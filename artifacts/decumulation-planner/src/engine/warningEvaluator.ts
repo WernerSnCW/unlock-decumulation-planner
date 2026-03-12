@@ -37,11 +37,19 @@ export function evaluateRegisterWarnings(register: Asset[]): Warning[] {
       });
     }
 
-    if ((asset.asset_class === 'vct' || asset.asset_class === 'eis' || asset.asset_class === 'aim_shares') && !asset.acquisition_date) {
+    if (asset.asset_class === 'vct' && !asset.acquisition_date) {
       warnings.push({
         id: `MISSING_ACQUISITION_DATE_${asset.asset_id}`,
         severity: 'error',
-        message: `${asset.label}: Acquisition date missing — BPR and CGT clock cannot be calculated.`
+        message: `${asset.label}: Acquisition date missing — 5-year hold clock and relief clawback clock cannot be calculated.`
+      });
+    }
+
+    if ((asset.asset_class === 'eis' || asset.asset_class === 'aim_shares') && !asset.acquisition_date) {
+      warnings.push({
+        id: `MISSING_ACQUISITION_DATE_${asset.asset_id}`,
+        severity: 'error',
+        message: `${asset.label}: Acquisition date missing — BPR qualifying date and CGT exemption clock cannot be determined.`
       });
     }
 
@@ -54,6 +62,24 @@ export function evaluateRegisterWarnings(register: Asset[]): Warning[] {
           severity: 'error',
           message: `${asset.label}: Acquisition cost missing — CGT cannot be calculated for this asset.`
         });
+      }
+    }
+
+    if (asset.asset_class === 'vct' && asset.relief_claimed_type !== 'none' && asset.tax_relief_claimed > 0) {
+      const subscriptionBasis = asset.original_subscription_amount ?? asset.acquisition_cost;
+      if (subscriptionBasis && subscriptionBasis > 0) {
+        const actualRate = asset.tax_relief_claimed / subscriptionBasis;
+        const acquisitionDate = asset.acquisition_date ? new Date(asset.acquisition_date) : null;
+        const isPost2026 = acquisitionDate && acquisitionDate >= new Date('2026-04-06');
+        const expectedRate = isPost2026 ? 0.20 : 0.30;
+        const tolerance = 0.02;
+        if (Math.abs(actualRate - expectedRate) > tolerance) {
+          warnings.push({
+            id: `VCT_RELIEF_RATE_MISMATCH_${asset.asset_id}`,
+            severity: 'warning',
+            message: `${asset.label}: VCT relief rate appears to be ${(actualRate * 100).toFixed(1)}% but expected ${(expectedRate * 100).toFixed(0)}% for ${isPost2026 ? 'post' : 'pre'}-April 2026 subscriptions. Check tax_relief_claimed and original_subscription_amount.`
+          });
+        }
       }
     }
 
@@ -83,7 +109,6 @@ export function evaluateRegisterWarnings(register: Asset[]): Warning[] {
   if (hasPension) {
     const pensionAsset = register.find(a => a.pension_type);
     if (pensionAsset && pensionAsset.current_value > 100000 && (pensionAsset.tfls_used_amount ?? 0) === 0) {
-      const age = 0;
       warnings.push({
         id: 'PCLS_HISTORY_UNCERTAIN',
         severity: 'warning',

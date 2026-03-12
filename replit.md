@@ -108,9 +108,14 @@ UK retirement drawdown planner. React + Vite frontend-only app (no backend, no A
   - `balanced`: per-buffer binary income search, scored as 0.6×income + 0.4×estate
   All modes use unified `isFeasible()` check (fully funded + legacy met). Safe bounds: `incomeFloor=5000`, `incomeCeiling=max(6000, min(portfolio/years×2, 500000))`. Returns `OptimiserResult` with optimal_income, optimal_buffer, net_estate, funded_years, legacy_met, glory phase breakdown.
 - **Conflict resolution**: Cash floor > Spend > Shortfall > Legacy (soft) > Gifts. Legacy never blocks living cost draws
+- **Legacy target scoring**: When `legacy_target > 0` and projected estate is within 2× the target, the engine dynamically boosts `iht_reduction` and `preserve_growth` weights. As `projected_estate / legacy_target` ratio approaches 1.0, urgency increases (up to +0.25 boost split equally between IHT and growth, then re-normalised). This actively steers drawdown sequencing to protect the estate floor while legacy is at risk.
 - **Critical rules**:
-  - VCT disposal: CGT always £0 (TCGA 1992 s.151A); early disposal (<5yr) may trigger income tax clawback
+  - VCT disposal: CGT always £0 (TCGA 1992 s.151A); early disposal (<5yr) triggers income tax relief clawback — NOT CGT. Clawback rate is subscription-date dependent: 30% for pre-April 2026 subscriptions, 20% for subscriptions on/after 6 April 2026 (per Nov 2025 policy paper). Clawback calculated as `subscriptionBasis × clawbackRate × proportion`. `original_subscription_amount` field used if present, otherwise falls back to `acquisition_cost`.
   - VCT is NEVER BPR-qualifying — excluded from BPR pool in scoring, IHT calc, and no-plan baseline
+  - VCT_RELIEF_RATE_MISMATCH warning fires when `tax_relief_claimed / original_subscription_amount` diverges from expected rate (30% pre-2026, 20% post-2026)
+  - Pension IHT scoring: pre-2027 = 0.1 (keep in pension, IHT-free). Post-2027 with toggle on = 0.95 (draw pension early, now in estate)
+  - Property mortgage: `mortgage_balance` deducted from estate in all IHT calculations (main engine + no-plan baseline). Estate for IHT = `totalPortfolio - pensionValue - totalMortgageLiabilities`
+  - BPR warnings (BPR_NOT_YET_QUALIFYING, BPR_LAST_REVIEWED_STALE) restricted to EIS + AIM only — never VCT. VCT acquisition date warning references 5-year hold clock and clawback clock instead.
   - CLT rolling window: filter gift history to last 7 years only
   - Taxes are deducted from portfolio each year (drawn from most liquid assets first, respecting cash reserve)
   - Age input restricted to 55-90

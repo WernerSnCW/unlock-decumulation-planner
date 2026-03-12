@@ -13,6 +13,7 @@ export interface Asset {
   current_value: number;
   acquisition_date: string | null;
   acquisition_cost: number | null;
+  original_subscription_amount: number | null;
   tax_relief_claimed: number;
   assumed_growth_rate: number;
   income_generated: number;
@@ -225,6 +226,8 @@ interface AssetState {
   label: string;
   value: number;
   acquisitionCost: number | null;
+  acquisitionDate: string | null;
+  originalSubscriptionAmount: number | null;
   growthRate: number;
   incomeGenerated: number;
   isIHTExempt: boolean;
@@ -280,6 +283,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     label: a.label,
     value: a.current_value,
     acquisitionCost: a.acquisition_cost,
+    acquisitionDate: a.acquisition_date,
+    originalSubscriptionAmount: a.original_subscription_amount,
     growthRate: a.assumed_growth_rate,
     incomeGenerated: a.income_generated,
     isIHTExempt: a.is_iht_exempt,
@@ -369,7 +374,30 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
     // Step 5: Draw from assets in priority order
     const drawsByAsset: Record<string, number> = {};
-    const priority = getDrawdownPriority(inputs.priority_weights, assets, planYear, toggles);
+    let effectiveWeights = inputs.priority_weights;
+    if (inputs.legacy_target > 0 && !isShadow) {
+      const pensionVal = assets.filter(a => a.assetClass === 'pension').reduce((s, a) => s + Math.max(0, a.value), 0);
+      const mortgages = assets.reduce((s, a) => s + (a.mortgageBalance > 0 ? a.mortgageBalance : 0), 0);
+      const pensionInEstate = toggles.apply_2027_pension_iht && calendarYear >= 2027;
+      const netEstateProxy = totalPortfolioPre - (pensionInEstate ? 0 : pensionVal) - mortgages;
+      const ratio = Math.max(0, netEstateProxy) / Math.max(1, inputs.legacy_target);
+      if (ratio < 2.0) {
+        const urgency = Math.max(0, Math.min(1, 1 - (ratio - 1)));
+        const boost = urgency * 0.25;
+        const totalOriginal = effectiveWeights.tax_efficiency + effectiveWeights.iht_reduction +
+          effectiveWeights.preserve_growth + effectiveWeights.liquidity;
+        const boostedIHT = effectiveWeights.iht_reduction + boost * 0.5;
+        const boostedGrowth = effectiveWeights.preserve_growth + boost * 0.5;
+        const scale = totalOriginal / (effectiveWeights.tax_efficiency + boostedIHT + boostedGrowth + effectiveWeights.liquidity);
+        effectiveWeights = {
+          tax_efficiency: effectiveWeights.tax_efficiency * scale,
+          iht_reduction: boostedIHT * scale,
+          preserve_growth: boostedGrowth * scale,
+          liquidity: effectiveWeights.liquidity * scale,
+        };
+      }
+    }
+    const priority = getDrawdownPriority(effectiveWeights, assets, planYear, toggles);
     let pensionDrawTaxable = 0;
     let totalCGTGain = 0;
     let totalDeferredGainRealized = 0;
@@ -402,13 +430,21 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         pensionDrawTaxable += pclsResult.taxableDraw;
       } else if (asset.wrapperType === 'unwrapped' && asset.assetClass !== 'cash') {
         if (asset.assetClass === 'vct') {
-          const acquisitionDate = register.find(r => r.asset_id === asset.id)?.acquisition_date;
-          if (acquisitionDate) {
-            const yearsHeld = calendarYear - new Date(acquisitionDate).getFullYear();
-            if (yearsHeld < 5 && asset.reliefClaimedType !== 'none') {
+          if (asset.acquisitionDate) {
+            const acquisitionDateObj = new Date(asset.acquisitionDate);
+            const fiveYearAnniversary = new Date(acquisitionDateObj);
+            fiveYearAnniversary.setFullYear(fiveYearAnniversary.getFullYear() + 5);
+            const disposalDate = new Date(calendarYear, 3, 5);
+            if (disposalDate < fiveYearAnniversary && asset.reliefClaimedType !== 'none') {
+              const subscriptionBasis = asset.originalSubscriptionAmount ?? asset.acquisitionCost ?? 0;
+              const isPost2026 = acquisitionDateObj >= new Date('2026-04-06');
+              const clawbackRate = isPost2026 ? 0.20 : 0.30;
               const preDrawValue = draw + asset.value;
               const proportion = preDrawValue > 0 ? draw / preDrawValue : 1;
-              pensionDrawTaxable += asset.taxReliefClaimed * proportion;
+              const derivedClawback = subscriptionBasis * clawbackRate * proportion;
+              const proportionalReliefClaimed = asset.taxReliefClaimed * proportion;
+              const clawback = Math.min(derivedClawback, proportionalReliefClaimed);
+              pensionDrawTaxable += clawback;
             }
           }
         } else if (asset.assetClass === 'eis') {
@@ -503,7 +539,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
     // Step 8: Calculate IHT — VCTs never qualify for BPR (IHTA 1984 s.105(3))
     let bprTotal = 0;
+    let totalMortgageLiabilities = 0;
     for (const asset of assets) {
+      if (asset.mortgageBalance > 0) {
+        totalMortgageLiabilities += asset.mortgageBalance;
+      }
       if (asset.assetClass === 'vct') continue;
       if (asset.isIHTExempt && asset.value > 0) {
         if (asset.bprQualifyingDate) {
@@ -518,8 +558,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     const cltCumulative = getCLTCumulative(giftHistory, planYear);
-    const estateWithoutPension = totalPortfolioValue - pensionValue;
-    const ihtBill = calculateIHTBill(estateWithoutPension, bprTotal, cltCumulative, pensionValue, toggles, params, calendarYear);
+    const estateForIHT = Math.max(0, totalPortfolioValue - pensionValue - totalMortgageLiabilities);
+    const ihtBill = calculateIHTBill(estateForIHT, bprTotal, cltCumulative, pensionValue, toggles, params, calendarYear);
 
     const ihtExemptTotal = bprTotal;
     const actualSpend = spendTarget - remaining;
@@ -634,6 +674,7 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
     isIHTExempt: a.is_iht_exempt,
     bprQualifyingDate: a.bpr_qualifying_date,
     pensionType: a.pension_type,
+    mortgageBalance: a.mortgage_balance,
   }));
 
   for (let planYear = 1; planYear <= inputs.plan_years; planYear++) {
@@ -649,9 +690,11 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
   let bprTotal = 0;
   let pensionValue = 0;
   let totalValue = 0;
+  let totalMortgages = 0;
   for (const asset of assets) {
     const val = Math.max(0, asset.value);
     totalValue += val;
+    if (asset.mortgageBalance > 0) totalMortgages += asset.mortgageBalance;
     if (asset.pensionType) pensionValue += val;
     if (asset.assetClass === 'vct') continue;
     if (asset.isIHTExempt && val > 0) {
@@ -664,8 +707,8 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
     }
   }
 
-  const estateWithoutPension = totalValue - pensionValue;
-  return calculateIHTBill(estateWithoutPension, bprTotal, 0, pensionValue, toggles, params, calendarYear);
+  const estateForIHT = Math.max(0, totalValue - pensionValue - totalMortgages);
+  return calculateIHTBill(estateForIHT, bprTotal, 0, pensionValue, toggles, params, calendarYear);
 }
 
 export interface OptimiserResult {
