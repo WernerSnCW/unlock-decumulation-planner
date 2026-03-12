@@ -14,7 +14,7 @@ function formatMoney(value: number): string {
 }
 
 export default function FundedYearsIndicator({ summary, planYears, currentAge }: Props) {
-  const fullyFunded = summary.funded_years >= planYears && summary.shadow_funded_years >= Math.max(planYears, 90 - currentAge);
+  const fullyFunded = summary.funded_years >= planYears && summary.shadow_funded_years >= Math.max(planYears, 35, 90 - currentAge);
   const partiallyFunded = summary.funded_years >= planYears && !fullyFunded;
   const shortfall = summary.funded_years < planYears;
 

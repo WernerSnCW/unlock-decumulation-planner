@@ -75,8 +75,8 @@ UK retirement drawdown planner. React + Vite frontend-only app (no backend, no A
   - `trustLogic.ts` — CLT rolling 7-year window, PET taper, NEFI check
   - `warningEvaluator.ts` — register-level and year-level warnings (error/warning/info)
 - **Data** (`src/data/`):
-  - `mockRegister.json` — 8 assets (cash, ISA, pension, property, VCT, EIS, AIM)
-  - `taxParameters.json` — 2025/26 UK tax rates held flat
+  - `mockRegister.json` — 8 assets (cash, ISA, pension, property, 2× VCT, EIS, AIM). VCT lots always have `is_iht_exempt: false` and `bpr_qualifying_date: null` (VCTs never qualify for BPR — IHTA 1984 s.105(3))
+  - `taxParameters.json` — 2025/26 + 2026/27 UK tax rates (2026/27 has updated dividend rates: 10.75%/35.75%/39.35%); held flat from 2026/27 onwards
 - **Components** (`src/components/`):
   - `InputPanel` — sidebar with income target, plan years, lifestyle, age, strategy, scenario toggles, gifting, inflation
   - `FundedYearsIndicator` — summary cards (funded years, total tax, estate, IHT)
@@ -85,22 +85,28 @@ UK retirement drawdown planner. React + Vite frontend-only app (no backend, no A
   - `IHTChart` — line chart with 2026/2027 reference lines
   - `WarningsPanel` — severity-badged warnings
   - `YearDetailTable` — expandable rows with per-asset draws and flags
-  - `ActionPlan` — timeline-style recommended action plan; translates simulation draws into year-by-year steps (what to sell/withdraw/draw, tax due, gifts, milestones); "Key years" mode shows only significant years (first/last, milestones, draw-source changes, gift years, shortfalls) with skip indicators; "All years" mode shows every year; summary totals at bottom
+  - `ActionPlan` — timeline-style "Modelled Sequence Under Selected Assumptions" (not "recommended"); translates simulation draws into year-by-year steps with per-year disclaimer footnote ("Illustrative — not financial advice"); "Key years" mode shows only significant years (first/last, milestones, draw-source changes, gift years, shortfalls, depletions) with skip indicators; "All years" mode shows every year; summary totals at bottom
   - `DisclosurePanel` — collapsible assumptions and disclosure text
 - **Drawdown Priorities**: Weighted multi-objective system with 4 continuous dimensions (tax_efficiency, iht_reduction, preserve_growth, liquidity). Sliders auto-normalise to sum to 1.0. Preset buttons: Tax, IHT, Income, Growth. Custom blends supported.
   - `PriorityWeights` interface replaces old `DrawdownStrategy` enum
   - `scoreAssetForDrawdown()` computes weighted composite score per asset per year
   - `STRATEGY_PRESETS` map: tax_optimised, iht_optimised, income_first, growth_first
   - StrategyComparison shows 5 columns: 4 pure presets + "Your Blend" (user's current weights)
-- **Legacy target**: `legacy_target` input — net estate amount user wants to leave after IHT; engine caps drawdowns when portfolio approaches this threshold; summary shows net_estate_after_iht, legacy_shortfall, and met/unmet status in the Estate card
+- **Legacy target**: `legacy_target` input — soft preference only; living costs always funded first; engine raises `LEGACY_FLOOR_AT_RISK` warning when projected net estate falls below target but never hard-blocks draws; summary shows net_estate_after_iht, legacy_shortfall, and met/unmet status in the Estate card
 - **Cash buffer**: `cash_reserve` input in SimulationInputs; draw logic and tax-payment logic both respect an aggregate cash floor across all cash assets — never draw total cash below the reserve threshold
 - **IHT savings vs no-plan**: `calculateNoPlanIHT()` grows all assets at their rates for plan_years with no draws/gifts, then calculates IHT at plan end; the saving is `max(0, noPlanIHT - actualIHTAtPlanEnd)`, both compared at the same plan-end horizon
 - **Asset depletion**: ActionPlan detects when any `valuesByAssetClass` transitions from >0 to 0 between consecutive years; shown with ⊘ icon in orange; triggers key-year inclusion
-- **Scenario toggles**: Apply 2026 BPR Cap (£1M, 50% above), Apply 2027 Pension IHT (undrawn pension in estate)
+- **Scenario toggles**: Apply 2026 BPR Cap (£2.5M, 50% above), Apply 2027 Pension IHT (undrawn pension in estate)
+- **Shadow horizon**: `max(plan_years, 35, 90 - current_age)` — always projects to at least age 90 or 35 years
+- **BPR marginal scoring**: IHT-reduction score is proportional to marginal relief remaining vs £2.5M cap (within-cap=0.1, above-cap=0.4, pre-qualifying=0.65); VCT always scored as in-estate (0.8)
+- **EIS deferred gains**: Revived deferred gains are CGT events, NOT income tax — stacked on top of taxable income only for CGT rate determination (18%/24%)
+- **Conflict resolution**: Cash floor > Spend > Shortfall > Legacy (soft) > Gifts. Legacy never blocks living cost draws
 - **Critical rules**:
   - VCT disposal: CGT always £0 (TCGA 1992 s.151A); early disposal (<5yr) may trigger income tax clawback
+  - VCT is NEVER BPR-qualifying — excluded from BPR pool in scoring, IHT calc, and no-plan baseline
   - CLT rolling window: filter gift history to last 7 years only
-  - Taxes are deducted from portfolio each year (drawn from most liquid assets first)
+  - Taxes are deducted from portfolio each year (drawn from most liquid assets first, respecting cash reserve)
+  - Age input restricted to 55-90
 
 ### `lib/db` (`@workspace/db`)
 

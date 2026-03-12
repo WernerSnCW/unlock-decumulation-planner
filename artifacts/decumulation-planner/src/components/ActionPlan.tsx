@@ -239,7 +239,7 @@ export default function ActionPlan({ perYear, register, inputs }: Props) {
         className="action-plan-header"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="action-plan-title">Recommended Action Plan</span>
+        <span className="action-plan-title">Modelled Sequence Under Selected Assumptions</span>
         <span className="action-plan-count">{planYears.length} years</span>
         <span className="disclosure-chevron">{expanded ? '▾' : '▸'}</span>
       </button>
@@ -311,6 +311,8 @@ export default function ActionPlan({ perYear, register, inputs }: Props) {
                         </div>
                       ))}
                     </div>
+
+                    <div className="step-footnote">Illustrative — not financial advice. Review with an adviser before acting.</div>
 
                     {!showAllYears && idx < yearsToShow.length - 1 && (() => {
                       const currIdx = planYears.indexOf(yr);

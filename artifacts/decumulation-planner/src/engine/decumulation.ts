@@ -121,7 +121,7 @@ const LIFESTYLE_MULTIPLIERS: Record<LifestyleMultiplier, number> = {
   unlimited: 2.2
 };
 
-function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, planYear: number, toggles: Toggles): number {
+function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, planYear: number, toggles: Toggles, allAssets: AssetState[]): number {
   const calendarYear = 2025 + planYear - 1;
 
   const taxCostOrder: Record<string, number> = {
@@ -136,13 +136,39 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
   const taxScore = taxCostOrder[asset.assetClass] ?? 0.5;
 
   let ihtScore = 0;
-  if (asset.isIHTExempt) {
+  if (asset.assetClass === 'vct') {
+    ihtScore = 0.8;
+  } else if (asset.isIHTExempt && (asset.assetClass === 'eis' || asset.assetClass === 'aim_shares')) {
     if (asset.bprQualifyingDate) {
       const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();
       if (calendarYear >= qualifyingYear) {
-        ihtScore = 0.1;
+        if (toggles.apply_2026_bpr_cap && calendarYear >= 2026) {
+          const bprPool = allAssets
+            .filter(a => (a.assetClass === 'eis' || a.assetClass === 'aim_shares') && a.isIHTExempt && a.value > 0)
+            .reduce((sum, a) => {
+              if (a.bprQualifyingDate) {
+                const qy = new Date(a.bprQualifyingDate).getFullYear();
+                if (calendarYear >= qy) return sum + a.value;
+              }
+              return sum;
+            }, 0);
+          const cap = 2500000;
+          const priorTotal = bprPool - Math.max(0, asset.value);
+          if (priorTotal >= cap) {
+            ihtScore = 0.4;
+          } else if (priorTotal + Math.max(0, asset.value) <= cap) {
+            ihtScore = 0.1;
+          } else {
+            const withinCap = cap - priorTotal;
+            const aboveCap = Math.max(0, asset.value) - withinCap;
+            const ratio = withinCap / Math.max(1, Math.max(0, asset.value));
+            ihtScore = 0.1 * ratio + 0.4 * (1 - ratio);
+          }
+        } else {
+          ihtScore = 0.1;
+        }
       } else {
-        ihtScore = 0.15;
+        ihtScore = 0.65;
       }
     } else {
       ihtScore = 0.1;
@@ -180,7 +206,7 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
 function getDrawdownPriority(weights: PriorityWeights, assets: AssetState[], planYear: number, toggles: Toggles): string[] {
   return assets
     .filter(a => a.value > 0)
-    .map(a => ({ id: a.id, score: scoreAssetForDrawdown(a, weights, planYear, toggles) }))
+    .map(a => ({ id: a.id, score: scoreAssetForDrawdown(a, weights, planYear, toggles, assets) }))
     .sort((a, b) => b.score - a.score)
     .map(a => a.id);
 }
@@ -263,7 +289,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
   let tflsRemaining = taxParams.schedule[0].tfls_lifetime_limit - (register.find(a => a.pension_type)?.tfls_used_amount ?? 0);
   const giftHistory: GiftHistoryEntry[] = [];
-  const shadowHorizon = Math.max(inputs.plan_years, 90 - inputs.current_age);
+  const shadowHorizon = Math.max(inputs.plan_years, 35, 90 - inputs.current_age);
   const perYear: YearResult[] = [];
 
   let totalSpent = 0;
@@ -310,9 +336,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     // Step 3: Calculate remaining needed from drawdowns (including estimated tax)
     const totalPortfolioPre = assets.reduce((s, a) => s + Math.max(0, a.value), 0);
     let remaining = Math.max(0, spendTarget - baselineCashIncome);
+    let legacyAtRisk = false;
     if (inputs.legacy_target > 0 && !isShadow) {
       const maxDrawForLegacy = Math.max(0, totalPortfolioPre - inputs.legacy_target);
-      remaining = Math.min(remaining, maxDrawForLegacy);
+      if (remaining > maxDrawForLegacy) {
+        legacyAtRisk = true;
+      }
     }
 
     // Step 4: Apply gifting
@@ -423,10 +452,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     // Step 6: Calculate taxes
-    const nonSavingsIncome = inputs.state_pension_annual + rentalIncome + pensionDrawTaxable + totalDeferredGainRealized;
+    const nonSavingsIncome = inputs.state_pension_annual + rentalIncome + pensionDrawTaxable;
     const incomeTax = calculateIncomeTax(nonSavingsIncome, savingsIncome, dividendIncome, params);
     const taxableIncomeAfterPA = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - params.personal_allowance);
-    const cgt = calculateCGT(totalCGTGain, taxableIncomeAfterPA, params);
+    const totalCGTGainWithDeferred = totalCGTGain + totalDeferredGainRealized;
+    const cgt = calculateCGT(totalCGTGainWithDeferred, taxableIncomeAfterPA, params);
 
     // Step 6b: Deduct tax liabilities from portfolio (draw from most liquid first, respecting cash reserve)
     let taxToPay = incomeTax + cgt;
@@ -462,9 +492,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const totalPortfolioValue = assets.reduce((sum, a) => sum + Math.max(0, a.value), 0);
     const pensionValue = valuesByAssetClass['pension'] || 0;
 
-    // Step 8: Calculate IHT
+    // Step 8: Calculate IHT — VCTs never qualify for BPR (IHTA 1984 s.105(3))
     let bprTotal = 0;
     for (const asset of assets) {
+      if (asset.assetClass === 'vct') continue;
       if (asset.isIHTExempt && asset.value > 0) {
         if (asset.bprQualifyingDate) {
           const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();
@@ -513,7 +544,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       tflsRemaining,
       drawsByAsset,
       flags: [],
-      currentAge: age
+      currentAge: age,
+      legacyAtRisk,
+      legacyTarget: inputs.legacy_target,
+      netEstateProjected: Math.max(0, totalPortfolioValue - ihtBill)
     };
 
     const yearWarnings = evaluateYearWarnings(snapshot, register, toggles, inputs.plan_years);
@@ -610,6 +644,7 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
     const val = Math.max(0, asset.value);
     totalValue += val;
     if (asset.pensionType) pensionValue += val;
+    if (asset.assetClass === 'vct') continue;
     if (asset.isIHTExempt && val > 0) {
       if (asset.bprQualifyingDate) {
         const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();

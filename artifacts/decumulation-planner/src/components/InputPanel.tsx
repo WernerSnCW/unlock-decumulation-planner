@@ -45,7 +45,7 @@ function validate(field: string, value: number): string | null {
       if (value < 5 || value > 50) return '5 \u2013 50 years';
       return null;
     case 'current_age':
-      if (value < 40 || value > 90) return '40 \u2013 90';
+      if (value < 55 || value > 90) return '55 \u2013 90';
       return null;
     case 'state_pension_annual':
       if (value < 0 || value > 50000) return '\u00A30 \u2013 \u00A350k';
@@ -309,7 +309,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
           />
         </div>
         <span style={{ fontSize: 11, color: 'var(--unlock-muted)' }}>
-          Net estate target after IHT — drawdowns will slow to protect this amount
+          Soft target — living costs always funded first. Warning shown if projected estate falls below this amount
         </span>
       </div>
 

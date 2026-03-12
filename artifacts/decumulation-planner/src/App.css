@@ -973,6 +973,14 @@ body {
   margin-top: 2px;
 }
 
+.step-footnote {
+  font-size: 10px;
+  color: var(--unlock-muted);
+  opacity: 0.6;
+  margin-top: 6px;
+  font-style: italic;
+}
+
 .timeline-skip {
   margin-top: 4px;
   padding: 6px 10px;
