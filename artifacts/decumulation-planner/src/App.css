@@ -939,6 +939,7 @@ body {
 .step-gift .step-icon { color: var(--tone-info); }
 .step-milestone .step-icon { color: #22D3EE; }
 .step-shortfall .step-icon { color: var(--tone-error); }
+.step-depletion .step-icon { color: #F97316; }
 
 .step-content {
   flex: 1;
@@ -964,6 +965,7 @@ body {
 .step-tax .step-amount { color: var(--tone-warning); }
 .step-gift .step-amount { color: var(--tone-info); }
 .step-shortfall .step-amount { color: var(--tone-error); }
+.step-depletion .step-amount { color: #F97316; }
 
 .step-detail {
   font-size: 11px;

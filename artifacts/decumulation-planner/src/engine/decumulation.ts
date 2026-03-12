@@ -63,6 +63,7 @@ export interface SimulationInputs {
   state_pension_annual: number;
   apply_2026_bpr_cap: boolean;
   apply_2027_pension_iht: boolean;
+  cash_reserve: number;
 }
 
 export interface YearResult {
@@ -99,6 +100,7 @@ export interface SimulationSummary {
   estate_at_end: number;
   iht_at_end: number;
   iht_saving_vs_no_plan: number;
+  iht_no_plan_baseline: number;
   shadow_funded_years: number;
 }
 
@@ -209,6 +211,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         estate_at_end: 0,
         iht_at_end: 0,
         iht_saving_vs_no_plan: 0,
+        iht_no_plan_baseline: 0,
         shadow_funded_years: 0
       },
       registerWarnings
@@ -312,12 +315,24 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     let totalCGTGain = 0;
     let totalDeferredGainRealized = 0;
 
+    const totalCashValue = assets.filter(a => a.assetClass === 'cash').reduce((s, a) => s + Math.max(0, a.value), 0);
+    const cashFloor = Math.min(inputs.cash_reserve, totalCashValue);
+    let cashDrawnSoFar = 0;
+    const maxCashDraw = totalCashValue - cashFloor;
+
     for (const assetId of priority) {
       if (remaining <= 0) break;
       const asset = assets.find(a => a.id === assetId);
       if (!asset || asset.value <= 0) continue;
 
-      const draw = Math.min(remaining, asset.value);
+      let available = asset.value;
+      if (asset.assetClass === 'cash' && cashFloor > 0) {
+        const cashRoomLeft = maxCashDraw - cashDrawnSoFar;
+        available = Math.min(asset.value, cashRoomLeft);
+        if (available <= 0) continue;
+      }
+      const draw = Math.min(remaining, available);
+      if (asset.assetClass === 'cash') cashDrawnSoFar += draw;
       asset.value -= draw;
       drawsByAsset[assetId] = (drawsByAsset[assetId] || 0) + draw;
       remaining -= draw;
@@ -392,8 +407,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const taxableIncomeAfterPA = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - params.personal_allowance);
     const cgt = calculateCGT(totalCGTGain, taxableIncomeAfterPA, params);
 
-    // Step 6b: Deduct tax liabilities from portfolio (draw from most liquid first)
+    // Step 6b: Deduct tax liabilities from portfolio (draw from most liquid first, respecting cash reserve)
     let taxToPay = incomeTax + cgt;
+    const postDrawCashTotal = assets.filter(a => a.assetClass === 'cash').reduce((s, a) => s + Math.max(0, a.value), 0);
+    const taxCashFloor = Math.min(inputs.cash_reserve, postDrawCashTotal);
+    let taxCashDrawn = 0;
+    const taxMaxCashDraw = postDrawCashTotal - taxCashFloor;
     const taxPayPriority = [...assets]
       .filter(a => a.value > 0)
       .sort((a, b) => {
@@ -402,9 +421,15 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       });
     for (const asset of taxPayPriority) {
       if (taxToPay <= 0) break;
-      const deduction = Math.min(taxToPay, asset.value);
+      let maxDeduction = asset.value;
+      if (asset.assetClass === 'cash' && taxCashFloor > 0) {
+        maxDeduction = Math.min(asset.value, taxMaxCashDraw - taxCashDrawn);
+        if (maxDeduction <= 0) continue;
+      }
+      const deduction = Math.min(taxToPay, maxDeduction);
       asset.value -= deduction;
       taxToPay -= deduction;
+      if (asset.assetClass === 'cash') taxCashDrawn += deduction;
     }
 
     // Step 7: Calculate portfolio totals
@@ -503,6 +528,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
   const lastYear = perYear[perYear.length - 1];
   const fullyFunded = fundedYears >= inputs.plan_years && shadowFundedYears >= shadowHorizon;
 
+  const planEndYear = perYear.find(yr => yr.planYear === inputs.plan_years);
+  const noPlanIHT = calculateNoPlanIHT(register, taxParams, inputs, toggles);
+  const actualIHTAtPlanEnd = planEndYear?.estimatedIHTBill ?? 0;
+  const ihtSaving = Math.max(0, noPlanIHT - actualIHTAtPlanEnd);
+
   return {
     perYear,
     summary: {
@@ -514,11 +544,53 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       total_cgt_paid: totalCGT,
       total_tax_paid: totalIncomeTax + totalCGT,
       total_gifted: totalGifted,
-      estate_at_end: lastYear?.totalPortfolioValue ?? 0,
-      iht_at_end: lastYear?.estimatedIHTBill ?? 0,
-      iht_saving_vs_no_plan: 0,
+      estate_at_end: planEndYear?.totalPortfolioValue ?? 0,
+      iht_at_end: actualIHTAtPlanEnd,
+      iht_saving_vs_no_plan: ihtSaving,
+      iht_no_plan_baseline: noPlanIHT,
       shadow_funded_years: shadowFundedYears
     },
     registerWarnings
   };
+}
+
+function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inputs: SimulationInputs, toggles: Toggles): number {
+  const assets = register.map(a => ({
+    value: a.current_value,
+    growthRate: a.assumed_growth_rate,
+    assetClass: a.asset_class,
+    isIHTExempt: a.is_iht_exempt,
+    bprQualifyingDate: a.bpr_qualifying_date,
+    pensionType: a.pension_type,
+  }));
+
+  for (let planYear = 1; planYear <= inputs.plan_years; planYear++) {
+    for (const asset of assets) {
+      asset.value *= (1 + asset.growthRate);
+    }
+  }
+
+  const lastPlanYear = inputs.plan_years;
+  const calendarYear = 2025 + lastPlanYear - 1;
+  const params = getParamsForYear(taxParams, lastPlanYear);
+
+  let bprTotal = 0;
+  let pensionValue = 0;
+  let totalValue = 0;
+  for (const asset of assets) {
+    const val = Math.max(0, asset.value);
+    totalValue += val;
+    if (asset.pensionType) pensionValue += val;
+    if (asset.isIHTExempt && val > 0) {
+      if (asset.bprQualifyingDate) {
+        const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();
+        if (calendarYear >= qualifyingYear) bprTotal += val;
+      } else {
+        bprTotal += val;
+      }
+    }
+  }
+
+  const estateWithoutPension = totalValue - pensionValue;
+  return calculateIHTBill(estateWithoutPension, bprTotal, 0, pensionValue, toggles, params, calendarYear);
 }

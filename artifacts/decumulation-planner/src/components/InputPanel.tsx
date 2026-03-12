@@ -277,6 +277,25 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
 
       <div className="divider" />
 
+      <div className="section-title">Cash Buffer</div>
+
+      <div className="input-group">
+        <label>Minimum Cash Reserve</label>
+        <div className="input-prefix">
+          <span>{'\u00A3'}</span>
+          <input
+            type="number"
+            value={inputs.cash_reserve}
+            onChange={e => update('cash_reserve', parseInt(e.target.value) || 0)}
+          />
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--unlock-muted)' }}>
+          Keep this amount in cash accounts — not drawn for income
+        </span>
+      </div>
+
+      <div className="divider" />
+
       <div className="section-title">Optional</div>
 
       <div className="input-group">

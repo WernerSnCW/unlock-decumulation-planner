@@ -35,6 +35,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   state_pension_annual: 0,
   apply_2026_bpr_cap: true,
   apply_2027_pension_iht: true,
+  cash_reserve: 0,
 };
 
 function App() {

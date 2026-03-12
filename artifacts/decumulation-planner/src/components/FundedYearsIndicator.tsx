@@ -60,6 +60,16 @@ export default function FundedYearsIndicator({ summary, planYears, currentAge }:
         <div className="mono" style={{ color: 'var(--chart-iht)' }}>
           {formatMoney(summary.iht_at_end)}
         </div>
+        {summary.iht_saving_vs_no_plan > 0 && (
+          <div style={{ fontSize: 11, color: 'var(--unlock-accent)', marginTop: 4, fontWeight: 500 }}>
+            Saving {formatMoney(summary.iht_saving_vs_no_plan)} vs no plan
+          </div>
+        )}
+        {summary.iht_no_plan_baseline > 0 && (
+          <div style={{ fontSize: 11, color: 'var(--unlock-muted)', marginTop: 2 }}>
+            No plan: {formatMoney(summary.iht_no_plan_baseline)}
+          </div>
+        )}
       </div>
     </div>
   );

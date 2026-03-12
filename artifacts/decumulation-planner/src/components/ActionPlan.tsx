@@ -15,7 +15,7 @@ function formatMoney(value: number): string {
 }
 
 interface ActionStep {
-  type: 'draw' | 'tax' | 'gift' | 'milestone' | 'shortfall';
+  type: 'draw' | 'tax' | 'gift' | 'milestone' | 'shortfall' | 'depletion';
   label: string;
   amount?: number;
   detail?: string;
@@ -145,6 +145,24 @@ function buildYearActions(
     });
   }
 
+  if (prevYr) {
+    const ASSET_CLASS_LABELS: Record<string, string> = {
+      cash: 'Cash', isa: 'ISA', pension: 'Pension', vct: 'VCT', eis: 'EIS',
+      aim_shares: 'AIM Shares', property_investment: 'Property', property_residential: 'Residential Property'
+    };
+    for (const cls of Object.keys(prevYr.valuesByAssetClass)) {
+      const prevVal = prevYr.valuesByAssetClass[cls] ?? 0;
+      const currVal = yr.valuesByAssetClass[cls] ?? 0;
+      if (prevVal > 0 && currVal <= 0) {
+        steps.push({
+          type: 'depletion',
+          label: `${ASSET_CLASS_LABELS[cls] || cls} fully depleted`,
+          detail: `Previous value: ${formatMoney(prevVal)} — now exhausted`,
+        });
+      }
+    }
+  }
+
   for (const flag of yr.flags) {
     if (flag.severity === 'error' || flag.severity === 'warning') {
       const alreadyCovered = steps.some(s => s.type === 'milestone' && s.label.includes(flag.message.substring(0, 20)));
@@ -167,6 +185,7 @@ function getStepIcon(type: ActionStep['type']): string {
     case 'gift': return '♡';
     case 'milestone': return '◆';
     case 'shortfall': return '✗';
+    case 'depletion': return '⊘';
   }
 }
 
@@ -177,6 +196,7 @@ function getStepColorClass(type: ActionStep['type']): string {
     case 'gift': return 'step-gift';
     case 'milestone': return 'step-milestone';
     case 'shortfall': return 'step-shortfall';
+    case 'depletion': return 'step-depletion';
   }
 }
 
@@ -192,11 +212,12 @@ export default function ActionPlan({ perYear, register, inputs }: Props) {
     const actions = buildYearActions(yr, prevYr, register, inputs);
     const hasDraws = Object.keys(yr.drawsByAsset).length > 0;
     const hasMilestone = actions.some(a => a.type === 'milestone');
+    const hasDepletion = actions.some(a => a.type === 'depletion');
     const hasGift = yr.giftedThisYear > 0;
     const hasShortfall = !yr.spendMet;
 
     if (idx === 0) return true;
-    if (hasMilestone || hasShortfall || hasGift) return true;
+    if (hasMilestone || hasShortfall || hasGift || hasDepletion) return true;
     if (idx === planYears.length - 1) return true;
 
     if (prevYr && hasDraws) {
