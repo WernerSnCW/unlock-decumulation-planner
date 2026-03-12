@@ -23,7 +23,7 @@ function fmt(n: number): string {
 
 export default function OptimiserPanel({ inputs, optimiserResult, optimiserRunning, onRunOptimiser, onApply }: OptimiserPanelProps) {
   const [mode, setMode] = useState<OptMode>('max_income');
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className="card optimiser-panel">
