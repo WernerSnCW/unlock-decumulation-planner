@@ -53,6 +53,22 @@ export default function FundedYearsIndicator({ summary, planYears, currentAge }:
         <div className="mono" style={{ color: 'var(--unlock-text)' }}>
           {formatMoney(summary.estate_at_end)}
         </div>
+        <div style={{ fontSize: 11, color: 'var(--unlock-muted)', marginTop: 4 }}>
+          Net after IHT: {formatMoney(summary.net_estate_after_iht)}
+        </div>
+        {summary.legacy_target > 0 && (
+          <div style={{
+            fontSize: 11,
+            marginTop: 4,
+            fontWeight: 500,
+            color: summary.legacy_shortfall > 0 ? 'var(--tone-error)' : 'var(--unlock-accent)'
+          }}>
+            {summary.legacy_shortfall > 0
+              ? `Legacy shortfall: ${formatMoney(summary.legacy_shortfall)}`
+              : `Legacy target met ✓`
+            }
+          </div>
+        )}
       </div>
 
       <div className="summary-card">

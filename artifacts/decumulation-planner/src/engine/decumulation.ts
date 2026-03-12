@@ -64,6 +64,7 @@ export interface SimulationInputs {
   apply_2026_bpr_cap: boolean;
   apply_2027_pension_iht: boolean;
   cash_reserve: number;
+  legacy_target: number;
 }
 
 export interface YearResult {
@@ -102,6 +103,9 @@ export interface SimulationSummary {
   iht_saving_vs_no_plan: number;
   iht_no_plan_baseline: number;
   shadow_funded_years: number;
+  legacy_target: number;
+  legacy_shortfall: number;
+  net_estate_after_iht: number;
 }
 
 export interface SimulationResult {
@@ -221,7 +225,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         iht_at_end: 0,
         iht_saving_vs_no_plan: 0,
         iht_no_plan_baseline: 0,
-        shadow_funded_years: 0
+        shadow_funded_years: 0,
+        legacy_target: inputs.legacy_target,
+        legacy_shortfall: inputs.legacy_target,
+        net_estate_after_iht: 0
       },
       registerWarnings
     };
@@ -301,7 +308,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     // Step 3: Calculate remaining needed from drawdowns (including estimated tax)
+    const totalPortfolioPre = assets.reduce((s, a) => s + Math.max(0, a.value), 0);
     let remaining = Math.max(0, spendTarget - baselineCashIncome);
+    if (inputs.legacy_target > 0 && !isShadow) {
+      const maxDrawForLegacy = Math.max(0, totalPortfolioPre - inputs.legacy_target);
+      remaining = Math.min(remaining, maxDrawForLegacy);
+    }
 
     // Step 4: Apply gifting
     let giftedThisYear = 0;
@@ -541,6 +553,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
   const noPlanIHT = calculateNoPlanIHT(register, taxParams, inputs, toggles);
   const actualIHTAtPlanEnd = planEndYear?.estimatedIHTBill ?? 0;
   const ihtSaving = Math.max(0, noPlanIHT - actualIHTAtPlanEnd);
+  const estateAtEnd = planEndYear?.totalPortfolioValue ?? 0;
+  const netEstateAfterIHT = Math.max(0, estateAtEnd - actualIHTAtPlanEnd);
+  const legacyShortfall = inputs.legacy_target > 0
+    ? Math.max(0, inputs.legacy_target - netEstateAfterIHT)
+    : 0;
 
   return {
     perYear,
@@ -553,11 +570,14 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       total_cgt_paid: totalCGT,
       total_tax_paid: totalIncomeTax + totalCGT,
       total_gifted: totalGifted,
-      estate_at_end: planEndYear?.totalPortfolioValue ?? 0,
+      estate_at_end: estateAtEnd,
       iht_at_end: actualIHTAtPlanEnd,
       iht_saving_vs_no_plan: ihtSaving,
       iht_no_plan_baseline: noPlanIHT,
-      shadow_funded_years: shadowFundedYears
+      shadow_funded_years: shadowFundedYears,
+      legacy_target: inputs.legacy_target,
+      legacy_shortfall: legacyShortfall,
+      net_estate_after_iht: netEstateAfterIHT
     },
     registerWarnings
   };

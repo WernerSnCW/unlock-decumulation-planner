@@ -296,6 +296,25 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
 
       <div className="divider" />
 
+      <div className="section-title">Legacy Target</div>
+
+      <div className="input-group">
+        <label>Amount to Leave in Will</label>
+        <div className="input-prefix">
+          <span>{'\u00A3'}</span>
+          <input
+            type="number"
+            value={inputs.legacy_target}
+            onChange={e => update('legacy_target', parseInt(e.target.value) || 0)}
+          />
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--unlock-muted)' }}>
+          Net estate target after IHT — drawdowns will slow to protect this amount
+        </span>
+      </div>
+
+      <div className="divider" />
+
       <div className="section-title">Optional</div>
 
       <div className="input-group">
