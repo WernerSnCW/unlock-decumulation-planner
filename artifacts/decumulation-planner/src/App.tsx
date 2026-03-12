@@ -14,6 +14,7 @@ import PortfolioChart from './components/PortfolioChart';
 import IHTChart from './components/IHTChart';
 import WarningsPanel from './components/WarningsPanel';
 import YearDetailTable from './components/YearDetailTable';
+import ActionPlan from './components/ActionPlan';
 import DisclosurePanel from './components/DisclosurePanel';
 
 import mockRegister from './data/mockRegister.json';
@@ -152,6 +153,12 @@ function App() {
                   apply_2026_bpr_cap: inputs.apply_2026_bpr_cap,
                   apply_2027_pension_iht: inputs.apply_2027_pension_iht,
                 }}
+              />
+
+              <ActionPlan
+                perYear={result.perYear}
+                register={register}
+                inputs={inputs}
               />
 
               <div className="two-col">

@@ -85,6 +85,7 @@ UK retirement drawdown planner. React + Vite frontend-only app (no backend, no A
   - `IHTChart` — line chart with 2026/2027 reference lines
   - `WarningsPanel` — severity-badged warnings
   - `YearDetailTable` — expandable rows with per-asset draws and flags
+  - `ActionPlan` — timeline-style recommended action plan; translates simulation draws into year-by-year steps (what to sell/withdraw/draw, tax due, gifts, milestones); "Key years" mode shows only significant years (first/last, milestones, draw-source changes, gift years, shortfalls) with skip indicators; "All years" mode shows every year; summary totals at bottom
   - `DisclosurePanel` — collapsible assumptions and disclosure text
 - **Drawdown Priorities**: Weighted multi-objective system with 4 continuous dimensions (tax_efficiency, iht_reduction, preserve_growth, liquidity). Sliders auto-normalise to sum to 1.0. Preset buttons: Tax, IHT, Income, Growth. Custom blends supported.
   - `PriorityWeights` interface replaces old `DrawdownStrategy` enum
