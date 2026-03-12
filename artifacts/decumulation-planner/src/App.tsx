@@ -18,10 +18,12 @@ import ActionPlan from './components/ActionPlan';
 import DisclosurePanel from './components/DisclosurePanel';
 import OptimiserPanel from './components/OptimiserPanel';
 
+import AssetEditor from './components/AssetEditor';
+
 import mockRegister from './data/mockRegister.json';
 import taxParameters from './data/taxParameters.json';
 
-const register = mockRegister as Asset[];
+const defaultRegister = mockRegister as Asset[];
 const taxParams = taxParameters as TaxParametersFile;
 
 const DEFAULT_INPUTS: SimulationInputs = {
@@ -44,20 +46,22 @@ const DEFAULT_INPUTS: SimulationInputs = {
 
 function App() {
   const [inputs, setInputs] = useState<SimulationInputs>(DEFAULT_INPUTS);
+  const [assets, setAssets] = useState<Asset[]>(() => defaultRegister.map(a => ({ ...a })));
+  const [assetEditorOpen, setAssetEditorOpen] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [optimiserResult, setOptimiserResult] = useState<OptimiserResult | null>(null);
   const [optimiserRunning, setOptimiserRunning] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runSim = useCallback((inp: SimulationInputs) => {
+  const runSim = useCallback((inp: SimulationInputs, reg?: Asset[]) => {
     try {
-      const res = runSimulation(inp, register, taxParams);
+      const res = runSimulation(inp, reg ?? assets, taxParams);
       setResult(res);
     } catch (e) {
       console.error('Simulation error:', e);
       setResult(null);
     }
-  }, []);
+  }, [assets]);
 
   useEffect(() => {
     runSim(inputs);
@@ -72,18 +76,25 @@ function App() {
     }, 400);
   }, [runSim]);
 
+  const handleAssetsChange = useCallback((newAssets: Asset[]) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setAssets(newAssets);
+    setOptimiserResult(null);
+    runSim(inputs, newAssets);
+  }, [inputs, runSim]);
+
   const handleRunOptimiser = useCallback((mode: 'max_income' | 'max_estate' | 'balanced') => {
     setOptimiserRunning(true);
     setTimeout(() => {
       try {
-        const res = runOptimiser(inputs, register, taxParams, mode);
+        const res = runOptimiser(inputs, assets, taxParams, mode);
         setOptimiserResult(res);
       } catch (e) {
         console.error('Optimiser error:', e);
       }
       setOptimiserRunning(false);
     }, 50);
-  }, [inputs]);
+  }, [inputs, assets]);
 
   const handleApplyOptimiser = useCallback(() => {
     if (!optimiserResult) return;
@@ -96,7 +107,7 @@ function App() {
     runSim(newInputs);
   }, [optimiserResult, inputs, runSim]);
 
-  const registerWarnings = useMemo(() => evaluateRegisterWarnings(register), []);
+  const registerWarnings = useMemo(() => evaluateRegisterWarnings(assets), [assets]);
 
   const allWarnings = useMemo(() => {
     const yearWarnings: Warning[] = result?.perYear
@@ -109,7 +120,17 @@ function App() {
   const scenarioActive = inputs.apply_2026_bpr_cap || inputs.apply_2027_pension_iht;
   const hasShortfall = result && result.summary.funded_years < inputs.plan_years;
 
-  if (register.length === 0) {
+  const hasOverrides = assets.some(a => {
+    const orig = defaultRegister.find(d => d.asset_id === a.asset_id);
+    if (!orig) return true;
+    return a.current_value !== orig.current_value ||
+      a.assumed_growth_rate !== orig.assumed_growth_rate ||
+      a.income_generated !== orig.income_generated ||
+      a.mortgage_balance !== orig.mortgage_balance ||
+      (a.acquisition_cost ?? 0) !== (orig.acquisition_cost ?? 0);
+  }) || assets.length !== defaultRegister.length;
+
+  if (assets.length === 0) {
     return (
       <div className="app-layout">
         <header className="app-header">
@@ -129,8 +150,24 @@ function App() {
       <header className="app-header">
         <div className="logo">U</div>
         <h1>Decumulation Planner</h1>
+        <div className="header-spacer" />
+        <button
+          className={`edit-assets-btn ${hasOverrides ? 'has-overrides' : ''}`}
+          onClick={() => setAssetEditorOpen(true)}
+        >
+          {hasOverrides ? 'Assets (edited)' : 'Edit Assets'}
+        </button>
         <span className="subtitle">Planning estimate — not financial advice</span>
       </header>
+
+      {assetEditorOpen && (
+        <AssetEditor
+          assets={assets}
+          defaults={defaultRegister}
+          onChange={handleAssetsChange}
+          onClose={() => setAssetEditorOpen(false)}
+        />
+      )}
 
       <div className="app-body">
         <InputPanel inputs={inputs} onChange={handleInputChange} />
@@ -177,7 +214,7 @@ function App() {
 
               <StrategyComparison
                 inputs={inputs}
-                register={register}
+                register={assets}
                 taxParams={taxParams}
               />
 
@@ -197,13 +234,13 @@ function App() {
 
               <ActionPlan
                 perYear={result.perYear}
-                register={register}
+                register={assets}
                 inputs={inputs}
               />
 
               <div className="two-col">
                 <WarningsPanel warnings={allWarnings} />
-                <YearDetailTable perYear={result.perYear} register={register} />
+                <YearDetailTable perYear={result.perYear} register={assets} />
               </div>
 
               <DisclosurePanel taxParams={taxParams} />
