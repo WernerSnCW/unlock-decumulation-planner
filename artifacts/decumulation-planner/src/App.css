@@ -1019,3 +1019,216 @@ body {
   font-weight: 600;
   color: var(--unlock-text);
 }
+
+.glory-years-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--unlock-muted);
+  margin-top: 4px;
+}
+
+.glory-years-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--tone-warning);
+}
+
+.glory-years-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: var(--radius-sm);
+}
+
+.glory-phase {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.glory-phase .phase-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tone-warning);
+}
+
+.glory-phase.calm .phase-label {
+  color: var(--unlock-muted);
+}
+
+.glory-phase .phase-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--unlock-text);
+}
+
+.optimiser-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.optimiser-panel .disclosure-header {
+  padding: 16px 20px;
+}
+
+.optimiser-body {
+  padding: 20px;
+  border-top: 1px solid var(--unlock-border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.optimiser-desc {
+  font-size: 13px;
+  color: var(--unlock-muted);
+  line-height: 1.5;
+}
+
+.optimiser-modes {
+  display: flex;
+  gap: 8px;
+}
+
+.optimiser-mode-btn {
+  flex: 1;
+  padding: 12px;
+  background: var(--unlock-bg);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.15s;
+  font-family: 'Inter', sans-serif;
+}
+
+.optimiser-mode-btn:hover {
+  border-color: var(--unlock-accent);
+}
+
+.optimiser-mode-btn.active {
+  border-color: var(--unlock-accent);
+  background: rgba(0, 187, 119, 0.06);
+}
+
+.optimiser-mode-btn .mode-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--unlock-text);
+}
+
+.optimiser-mode-btn.active .mode-label {
+  color: var(--unlock-accent);
+}
+
+.optimiser-mode-btn .mode-desc {
+  font-size: 11px;
+  color: var(--unlock-muted);
+  line-height: 1.4;
+}
+
+.optimiser-run-btn {
+  padding: 12px 20px;
+  background: var(--unlock-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--unlock-bg);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.optimiser-run-btn:hover {
+  opacity: 0.9;
+}
+
+.optimiser-run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.optimiser-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--unlock-border);
+}
+
+.optimiser-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.optimiser-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: var(--unlock-bg);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-sm);
+}
+
+.optimiser-result-item .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--unlock-muted);
+}
+
+.optimiser-result-item .value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--unlock-text);
+}
+
+.optimiser-result-item .value.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.optimiser-apply-btn {
+  padding: 10px 20px;
+  background: rgba(0, 187, 119, 0.12);
+  border: 1px solid var(--unlock-accent);
+  border-radius: var(--radius-md);
+  color: var(--unlock-accent);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.optimiser-apply-btn:hover {
+  background: rgba(0, 187, 119, 0.18);
+}
+
+.optimiser-footnote {
+  font-size: 11px;
+  color: var(--unlock-muted);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.optimiser-no-solution {
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  color: var(--tone-warning);
+  font-size: 13px;
+  line-height: 1.5;
+}

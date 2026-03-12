@@ -86,6 +86,7 @@ UK retirement drawdown planner. React + Vite frontend-only app (no backend, no A
   - `WarningsPanel` — severity-badged warnings
   - `YearDetailTable` — expandable rows with per-asset draws and flags
   - `ActionPlan` — timeline-style "Modelled Sequence Under Selected Assumptions" (not "recommended"); translates simulation draws into year-by-year steps with per-year disclaimer footnote ("Illustrative — not financial advice"); "Key years" mode shows only significant years (first/last, milestones, draw-source changes, gift years, shortfalls, depletions) with skip indicators; "All years" mode shows every year; summary totals at bottom
+  - `OptimiserPanel` — collapsible panel with 3 modes: Max Income (binary search for highest sustainable income), Max Estate (grid search over income+buffer to maximise net estate after IHT), Balanced (weighted score of income + estate). Respects legacy target and glory years. Shows results with "Apply to Plan" button that updates inputs. Handles infeasibility with warning message.
   - `DisclosurePanel` — collapsible assumptions and disclosure text
 - **Drawdown Priorities**: Weighted multi-objective system with 4 continuous dimensions (tax_efficiency, iht_reduction, preserve_growth, liquidity). Sliders auto-normalise to sum to 1.0. Preset buttons: Tax, IHT, Income, Growth. Custom blends supported.
   - `PriorityWeights` interface replaces old `DrawdownStrategy` enum
@@ -100,6 +101,12 @@ UK retirement drawdown planner. React + Vite frontend-only app (no backend, no A
 - **Shadow horizon**: `max(plan_years, 35, 90 - current_age)` — always projects to at least age 90 or 35 years
 - **BPR marginal scoring**: IHT-reduction score is proportional to marginal relief remaining vs £2.5M cap (within-cap=0.1, above-cap=0.4, pre-qualifying=0.65); VCT always scored as in-estate (0.8)
 - **EIS deferred gains**: Revived deferred gains are CGT events, NOT income tax — stacked on top of taxable income only for CGT rate determination (18%/24%)
+- **Glory Years**: Two-phase spending profile — `GloryYearsConfig { enabled, duration, multiplier }` in `SimulationInputs`. When enabled, spend target for first `duration` years is multiplied by `multiplier` (e.g. 1.5× for 5 years), then reverts to 1.0×. Sidebar has toggle + dual sliders (duration 1-15yr, multiplier 110%-300%) with live preview showing Glory phase vs Calm phase income amounts.
+- **Optimiser**: `runOptimiser(inputs, register, taxParams, mode)` finds optimal income/buffer. Three modes:
+  - `max_income`: binary search for highest sustainable annual income (respects legacy target + full funding)
+  - `max_estate`: grid search over income × buffer candidates to maximise net estate after IHT
+  - `balanced`: per-buffer binary income search, scored as 0.6×income + 0.4×estate
+  All modes use unified `isFeasible()` check (fully funded + legacy met). Safe bounds: `incomeFloor=5000`, `incomeCeiling=max(6000, min(portfolio/years×2, 500000))`. Returns `OptimiserResult` with optimal_income, optimal_buffer, net_estate, funded_years, legacy_met, glory phase breakdown.
 - **Conflict resolution**: Cash floor > Spend > Shortfall > Legacy (soft) > Gifts. Legacy never blocks living cost draws
 - **Critical rules**:
   - VCT disposal: CGT always £0 (TCGA 1992 s.151A); early disposal (<5yr) may trigger income tax clawback

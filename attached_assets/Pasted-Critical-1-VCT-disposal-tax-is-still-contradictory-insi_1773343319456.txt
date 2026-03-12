@@ -1,0 +1,83 @@
+Critical
+1. VCT disposal tax is still contradictory inside the live tax matrix.
+Applies to: asset_tax_matrix.assets.vct.on_draw, asset_tax_matrix.assets.vct.cgt, asset_tax_matrix.assets.vct.limits, asset_tax_matrix.assets.vct.on_entry
+Problem: You correctly say in before_5_years_CORRECTED that early disposal triggers clawback, not CGT. But elsewhere the same VCT block still says:
+cgt: “CGT-free after 5-year hold … CGT at standard rates before 5 years”
+limits.cgt_free_hold_period.note: “CGT applies on disposal before 5 years”
+early_disposal_mechanics: always uses 30% clawback, even though you have already added the April 2026 change to 20% for new subscriptions
+That means the live body still contains a wrong tax rule and a wrong clawback basis for post-6 April 2026 VCT lots. The VCT relief reduction from 30% to 20% from 6 April 2026 is in the government’s November 2025 paper.
+Correction:
+Remove every remaining statement that implies CGT applies to VCT disposal before 5 years.
+Make VCT clawback explicitly subscription-date dependent:
+pre-6 April 2026 lot: 30%
+on/after 6 April 2026 lot: 20%
+2. Pension IHT scoring is not operationally defined for the post-2027 scenario.
+Applies to: drawdown_priority_scoring.dimensions.iht_reduction.scoring_logic, scenario toggle interaction
+Problem: You define pension_pre_2027: 8, but there is no explicit post-2027 pension IHT score when apply_2027_pension_iht=true. That leaves a gap in the core scoring engine exactly where the scenario should change draw behaviour. Since official policy papers say unused pension funds and most death benefits are intended to come into IHT from 6 April 2027, with death-in-service benefits excluded, this is not a theoretical nicety.
+Correction: Add explicit year-sensitive pension scoring, for example:
+pre-2027 with toggle on/off: high IHT-protection score
+post-2027 with toggle on: pension drops sharply on the IHT dimension
+death-in-service excluded if ever modelled later
+3. Property mortgage treatment is still inconsistent between the valuation layer and the output/IHT formulas.
+Applies to: algorithm.property_valuation_layer, output_schema.per_year.estimated_iht_bill, engine_functions.calculateNoPlanIHT
+Problem: You added the right three-value property model, but your output descriptions still define IHT using total_portfolio_value - bpr_exempt - pension, which ignores the new estate_value_iht concept. If an engineer follows the output schema literally, mortgaged property can still overstate the estate.
+Correction: Every IHT formula in the spec must reference estate-value inputs, not total_portfolio_value. Do the same in calculateNoPlanIHT().
+Important
+4. VCT_RELIEF_RATE_MISMATCH is referenced but not defined.
+Applies to: asset_register_schema.vct_relief_rate_by_subscription_date
+Problem: You say onboarding should warn VCT_RELIEF_RATE_MISMATCH, but that warning does not exist in warning_triggers or additional_warning_triggers.
+Correction: Add the trigger formally, with condition and message.
+5. subscription_amount is used but not in the schema.
+Applies to: asset_register_schema.vct_relief_rate_by_subscription_date, VCT clawback logic
+Problem: The logic relies on subscription_amount, but the schema only clearly gives you acquisition_cost and tax_relief_claimed. For primary-issue VCTs, those may align; for secondary-market lots they may not.
+Correction: Add an explicit field:
+original_subscription_amount for VCT/EIS primary lots
+or define exactly when acquisition_cost doubles as the subscription basis.
+6. BPR warning logic is still too broad.
+Applies to: warning_triggers.BPR_NOT_YET_QUALIFYING, warning_triggers.BPR_LAST_REVIEWED_STALE, warning_triggers.MISSING_ACQUISITION_DATE, hard_constraints.data_quality_vct_dates
+Problem: These warnings are still written generically enough to catch VCTs or talk about BPR in VCT contexts. You fixed the main logic, but the warning layer still leaks old assumptions.
+Correction: Restrict BPR-clock and stale-review warnings to EIS direct + AIM only. Rewrite the VCT date warning to talk only about:
+5-year CGT-free clock
+relief-clawback clock
+7. The Action Plan requires event types you have not defined.
+Applies to: action_plan_schema.property_disposal_year_event_order
+Problem: The required sequence includes debt_repayment and tax_provision, but those are not declared in action_types.
+Correction: Add both action types, otherwise the frontend team will improvise.
+8. Legacy target is described consistently as a soft preference, but the engine does not yet show exactly how it changes sequencing.
+Applies to: what_has_been_built.F004, simulation_inputs_schema.legacy_target, drawdown engine behaviour
+Problem: The wording is now much better, but the implementation hook is still vague: “influence draw sequencing” is not an algorithm.
+Correction: Add one explicit rule, such as:
+legacy target increases the effective weight on iht_reduction and/or preserve_growth by X when projected net estate approaches target
+or
+legacy target only affects warnings, not ordering
+Right now it sits in between.
+9. status: FINAL — production-ready is stronger than the document justifies.
+Applies to: meta.status
+Problem: There are still unresolved implementation gaps above. Calling it final will make people stop reading critically.
+Correction: Mark it as release candidate or implementation-ready pending tax-matrix cleanup.
+10. The review request text still says “third review cycle” and refers to older behaviour.
+Applies to: meta.review_request.context, question 3 wording
+Problem: The document history has moved on, but the review framing hasn’t. That is harmless for tax, but bad for handoff clarity.
+Correction: Update the meta language so the spec doesn’t look like a stitched-together draft.
+Minor
+11. drawdown_strategy still appears in user inputs, even though you have deprecated it.
+Applies to: user_inputs.derived_inputs.drawdown_strategy
+This is now mostly a UX hygiene issue. The deprecation note is there, but I’d remove it from “derived inputs” entirely and keep it only as a benchmark/preset implementation detail.
+12. F002 still says “recommended actions” in the meta section.
+Applies to: what_has_been_built.additions.F002
+That cuts against your own regulatory-safe wording later. Change it to “modelled sequence” or “illustrative actions.”
+13. The “BPR above cap” simplification is now stale.
+Applies to: known_simplifications_in_v1
+You now have bpr_marginal_relief_scoring, but the simplification text still says over-cap BPR lots are treated as fully protected.
+Correction: Remove or rewrite that simplification.
+Tax-law check
+The main current-law / published-measure updates you needed are already mostly in v1.5:
+2026/27 dividend rates of 10.75% / 35.75% / 39.35% are correctly aligned with the official rates table.
+LSA £268,275, annual allowance £60,000, MPAA £10,000, ISA £20,000, and CGT 18% / 24% remain aligned with the same official table.
+VCT upfront relief reducing to 20% from 6 April 2026 is real and should be reflected not just in the schedule, but in the live VCT disposal logic too.
+The published pension-IHT measure from 6 April 2027 is real enough that your scenario scoring should explicitly react to it.
+Bottom line
+The two things I would fix before handoff are:
+clean the VCT block completely so there is no remaining CGT/clawback contradiction, and
+hard-wire post-2027 pension scoring so the scenario actually changes behaviour, not just disclosures.
+After that, it really is close.

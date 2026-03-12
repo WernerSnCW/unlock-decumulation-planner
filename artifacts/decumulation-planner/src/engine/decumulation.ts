@@ -51,6 +51,12 @@ export const STRATEGY_PRESETS: Record<DrawdownStrategy, PriorityWeights> = {
   growth_first:   { tax_efficiency: 0.15, iht_reduction: 0.10, preserve_growth: 0.60, liquidity: 0.15 },
 };
 
+export interface GloryYearsConfig {
+  enabled: boolean;
+  duration: number;
+  multiplier: number;
+}
+
 export interface SimulationInputs {
   annual_income_target: number;
   plan_years: number;
@@ -65,6 +71,7 @@ export interface SimulationInputs {
   apply_2027_pension_iht: boolean;
   cash_reserve: number;
   legacy_target: number;
+  glory_years: GloryYearsConfig;
 }
 
 export interface YearResult {
@@ -305,7 +312,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const calendarYear = 2025 + planYear - 1;
     const age = inputs.current_age + planYear - 1;
     const inflationFactor = Math.pow(1 + inputs.inflation_rate, planYear - 1);
-    const spendTarget = inputs.annual_income_target * multiplier * inflationFactor;
+    const gloryMultiplier = (inputs.glory_years.enabled && planYear <= inputs.glory_years.duration)
+      ? inputs.glory_years.multiplier : 1.0;
+    const spendTarget = inputs.annual_income_target * multiplier * gloryMultiplier * inflationFactor;
 
     // Step 1: Apply growth to all assets
     for (const asset of assets) {
@@ -657,4 +666,134 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
 
   const estateWithoutPension = totalValue - pensionValue;
   return calculateIHTBill(estateWithoutPension, bprTotal, 0, pensionValue, toggles, params, calendarYear);
+}
+
+export interface OptimiserResult {
+  optimal_income: number;
+  optimal_buffer: number;
+  net_estate_after_iht: number;
+  funded_years: number;
+  legacy_met: boolean;
+  glory_phase_income: number;
+  calm_phase_income: number;
+  iterations: number;
+}
+
+export function runOptimiser(
+  baseInputs: SimulationInputs,
+  register: Asset[],
+  taxParams: TaxParametersFile,
+  mode: 'max_income' | 'max_estate' | 'balanced'
+): OptimiserResult {
+  const totalPortfolio = register.reduce((s, a) => s + a.current_value, 0);
+  const incomeFloor = 5000;
+  const incomeCeiling = Math.max(incomeFloor + 1000, Math.min(totalPortfolio / Math.max(1, baseInputs.plan_years) * 2, 500000));
+  let bestIncome = incomeFloor;
+  let bestBuffer = baseInputs.cash_reserve;
+  let bestResult: SimulationResult | null = null;
+  let iterations = 0;
+  const maxIterations = 40;
+
+  const isFeasible = (r: SimulationResult): boolean => {
+    const fullyFunded = r.summary.funded_years >= baseInputs.plan_years;
+    const legacyMet = baseInputs.legacy_target <= 0 || r.summary.net_estate_after_iht >= baseInputs.legacy_target;
+    return fullyFunded && legacyMet;
+  };
+
+  if (mode === 'max_income') {
+    let lo = incomeFloor;
+    let hi = incomeCeiling;
+    while (hi - lo > 500 && iterations < maxIterations) {
+      iterations++;
+      const mid = Math.round((lo + hi) / 2);
+      const testInputs = { ...baseInputs, annual_income_target: mid };
+      const result = runSimulation(testInputs, register, taxParams);
+      if (isFeasible(result)) {
+        bestIncome = mid;
+        bestResult = result;
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+  } else if (mode === 'max_estate') {
+    const bufferCandidates = [0, 10000, 25000, 50000, 75000, 100000, 150000, 200000, 300000];
+    const incomeCandidates: number[] = [];
+    for (let inc = incomeFloor; inc <= incomeCeiling; inc += Math.max(5000, Math.round((incomeCeiling - incomeFloor) / 20))) {
+      incomeCandidates.push(inc);
+    }
+    let bestEstate = -1;
+    for (const buffer of bufferCandidates) {
+      for (const income of incomeCandidates) {
+        iterations++;
+        if (iterations > 200) break;
+        const testInputs = { ...baseInputs, annual_income_target: income, cash_reserve: buffer };
+        const result = runSimulation(testInputs, register, taxParams);
+        if (isFeasible(result) && result.summary.net_estate_after_iht > bestEstate) {
+          bestEstate = result.summary.net_estate_after_iht;
+          bestBuffer = buffer;
+          bestIncome = income;
+          bestResult = result;
+        }
+      }
+      if (iterations > 200) break;
+    }
+  } else {
+    const bufferOptions = [0, 25000, 50000, 75000, 100000, 150000, 200000];
+    let bestScore = -Infinity;
+    for (const buffer of bufferOptions) {
+      let incLo = incomeFloor;
+      let incHi = incomeCeiling;
+      let bufBestIncome = incLo;
+      let bufBestResult: SimulationResult | null = null;
+      let subIter = 0;
+      while (incHi - incLo > 500 && subIter < 25) {
+        subIter++;
+        iterations++;
+        const mid = Math.round((incLo + incHi) / 2);
+        const testInputs = { ...baseInputs, annual_income_target: mid, cash_reserve: buffer };
+        const result = runSimulation(testInputs, register, taxParams);
+        if (isFeasible(result)) {
+          bufBestIncome = mid;
+          bufBestResult = result;
+          incLo = mid;
+        } else {
+          incHi = mid;
+        }
+      }
+      if (bufBestResult) {
+        const incomeScore = bufBestIncome / 100000;
+        const estateScore = bufBestResult.summary.net_estate_after_iht / totalPortfolio;
+        const score = incomeScore * 0.6 + estateScore * 0.4;
+        if (score > bestScore) {
+          bestScore = score;
+          bestIncome = bufBestIncome;
+          bestBuffer = buffer;
+          bestResult = bufBestResult;
+        }
+      }
+    }
+  }
+
+  if (!bestResult) {
+    const testInputs = { ...baseInputs, annual_income_target: bestIncome, cash_reserve: bestBuffer };
+    bestResult = runSimulation(testInputs, register, taxParams);
+  }
+
+  const gloryEnabled = baseInputs.glory_years.enabled;
+  const gloryPhaseIncome = gloryEnabled
+    ? bestIncome * baseInputs.glory_years.multiplier
+    : bestIncome;
+  const calmPhaseIncome = bestIncome;
+
+  return {
+    optimal_income: bestIncome,
+    optimal_buffer: bestBuffer,
+    net_estate_after_iht: bestResult.summary.net_estate_after_iht,
+    funded_years: bestResult.summary.funded_years,
+    legacy_met: baseInputs.legacy_target <= 0 || bestResult.summary.net_estate_after_iht >= baseInputs.legacy_target,
+    glory_phase_income: gloryPhaseIncome,
+    calm_phase_income: calmPhaseIncome,
+    iterations,
+  };
 }

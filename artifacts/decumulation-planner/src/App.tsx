@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import './App.css';
-import type { SimulationInputs, SimulationResult } from './engine/decumulation';
-import { runSimulation, STRATEGY_PRESETS } from './engine/decumulation';
+import type { SimulationInputs, SimulationResult, OptimiserResult } from './engine/decumulation';
+import { runSimulation, runOptimiser, STRATEGY_PRESETS } from './engine/decumulation';
 import type { Asset } from './engine/decumulation';
 import type { TaxParametersFile } from './engine/taxLogic';
 import type { Warning } from './engine/warningEvaluator';
@@ -16,6 +16,7 @@ import WarningsPanel from './components/WarningsPanel';
 import YearDetailTable from './components/YearDetailTable';
 import ActionPlan from './components/ActionPlan';
 import DisclosurePanel from './components/DisclosurePanel';
+import OptimiserPanel from './components/OptimiserPanel';
 
 import mockRegister from './data/mockRegister.json';
 import taxParameters from './data/taxParameters.json';
@@ -37,11 +38,14 @@ const DEFAULT_INPUTS: SimulationInputs = {
   apply_2027_pension_iht: true,
   cash_reserve: 0,
   legacy_target: 0,
+  glory_years: { enabled: false, duration: 5, multiplier: 1.5 },
 };
 
 function App() {
   const [inputs, setInputs] = useState<SimulationInputs>(DEFAULT_INPUTS);
   const [result, setResult] = useState<SimulationResult | null>(null);
+  const [optimiserResult, setOptimiserResult] = useState<OptimiserResult | null>(null);
+  const [optimiserRunning, setOptimiserRunning] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runSim = useCallback((inp: SimulationInputs) => {
@@ -60,11 +64,36 @@ function App() {
 
   const handleInputChange = useCallback((newInputs: SimulationInputs) => {
     setInputs(newInputs);
+    setOptimiserResult(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       runSim(newInputs);
     }, 400);
   }, [runSim]);
+
+  const handleRunOptimiser = useCallback((mode: 'max_income' | 'max_estate' | 'balanced') => {
+    setOptimiserRunning(true);
+    setTimeout(() => {
+      try {
+        const res = runOptimiser(inputs, register, taxParams, mode);
+        setOptimiserResult(res);
+      } catch (e) {
+        console.error('Optimiser error:', e);
+      }
+      setOptimiserRunning(false);
+    }, 50);
+  }, [inputs]);
+
+  const handleApplyOptimiser = useCallback(() => {
+    if (!optimiserResult) return;
+    const newInputs: SimulationInputs = {
+      ...inputs,
+      annual_income_target: optimiserResult.optimal_income,
+      cash_reserve: optimiserResult.optimal_buffer,
+    };
+    setInputs(newInputs);
+    runSim(newInputs);
+  }, [optimiserResult, inputs, runSim]);
 
   const registerWarnings = useMemo(() => evaluateRegisterWarnings(register), []);
 
@@ -135,6 +164,14 @@ function App() {
                 summary={result.summary}
                 planYears={inputs.plan_years}
                 currentAge={inputs.current_age}
+              />
+
+              <OptimiserPanel
+                inputs={inputs}
+                optimiserResult={optimiserResult}
+                optimiserRunning={optimiserRunning}
+                onRunOptimiser={handleRunOptimiser}
+                onApply={handleApplyOptimiser}
               />
 
               <StrategyComparison

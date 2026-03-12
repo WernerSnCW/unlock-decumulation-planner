@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { SimulationInputs, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy } from '../engine/decumulation';
+import type { SimulationInputs, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig } from '../engine/decumulation';
 import { STRATEGY_PRESETS } from '../engine/decumulation';
 import { getPETTaperRate } from '../engine/trustLogic';
 
@@ -162,6 +162,83 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
         />
         {errors.current_age && <span className="error-text">{errors.current_age}</span>}
       </div>
+
+      <div className="divider" />
+
+      <div className="section-title">Glory Years</div>
+
+      <div className="toggle-row">
+        <label>Spend more in early years</label>
+        <button
+          className={`toggle-switch ${inputs.glory_years.enabled ? 'active' : 'inactive'}`}
+          onClick={() => onChange({
+            ...inputs,
+            glory_years: { ...inputs.glory_years, enabled: !inputs.glory_years.enabled }
+          })}
+        >
+          <div className="toggle-knob" />
+        </button>
+      </div>
+
+      {inputs.glory_years.enabled && (
+        <>
+          <div className="input-group">
+            <label>Glory Period (years)</label>
+            <input
+              type="range"
+              min="1"
+              max={Math.min(inputs.plan_years, 15)}
+              value={inputs.glory_years.duration}
+              onChange={e => onChange({
+                ...inputs,
+                glory_years: { ...inputs.glory_years, duration: parseInt(e.target.value) }
+              })}
+              className="weight-range"
+              style={{ '--slider-color': '#F59E0B' } as React.CSSProperties}
+            />
+            <div className="glory-years-label">
+              <span>First {inputs.glory_years.duration} years</span>
+              <span className="glory-years-value">{Math.round(inputs.glory_years.multiplier * 100)}% of base income</span>
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label>Spending Multiplier</label>
+            <input
+              type="range"
+              min="110"
+              max="300"
+              step="10"
+              value={Math.round(inputs.glory_years.multiplier * 100)}
+              onChange={e => onChange({
+                ...inputs,
+                glory_years: { ...inputs.glory_years, multiplier: parseInt(e.target.value) / 100 }
+              })}
+              className="weight-range"
+              style={{ '--slider-color': '#F59E0B' } as React.CSSProperties}
+            />
+            <div className="glory-years-label">
+              <span>{'\u00D7'}{inputs.glory_years.multiplier.toFixed(1)} for {inputs.glory_years.duration}yr</span>
+              <span className="glory-years-value">then {'\u00D7'}1.0 after</span>
+            </div>
+          </div>
+
+          <div className="glory-years-summary">
+            <div className="glory-phase">
+              <span className="phase-label">Glory phase</span>
+              <span className="phase-amount">
+                {'\u00A3'}{Math.round(inputs.annual_income_target * inputs.glory_years.multiplier).toLocaleString('en-GB')}/yr
+              </span>
+            </div>
+            <div className="glory-phase calm">
+              <span className="phase-label">Calm phase</span>
+              <span className="phase-amount">
+                {'\u00A3'}{inputs.annual_income_target.toLocaleString('en-GB')}/yr
+              </span>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="divider" />
 
