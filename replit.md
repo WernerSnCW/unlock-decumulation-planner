@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── decumulation-planner/ # UK retirement drawdown planner (React + Vite)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -61,6 +62,36 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
 - Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+
+### `artifacts/decumulation-planner` (`@workspace/decumulation-planner`)
+
+UK retirement drawdown planner. React + Vite frontend-only app (no backend, no API calls). All computation runs in-browser from JSON data files.
+
+- **Styling**: Plain CSS with CSS custom properties (dark theme). No Tailwind. Fonts: Inter + JetBrains Mono.
+- **Key CSS vars**: `--unlock-bg: #0E1114`, `--unlock-surface: #11161C`, `--unlock-accent: #00BB77`, `--unlock-muted: #9FB3C8`
+- **Engine** (`src/engine/`):
+  - `decumulation.ts` — pure `runSimulation(inputs, register, taxParams)` with per-asset-class value tracking, tax deduction from portfolio, and shadow year projection
+  - `taxLogic.ts` — income tax with PA taper, CGT with basic/higher band split, PCLS/TFLS (uses `min(0.25 * gross, remainingLSA)`), IHT with BPR/NRB and year-gated scenario toggles
+  - `trustLogic.ts` — CLT rolling 7-year window, PET taper, NEFI check
+  - `warningEvaluator.ts` — register-level and year-level warnings (error/warning/info)
+- **Data** (`src/data/`):
+  - `mockRegister.json` — 8 assets (cash, ISA, pension, property, VCT, EIS, AIM)
+  - `taxParameters.json` — 2025/26 UK tax rates held flat
+- **Components** (`src/components/`):
+  - `InputPanel` — sidebar with income target, plan years, lifestyle, age, strategy, scenario toggles, gifting, inflation
+  - `FundedYearsIndicator` — summary cards (funded years, total tax, estate, IHT)
+  - `StrategyComparison` — runs all 4 strategies and displays comparison grid
+  - `PortfolioChart` — stacked area chart by asset class (Recharts)
+  - `IHTChart` — line chart with 2026/2027 reference lines
+  - `WarningsPanel` — severity-badged warnings
+  - `YearDetailTable` — expandable rows with per-asset draws and flags
+  - `DisclosurePanel` — collapsible assumptions and disclosure text
+- **Strategies**: tax_optimised, iht_optimised, income_first, growth_first
+- **Scenario toggles**: Apply 2026 BPR Cap (£1M, 50% above), Apply 2027 Pension IHT (undrawn pension in estate)
+- **Critical rules**:
+  - VCT disposal: CGT always £0 (TCGA 1992 s.151A); early disposal (<5yr) may trigger income tax clawback
+  - CLT rolling window: filter gift history to last 7 years only
+  - Taxes are deducted from portfolio each year (drawn from most liquid assets first)
 
 ### `lib/db` (`@workspace/db`)
 
