@@ -1,0 +1,2178 @@
+{
+  "meta": {
+    "document_title": "Unlock Decumulation Engine \u2014 Technical Specification v1.5",
+    "purpose": "This document specifies the algorithm, tax logic, data requirements and constraint model for the Unlock Decumulation Planner. It is the primary document sent to LLM reviewers (Perplexity, ChatGPT, Claude) for independent technical feedback before the next development sprint.",
+    "audience": [
+      "LLM technical reviewers",
+      "backend engineers",
+      "tax logic specialists",
+      "product architects"
+    ],
+    "jurisdiction": "United Kingdom",
+    "tax_year": "2025/26",
+    "version": "1.5",
+    "created": "2026-03-12",
+    "updated": "2026-03-12",
+    "author": "Unlock \u2014 Tom King",
+    "project_description": {
+      "what_unlock_is": "Unlock is a UK wealth intelligence platform for high-net-worth private investors (\u00a3250k\u2013\u00a35M+ portfolios). It provides institutional-grade portfolio intelligence: an asset register, tax modelling, EIS/VCT deal flow curation, and \u2014 via this module \u2014 decumulation planning.",
+      "what_the_decumulation_planner_does": "The Decumulation Planner answers a single question: given my assets, how long will my money last and in what order should I draw from them? The user provides their income target, plan horizon, lifestyle level, cash reserve floor, and legacy bequest target. Assets flow automatically from the Unlock asset register (cash, ISA, pension, VCTs, EIS direct, AIM shares, investment property). The engine runs a year-by-year simulation and outputs: a funded timeline, portfolio value chart by asset class, IHT trajectory, tax drag summary, net estate after IHT, and a plain-English year-by-year action plan.",
+      "architecture": "Local-first. The desktop application is the system of record \u2014 all processing runs locally. A cloud layer handles encrypted snapshot sync to a mobile viewer. The decumulation engine is a pure function (no UI or cloud dependencies) that can run on the local Node.js desktop app without modification.",
+      "target_user": "UK HNW investor, typically 55\u201375, self-directed or adviser-informed. Complex multi-asset portfolios including assets IFAs cannot advise on (VCTs, EIS direct). Reference user: retired, widowed, estate of approximately \u00a39M including VCTs, main residence, rental property, ISA, SIPP, and cash.",
+      "regulatory_context": "The tool is a planning aid, not regulated financial advice. All outputs are clearly labelled as planning estimates. Two material proposed-but-not-enacted rule changes are modelled as toggleable scenarios with disclosure banners: the April 2026 BPR/APR cap (\u00a32.5M combined) and the April 2027 pension IHT inclusion.",
+      "reference_benchmark": "The 2010 Towry Lifetime Financial Plan \u2014 a traditional IFA decumulation report. Unlock produces the equivalent dynamically, in real time, covering asset classes IFAs cannot touch."
+    },
+    "what_has_been_built": {
+      "description": "A working React/TypeScript prototype has been delivered (v1.0.0, March 2026). This spec reflects both the original design and the features added by the builder. The following were built beyond the original brief:",
+      "additions": [
+        "F001: Weighted multi-objective drawdown priority sliders \u2014 four continuous dimensions (Tax Efficiency, IHT Reduction, Preserve Growth, Liquidity) replace the fixed four-strategy enum. Weights auto-normalise. Preset buttons set common profiles. Custom blends compared as a fifth column.",
+        "F002: Action Plan \u2014 year-by-year plain-English timeline of recommended actions: what to sell, draw, gift; taxes due; milestones; shortfalls; asset depletion events. Key Years / All Years filter modes.",
+        "F003: Cash buffer \u2014 user sets a minimum cash reserve; engine enforces as hard floor across all cash-class assets.",
+        "F004: Legacy target \u2014 user specifies net-of-IHT bequest goal. Engine uses this to influence draw sequencing (prefer preserving IHT-efficient assets) and surface LEGACY_FLOOR_AT_RISK warning. Does not hard-block living-cost spending \u2014 spend target always takes precedence.",
+        "F005: IHT savings vs no-plan baseline \u2014 engine computes IHT if no draws or gifts were ever made, compares against actual plan.",
+        "F006: Asset depletion visibility \u2014 Action Plan detects and marks when any asset class reaches zero.",
+        "F007: BPR-aware draw scoring \u2014 EIS/AIM lots past their 2-year BPR qualifying date receive stronger drawdown protection than pre-qualifying lots.",
+        "F008: BPR cap updated to \u00a32.5M \u2014 reflects announced combined BPR/APR allowance. 100% relief up to \u00a32.5M, 50% above. All disclosures and warning thresholds updated.",
+        "F009: Net estate after IHT always shown \u2014 the amount beneficiaries actually receive, always visible in the estate summary card."
+      ]
+    },
+    "review_request": {
+      "context": "This specification has been through two prior LLM review cycles. v1.1 was reviewed and produced critical fixes (VCT CGT correction, PCLS formula rewrite, tax parameter scheduling, EIS deferred gains, NEFI reclassification downgrade). v1.2 incorporated those fixes. v1.3 adds nine new features from the delivered prototype. We are now requesting a third review cycle before the next development sprint.",
+      "what_we_want_from_reviewers": "A rigorous, critical assessment. We do not want validation \u2014 we want to find errors before they are built. Previous reviews caught material tax errors (VCT CGT, PCLS formula). We expect this round to catch issues with the new features.",
+      "specific_review_questions": [
+        "1. WEIGHTED PRIORITY SYSTEM (F001): The engine scores each asset using four weighted dimensions. Is the scoring logic described in 'drawdown_priority_scoring' sound? Are there edge cases where the weighting produces perverse results \u2014 e.g., drawing BPR-qualifying EIS before cash at extreme weight combinations?",
+        "2. CASH BUFFER (F003): The engine enforces a hard floor across all cash-class assets. What happens in a year where the spend target cannot be met even from non-cash assets, but drawing cash would breach the floor? The spec must define this failure mode explicitly.",
+        "3. LEGACY TARGET (F004): The engine caps drawdowns when the portfolio approaches the legacy target. How should the engine handle a year where the spend target and legacy floor are in direct conflict \u2014 i.e., meeting the spend target would breach the legacy floor? Which takes precedence and how is this surfaced to the user?",
+        "4. NO-PLAN IHT BASELINE (F005): The no-plan baseline grows all assets at their assumed_growth_rate with no draws or gifts. Is this the right baseline? Should it apply BPR relief (since BPR would still apply at death even with no plan)? Should it model the 2026/2027 rule changes in line with the main plan toggles?",
+        "5. BPR CAP \u2014 RESOLVED IN v1.5: \u00a32.5M per estate (single-individual model, announced December 2025). VCTs confirmed excluded from BPR pool. BPR pool = EIS direct + AIM shares only. Spouse/CP not modelled.",
+        "6. BPR-AWARE SCORING (F007): Lots past their 2-year BPR qualifying date receive stronger protection from drawdown under the IHT-reduction weight. Is there a scenario where drawing a qualifying EIS lot is actually IHT-optimal \u2014 e.g., when the combined BPR-qualifying total is already well above \u00a32.5M and additional BPR assets provide no marginal IHT benefit?",
+        "7. ACTION PLAN ACCURACY (F002): The Action Plan translates simulation outputs into plain-English recommended actions. Are there year-types or draw combinations that would produce misleading plain-English descriptions \u2014 e.g., a year where multiple asset classes are drawn simultaneously, or a year where a property disposal produces a large cash surplus carried forward?",
+        "8. TAX TREATMENT REVIEW: Has anything changed in UK tax law since the v1.2 review (March 2026) that affects: CGT rates, IHT nil-rate band, pension annual allowance, VCT/EIS limits, or the PCLS/LSA regime? If so, what parameters need updating?",
+        "9. SILENT FAILURE RISKS: What data quality issues or edge cases in the mock register or algorithm would cause the engine to produce wrong numbers without any visible error or warning? The previous review identified six silent failures \u2014 are there new ones introduced by the F001\u2013F009 features?",
+        "10. ACCEPTABLE vs MISLEADING SIMPLIFICATIONS: Given the nine new features, has the balance shifted \u2014 are there simplifications that were acceptable in v1.2 that are now misleading given the increased sophistication of the output (e.g., single-individual assumption, no RNRB, flat DB pension)?"
+      ],
+      "format_requested": "For each finding: (1) which section or feature it applies to, (2) severity \u2014 Critical (will produce wrong outputs) / Important (logic gap or misleading output) / Minor (edge case or disclosure gap), (3) specific correction or recommendation. Group by severity. Be direct \u2014 do not soften findings."
+    },
+    "changelog_from_v1.2": [
+      "UPDATED: bpr_full_relief_cap from \u00a31,000,000 to \u00a32,500,000 \u2014 reflects December 2025 announcement. 100% relief up to \u00a32.5M per ESTATE, 50% above. Not per taxpayer.",
+      "UPDATED: BPR_APPROACHING_CAP warning trigger threshold from \u00a3800,000 to \u00a32,000,000 to reflect the higher cap.",
+      "ADDED: drawdown_priority_scoring section \u2014 replaces fixed four-strategy enum with weighted multi-objective scoring system (F001).",
+      "ADDED: priority_weights to SimulationInputs schema \u2014 four dimensions, auto-normalising (F001).",
+      "ADDED: action_plan_schema section \u2014 defines Action Plan output structure, action types, and Key Years filter logic (F002).",
+      "ADDED: cash_reserve to SimulationInputs \u2014 minimum cash floor enforced by engine (F003).",
+      "ADDED: legacy_target to SimulationInputs \u2014 net-of-IHT bequest protection cap (F004).",
+      "ADDED: legacy_shortfall, net_estate_after_iht, iht_no_plan_baseline, iht_saving_vs_no_plan to output_schema.plan_summary (F005, F009).",
+      "ADDED: calculateNoPlanIHT() function specification (F005).",
+      "ADDED: asset_depletion_detection to algorithm step 9 (F006).",
+      "ADDED: bpr_aware_scoring_logic to drawdown_priority_scoring (F007).",
+      "ADDED: project_description and what_has_been_built to meta for reviewer context.",
+      "ADDED: review_request section with ten specific questions for this review cycle."
+    ],
+    "changelog_from_v1.1": [
+      "CRITICAL FIX: VCT disposal tax corrected \u2014 CGT does NOT apply on disposal of qualifying VCT shares regardless of hold period. Early disposal (before 5 years) triggers income tax relief clawback only, not CGT. Previous spec was materially wrong on this point.",
+      "CRITICAL FIX: Pension TFLS/PCLS crystallisation formula rewritten. Previous ratio-based formula was mathematically unstable across multiple crystallisation events. New formula: pcls = min(0.25 \u00d7 gross_crystallisation, remaining_lsa); taxable = gross_crystallisation - pcls; remaining_lsa -= pcls.",
+      "CRITICAL FIX: Tax parameter schedule introduced \u2014 tax rates, thresholds and allowances must be year-indexed for multi-year plans. Flat 2025/26 parameters cannot be silently applied to year 20 of a plan.",
+      "CRITICAL FIX: EIS deferred gains field added to schema \u2014 deferred_gain_amount. Deferred gains crystallise on EIS disposal and must be added to taxable income in the disposal year.",
+      "CRITICAL FIX: AIM/listed equity CGT rates made explicit \u2014 same 18%/24% residential property rates apply to all chargeable assets for individuals in 2025/26. Not 'standard rates' (ambiguous).",
+      "CRITICAL FIX: NEFI reclassification downgraded from automatic to advisory warning \u2014 HMRC test is looser than the strict income-surplus check. Hard reclassification removed; warning flag retained.",
+      "ADDED: schema fields allowable_improvement_costs, estimated_disposal_cost_pct, relief_claimed_type, deferred_gain_amount",
+      "ADDED: lot_disposal_methodology \u2014 UK share matching rules acknowledged; average-cost proxy disclosed for v1",
+      "ADDED: income tracking model split into cash_income / taxable_income_pre_allowances / taxable_income_post_allowances",
+      "ADDED: current_age field to enable age-anchored shadow projection horizon",
+      "ADDED: post_2027_pension_double_tax_disclaimer \u2014 beneficiary-side income tax not modelled",
+      "ADDED: trust_ongoing_charges_disclaimer \u2014 ten-year and exit charges on relevant-property trusts not modelled",
+      "ADDED: tax_parameter_schedule section with year-indexed rates and hold-flat disclosure"
+    ],
+    "changelog_from_v1.0": [
+      "FIXED: IHT bill formula now applies NRB stacking from prior CLTs/PETs before applying 40% to estate remainder",
+      "FIXED: tfls_taken boolean replaced with tfls_used_amount (number) to support partial TFLS history across multiple schemes",
+      "FIXED: wrapper_type field added to asset schema \u2014 separates wrapper (isa/pension/unwrapped/trust) from underlying asset class",
+      "FIXED: flexible_isa boolean added to schema",
+      "FIXED: Property disposal proceeds rule added \u2014 net proceeds transfer to cash and fund subsequent years",
+      "FIXED: Income type ordering specified for tax band calculation (non-savings \u2192 savings \u2192 dividends)",
+      "FIXED: Personal allowance taper formula added algorithmically",
+      "FIXED: Annual gift exemption ordering defined \u2014 applied before CLT rolling total counted",
+      "FIXED: TFLS crystallisation logic defined",
+      "FIXED: April 2026/2027 rule changes relabelled as MODELLED ASSUMPTIONS, not enacted law",
+      "FIXED: VCT BPR description amended \u2014 no longer a blanket claim; defers to is_iht_exempt flag per lot",
+      "ADDED: mpaa_triggered boolean (separate from in_drawdown)",
+      "ADDED: bpr_last_reviewed date field",
+      "ADDED: state_pension_annual optional field",
+      "ADDED: global_assumptions section",
+      "ADDED: income_type_ordering to algorithm step 3",
+      "ADDED: warning_triggers section defining when flags array is populated",
+      "ADDED: missing acquisition_cost flag logic",
+      "DEFERRED: Spouse/civil partner NRB, RNRB, Monte Carlo, multi-year optimiser, state pension offset (v2)"
+    ],
+    "review_questions": [
+      "Is the tax treatment for each asset class correct and complete?",
+      "Are there edge cases in the drawdown algorithm that produce incorrect or absurd results?",
+      "Is the constraint model complete \u2014 are there limits we have missed?",
+      "Is the trust and gifting logic accurate under current HMRC rules?",
+      "What data quality problems would cause the algorithm to fail silently?",
+      "What simplifications in this spec are acceptable for v1, and which would mislead users?",
+      "Are the proposed 2026 and 2027 rule change scenarios modelled correctly as assumptions rather than law?"
+    ],
+    "changelog_from_v1.3": [
+      "CRITICAL FIX: VCT removed from BPR/APR relief pool entirely. VCTs are listed securities and do not qualify for Business Property Relief (HMRC IHTM18113 / IHTA 1984 s.105(3)). All BPR cap logic, scoring, and IHT calculations now exclude VCTs. VCT is_iht_exempt must never be true on BPR grounds.",
+      "CRITICAL FIX: BPR cap corrected from 'per taxpayer' to 'per estate' per December 2025 government announcement. Spouses/civil partners each have their own \u00a32.5M per-estate threshold.",
+      "CRITICAL FIX: Weighted scoring dimension directions unified. All dimensions now use PROTECTION SCORE convention (10 = protect/draw last, 1 = draw first). Previous spec had mixed directions producing nonsense under some weight combinations.",
+      "CRITICAL FIX: EIS deferred gains (revived_deferred_gain) are a CGT event, not an income tax event. They affect CGT rate via income stacking but do not enter income tax band calculation as non-savings income. Field renamed from deferred_gain_amount to revived_deferred_gain in engine context.",
+      "CRITICAL FIX: BPR cap in scenario_toggles label corrected from \u00a31M to \u00a32.5M. Multiple lingering \u00a31M references eliminated from VCT/EIS/AIM asset matrix and hard constraints.",
+      "ADDED: bpr_marginal_relief_scoring \u2014 replaces binary BPR protection. IHT-reduction score now proportional to marginal relief remaining relative to \u00a32.5M cap. Over-cap lots score 5 not 10.",
+      "ADDED: constraint_layer_rule to drawdown_priority_scoring \u2014 scoring only orders the eligible draw set; it cannot override hard constraints.",
+      "ADDED: conflict_resolution_priority_order to hard_constraints \u2014 cash floor > spend > shortfall > legacy > gifts.",
+      "ADDED: data_confidence_framework \u2014 plan_confidence_level (HIGH/MEDIUM/LOW) required on every simulation output.",
+      "ADDED: ux_and_onboarding_requirements section \u2014 first-run acknowledgement gate, onboarding step order, input badging (hard rule / soft preference / scenario assumption), slider human-readable labels, operational realism warning.",
+      "ADDED: action_plan new event types \u2014 dispose, transfer_to_cash, surplus_carried_forward, band_management, driver_note.",
+      "ADDED: multi_asset_year_rule to action_plan_schema \u2014 grouped format for years with 3+ draw sources.",
+      "ADDED: property_mortgage_net_economics hard constraint.",
+      "ADDED: vct_not_bpr_qualifying hard constraint.",
+      "ADDED: Shadow horizon formula corrected to max(plan_years, 35, 90 - current_age). Age input restricted to 55-90 in v1.",
+      "ADDED: Five new warning triggers \u2014 PCLS_HISTORY_UNCERTAIN, MPAA_STATUS_INCONSISTENT, LIQUIDITY_RISK, VCT_IHT_EXEMPT_FLAG_INCORRECT, ISA_GIFT_DESTROYS_SHELTER, WRAPPER_TYPE_REVIEW_REQUIRED.",
+      "ADDED: 2026/27 dividend rate update \u2014 10.75% / 35.75% / 39.35%. Note to add 2026/27 schedule entry.",
+      "ADDED: VCT upfront relief rate change from April 2026 \u2014 new subscriptions at 20% (not 30%). Clawback basis changes for post-April-2026 lots.",
+      "UPDATED: VCT drawdown_priority_notes \u2014 removed BPR references, updated to reflect in-estate status.",
+      "UPDATED: action_plan Language guidance \u2014 avoid 'recommended actions' framing. Use 'modelled sequence under selected assumptions'."
+    ],
+    "changelog_from_v1.4": [
+      "CRITICAL FIX: VCT removed from BPR/IHT-exempt logic in every live body section \u2014 is_iht_exempt field, VCT asset matrix (IHT, limits, drawdown notes), algorithm step 7, drawdown_strategies (both priority orders and logic), scenario_toggles affects list, known_simplifications, bpr_marginal_relief_scoring.",
+      "CRITICAL FIX: Scoring convention enforced globally. All edge-case examples rewritten to match protection-score direction (10=protect/draw last, 1=draw first). Sort ascending = draw first. scoreAssetForDrawdown returns description updated.",
+      "CRITICAL FIX: current_age range unified to 55\u201390 in all sections. Shadow horizon formula unified to max(plan_years, 35, 90 - current_age) in all sections.",
+      "CRITICAL FIX: EIS deferred gain field renamed revived_deferred_gain in schema, warning trigger, hard constraints, and known_simplifications. All references updated to CGT-not-income framing.",
+      "CRITICAL FIX: Ownership unit unified to 'single-individual model; spouse/CP has separate threshold' in all BPR cap references. Eliminated mixed per-taxpayer / per-individual / per-estate language.",
+      "UPDATED: drawdown_strategy enum deprecated in user_inputs \u2014 replaced by preset buttons populating priority_weights. Enum retained in algorithm.drawdown_strategies as reference/benchmark only.",
+      "UPDATED: Cash buffer simplification note corrected \u2014 engine continues to non-cash assets when cash floor binds. Removed contradictory 'no automatic substitution' statement.",
+      "UPDATED: Legacy target \u2014 all 'caps drawdowns' language removed. Now consistently: soft optimisation preference, does not hard-block living-cost draws.",
+      "UPDATED: ISA entry in tax matrix labelled as wrapper_behaviour_reference \u2014 not a real asset class.",
+      "ADDED: property_valuation_layer to algorithm \u2014 three explicit fields: display_value_gross, funding_value_net, estate_value_iht.",
+      "ADDED: property_disposal_year_event_order \u2014 mandatory six-step event sequence for disposal years.",
+      "ADDED: iht_saving_suppressed to output_schema.plan_summary \u2014 suppresses comparison when confidence is LOW.",
+      "ADDED: blocking_checklist to data_confidence_framework \u2014 plain-English blockers with Fix/Proceed UI.",
+      "ADDED: three_screen_onboarding with three preset cards (Spend well / Balanced / Protect my legacy) including concrete weights and defaults.",
+      "ADDED: 2026/27 entry to tax_parameter_schedule \u2014 dividend rates 10.75%/35.75%/39.35%, VCT relief 20%, BPR cap note.",
+      "ADDED: vct_relief_rate_by_subscription_date to asset_register_schema \u2014 30% pre-April-2026, 20% post.",
+      "FIXED: baseline_income output field \u2014 gross cash received, not taxable amount.",
+      "FIXED: Liquidity slider \u2014 live example and counter-intuitive direction warning added for UX implementation.",
+      "RENAMED: simulation_inputs_schema_v1.3 \u2192 simulation_inputs_schema.",
+      "RENAMED: new_functions_v1.3 \u2192 engine_functions.",
+      "RENAMED: new_warning_triggers_v1.3 \u2192 additional_warning_triggers."
+    ],
+    "status": "FINAL \u2014 production-ready for Werner handoff"
+  },
+  "global_assumptions": {
+    "description": "Explicit assumptions that apply to the entire model. These must be disclosed in the UI wherever outputs are shown.",
+    "assumptions": [
+      "We model you as a single UK resident individual. Spouse, civil partner exemptions, transferable nil-rate bands (TNRB), and joint asset transfers are not modelled.",
+      "Plan year 1 = the tax year starting 6 April in which the plan is created. All allowances reset on 6 April. Plans do not start mid-tax-year.",
+      "The April 2026 BPR cap and April 2027 pension IHT changes are modelled policy assumptions based on proposals announced in October 2024. Neither has been enacted into statute as of March 2026. These scenarios can be toggled on or off.",
+      "Defined benefit pensions are treated as a flat annual income stream. Pension capital value, survivor benefits, and commutation rights are not modelled.",
+      "State pension is excluded by default. An optional state_pension_annual field can be populated to reduce required drawdown.",
+      "All assets are assumed to be UK-sited and owned by a UK resident individual. Non-domiciled status, offshore structures, and corporate ownership are not modelled.",
+      "Growth rates are flat annual assumptions. Sequence-of-returns risk and Monte Carlo modelling are deferred to v2.",
+      "Residential Nil-Rate Band (RNRB: \u00a3175,000 per individual) is not modelled. If your main residence passes to direct descendants, actual IHT may be lower than shown.",
+      "Care costs, divorce, and relationship changes are not modelled.",
+      "The dividend allowance (\u00a3500 for 2025/26) and personal savings allowance (\u00a31,000 basic rate / \u00a3500 higher rate / \u00a30 additional rate) are stored as configurable global parameters, not hardcoded constants.",
+      "All tax rates, thresholds and allowances are year-indexed via tax_parameter_schedule. Years beyond the schedule use the last known parameters (hold-flat assumption). This must be disclosed in the UI: 'Tax parameters beyond [last scheduled year] are held at [year] values. Actual future rates may differ.'",
+      "current_age is required at plan creation to anchor the shadow projection. Shadow horizon = max(plan_years, 35, 90 - current_age). The minimum of 35 ensures the shadow always runs at least 35 years. Example: age 70, plan 20 years \u2192 max(20, 35, 20) = 35. Age input range is 55\u201390 in v1. Disclosed in UI.",
+      "Post-2027 pension IHT outputs show estate-level IHT only. Beneficiary-side income tax on inherited pension drawdown is not modelled. The full family tax burden may be higher or lower than shown depending on beneficiary circumstances.",
+      "Discretionary trust outputs model entry charges and death interactions only. Ongoing relevant-property trust charges (ten-year periodic charge and exit charges) are not modelled. Users with active discretionary trusts should obtain separate adviser confirmation of ongoing trust costs."
+    ],
+    "configurable_global_parameters": [
+      {
+        "id": "personal_allowance",
+        "default": 12570,
+        "description": "Income tax personal allowance"
+      },
+      {
+        "id": "basic_rate_threshold",
+        "default": 50270,
+        "description": "Upper bound of basic rate band"
+      },
+      {
+        "id": "higher_rate_threshold",
+        "default": 125140,
+        "description": "Upper bound of higher rate band (personal allowance taper completes here)"
+      },
+      {
+        "id": "pa_taper_start",
+        "default": 100000,
+        "description": "Income at which personal allowance begins tapering"
+      },
+      {
+        "id": "basic_rate",
+        "default": 0.2,
+        "description": "Income tax basic rate"
+      },
+      {
+        "id": "higher_rate",
+        "default": 0.4,
+        "description": "Income tax higher rate"
+      },
+      {
+        "id": "additional_rate",
+        "default": 0.45,
+        "description": "Income tax additional rate"
+      },
+      {
+        "id": "dividend_allowance",
+        "default": 500,
+        "description": "Annual dividend allowance before tax applies"
+      },
+      {
+        "id": "psa_basic",
+        "default": 1000,
+        "description": "Personal savings allowance \u2014 basic rate taxpayer"
+      },
+      {
+        "id": "psa_higher",
+        "default": 500,
+        "description": "Personal savings allowance \u2014 higher rate taxpayer"
+      },
+      {
+        "id": "psa_additional",
+        "default": 0,
+        "description": "Personal savings allowance \u2014 additional rate taxpayer"
+      },
+      {
+        "id": "cgt_exempt_amount",
+        "default": 3000,
+        "description": "Annual CGT exempt amount"
+      },
+      {
+        "id": "cgt_rate_basic",
+        "default": 0.18,
+        "description": "CGT rate for residential property \u2014 basic rate taxpayer"
+      },
+      {
+        "id": "cgt_rate_higher",
+        "default": 0.24,
+        "description": "CGT rate for residential property \u2014 higher/additional rate taxpayer"
+      },
+      {
+        "id": "iht_rate",
+        "default": 0.4,
+        "description": "Standard IHT rate"
+      },
+      {
+        "id": "iht_rate_lifetime_clt",
+        "default": 0.2,
+        "description": "Immediate IHT rate on CLT above NRB"
+      },
+      {
+        "id": "nil_rate_band",
+        "default": 325000,
+        "description": "IHT nil-rate band per individual"
+      },
+      {
+        "id": "tfls_lifetime_limit",
+        "default": 268275,
+        "description": "Lifetime TFLS allowance across all pension schemes"
+      },
+      {
+        "id": "annual_gift_exemption",
+        "default": 3000,
+        "description": "Annual IHT-free gift exemption per individual"
+      },
+      {
+        "id": "isa_annual_limit",
+        "default": 20000,
+        "description": "Annual ISA subscription limit"
+      },
+      {
+        "id": "pension_annual_allowance",
+        "default": 60000,
+        "description": "Annual pension contribution allowance"
+      },
+      {
+        "id": "mpaa",
+        "default": 10000,
+        "description": "Money Purchase Annual Allowance once triggered"
+      },
+      {
+        "id": "vct_annual_limit",
+        "default": 200000,
+        "description": "Annual VCT subscription limit"
+      },
+      {
+        "id": "eis_annual_limit",
+        "default": 1000000,
+        "description": "Annual EIS investment limit (standard)"
+      },
+      {
+        "id": "eis_ki_annual_limit",
+        "default": 2000000,
+        "description": "Annual EIS investment limit (knowledge-intensive)"
+      },
+      {
+        "id": "bpr_full_relief_cap",
+        "default": 2500000,
+        "description": "MODELLED ASSUMPTION (effective April 2026, announced December 2025): Combined BPR + APR qualifying assets (EIS direct + AIM shares \u2014 VCT excluded) below this threshold: 100% IHT relief. Above: 50% (effective 20% IHT on excess). \u00a32.5M threshold in this single-individual model; spouse/civil partner has a separate threshold \u2014 aggregation not modelled."
+      }
+    ],
+    "tax_parameter_schedule": {
+      "description": "Year-indexed tax parameters for multi-year plans. Each entry covers one tax year (6 April to 5 April). The engine must look up parameters by plan_year rather than using flat 2025/26 values. Years beyond the last entry use the final entry's values (hold-flat). The UI must disclose the hold-flat assumption clearly.",
+      "hold_flat_disclosure": "Tax parameters beyond the last scheduled year are held at the most recent known values. Actual future rates, thresholds, and allowances will differ. This planner is not a forecast of future tax law.",
+      "schedule": [
+        {
+          "tax_year": "2025/26",
+          "plan_year_start": 1,
+          "personal_allowance": 12570,
+          "basic_rate_threshold": 50270,
+          "higher_rate_threshold": 125140,
+          "pa_taper_start": 100000,
+          "basic_rate": 0.2,
+          "higher_rate": 0.4,
+          "additional_rate": 0.45,
+          "dividend_basic_rate": 0.0875,
+          "dividend_higher_rate": 0.3375,
+          "dividend_additional_rate": 0.3935,
+          "dividend_allowance": 500,
+          "psa_basic": 1000,
+          "psa_higher": 500,
+          "psa_additional": 0,
+          "cgt_exempt_amount": 3000,
+          "cgt_rate_basic": 0.18,
+          "cgt_rate_higher": 0.24,
+          "cgt_rate_basic_other_assets": 0.18,
+          "cgt_rate_higher_other_assets": 0.24,
+          "iht_rate": 0.4,
+          "nil_rate_band": 325000,
+          "tfls_lifetime_limit": 268275,
+          "isa_annual_limit": 20000,
+          "pension_annual_allowance": 60000,
+          "mpaa": 10000,
+          "vct_annual_limit": 200000,
+          "eis_annual_limit": 1000000,
+          "eis_ki_annual_limit": 2000000,
+          "notes": "CGT rates unified at 18%/24% from October 2024. VCT income-tax relief 30% \u2014 reduces to 20% from 6 April 2026 for new subscriptions.",
+          "vct_income_tax_relief_rate": 0.3
+        },
+        {
+          "tax_year": "2026/27",
+          "plan_year_start": 2,
+          "personal_allowance": 12570,
+          "basic_rate_threshold": 50270,
+          "higher_rate_threshold": 125140,
+          "pa_taper_start": 100000,
+          "basic_rate": 0.2,
+          "higher_rate": 0.4,
+          "additional_rate": 0.45,
+          "dividend_basic_rate": 0.1075,
+          "dividend_higher_rate": 0.3575,
+          "dividend_additional_rate": 0.3935,
+          "dividend_allowance": 500,
+          "psa_basic": 1000,
+          "psa_higher": 500,
+          "psa_additional": 0,
+          "cgt_exempt_amount": 3000,
+          "cgt_rate_basic": 0.18,
+          "cgt_rate_higher": 0.24,
+          "cgt_rate_basic_other_assets": 0.18,
+          "cgt_rate_higher_other_assets": 0.24,
+          "iht_rate": 0.4,
+          "nil_rate_band": 325000,
+          "tfls_lifetime_limit": 268275,
+          "isa_annual_limit": 20000,
+          "pension_annual_allowance": 60000,
+          "mpaa": 10000,
+          "vct_annual_limit": 200000,
+          "eis_annual_limit": 1000000,
+          "eis_ki_annual_limit": 2000000,
+          "vct_income_tax_relief_rate": 0.2,
+          "notes": "Dividend rates increased from 2025/26. VCT upfront income-tax relief reduced 30% \u2192 20% from 6 April 2026 for new subscriptions \u2014 affects tax_relief_claimed and clawback basis. BPR/APR cap (\u00a32.5M per estate) takes effect from April 2026 under modelled assumption. Savings rates planned to change from 6 April 2027 (22%/42%/47%) \u2014 not yet enacted."
+        }
+      ],
+      "implementation_note": "When a plan crosses a tax year boundary mid-simulation (all plans do, since plan years align to 6 April), apply the parameters for the tax year containing that plan year. For example, plan year 3 starting April 2028 uses 2028/29 parameters if they exist in the schedule, otherwise holds at the last known entry."
+    }
+  },
+  "product_context": {
+    "platform": "Unlock",
+    "description": "Unlock is a UK wealth intelligence platform for high-net-worth private investors with portfolios of \u00a3250k\u2013\u00a35M+. It provides institutional-grade portfolio intelligence including an asset register, tax modelling, EIS/VCT deal flow, and \u2014 via this module \u2014 decumulation planning.",
+    "target_user": "UK HNW investor, typically aged 55\u201375, with complex multi-asset portfolios including ISAs, pensions, VCTs, EIS direct investments, rental property, and cash. Often self-directed or adviser-informed rather than fully advised.",
+    "module": "Decumulation Planner",
+    "module_description": "A planning tool that answers: given my assets (loaded from the Unlock asset register), how long will my money last if I spend X per year at Y lifestyle level, and what is the optimal sequence to draw assets to minimise tax and maximise the estate passed to heirs?",
+    "key_design_principle": "Assets are NEVER manually entered by the user. They flow from the Unlock asset register, which holds lot-level data including acquisition dates, acquisition costs, wrapper types, and tax relief claimed on entry. The planner is a read-and-compute layer on top of the register.",
+    "reference_benchmark": "The 2010 Towry Lifetime Financial Plan (a traditional IFA-produced decumulation report). Unlock should produce an equivalent output dynamically, in real time, covering asset classes IFAs cannot advise on (VCTs, EIS direct), and updating continuously as the register changes."
+  },
+  "scenario_toggles": {
+    "description": "Future rule changes that are modelled as assumptions, not enacted law. These must appear as toggleable scenarios in the UI with a clear disclosure banner. Default is ON to encourage planning ahead, but users must be told these are not current law.",
+    "toggles": [
+      {
+        "id": "apply_2026_bpr_cap",
+        "label": "Apply proposed 2026 BPR/APR cap (\u00a32.5M per estate at 100%, 50% above)",
+        "default": true,
+        "disclaimer": "This scenario is based on proposals announced in the October 2024 Autumn Budget. It has not been enacted into law as of March 2026. Actual rules may differ.",
+        "affects": [
+          "eis.iht",
+          "aim_shares.iht",
+          "output_schema.estimated_iht_bill"
+        ]
+      },
+      {
+        "id": "apply_2027_pension_iht",
+        "label": "Apply proposed 2027 pension IHT inclusion",
+        "default": true,
+        "disclaimer": "This scenario is based on proposals announced in the October 2024 Autumn Budget. It has not been enacted into law as of March 2026. Actual rules may differ.",
+        "affects": [
+          "pension.iht",
+          "algorithm.step_8",
+          "drawdown_strategies.iht_optimised"
+        ]
+      }
+    ]
+  },
+  "user_inputs": {
+    "description": "The only three inputs the user provides. Everything else is computed from the register or offered as optional configuration.",
+    "inputs": [
+      {
+        "id": "annual_income_target",
+        "label": "Annual income needed",
+        "type": "number",
+        "unit": "GBP",
+        "range": [
+          20000,
+          500000
+        ],
+        "description": "The base annual spending target in today's money, before lifestyle multiplier and before inflation adjustment"
+      },
+      {
+        "id": "plan_years",
+        "label": "Plan for how many years",
+        "type": "integer",
+        "range": [
+          5,
+          50
+        ],
+        "description": "The number of years the plan should cover. Longevity risk is the primary failure mode \u2014 users should be encouraged to plan to at least age 90 (typically 25\u201335 years). Algorithm always also runs a 35-year shadow projection regardless of this input."
+      },
+      {
+        "id": "lifestyle_multiplier",
+        "label": "Lifestyle level",
+        "type": "enum",
+        "options": [
+          {
+            "id": "modest",
+            "label": "Modest",
+            "multiplier": 0.7,
+            "description": "Comfortable, careful spending"
+          },
+          {
+            "id": "comfortable",
+            "label": "Comfortable",
+            "multiplier": 1.0,
+            "description": "Regular holidays, dining out"
+          },
+          {
+            "id": "generous",
+            "label": "Generous",
+            "multiplier": 1.5,
+            "description": "Business class, luxury experiences"
+          },
+          {
+            "id": "unlimited",
+            "label": "Unlimited",
+            "multiplier": 2.2,
+            "description": "No compromises"
+          }
+        ],
+        "description": "Applied as a multiplier to annual_income_target to produce the real annual spend target"
+      }
+    ],
+    "derived_inputs": [
+      {
+        "id": "inflation_rate",
+        "default": 0.03,
+        "user_selectable": true,
+        "options": [
+          0.02,
+          0.03,
+          0.04,
+          0.05
+        ],
+        "description": "Applied annually to compound the spending target in nominal terms"
+      },
+      {
+        "id": "drawdown_strategy",
+        "default": "tax_optimised",
+        "user_selectable": true,
+        "options": [
+          "tax_optimised",
+          "iht_optimised",
+          "income_first",
+          "growth_first"
+        ],
+        "description": "DEPRECATED from v1.3. The four strategies are now preset buttons that populate priority_weights sliders. Retained in algorithm.drawdown_strategies as reference only and for benchmark comparison UI columns. Do not expose as a user-facing selector in v1.5+.",
+        "deprecated_in": "v1.3",
+        "replacement": "priority_weights with preset_weight_profiles"
+      },
+      {
+        "id": "annual_gift_amount",
+        "default": 0,
+        "user_selectable": true,
+        "description": "Annual amount transferred to trust or gifted to family. Removed from estate each year before drawdown calculation."
+      },
+      {
+        "id": "state_pension_annual",
+        "default": 0,
+        "user_selectable": true,
+        "description": "Annual state pension income in today's money. Reduces required drawdown from assets each year. Default 0 \u2014 omitting it overstates asset consumption slightly but is the conservative assumption."
+      },
+      {
+        "id": "current_age",
+        "default": null,
+        "required": true,
+        "type": "integer",
+        "range": [
+          55,
+          90
+        ],
+        "description": "User's current age at plan creation. Required. Range 55\u201390 in v1. Shadow horizon = max(plan_years, 35, 90 - current_age)."
+      }
+    ]
+  },
+  "asset_register_schema": {
+    "description": "The data structure Unlock's asset register must supply per asset holding. Lot-level granularity is required for VCTs and EIS \u2014 a single holding may have multiple lots with different acquisition dates and therefore different BPR/CGT clocks. wrapper_type and asset_class are separate fields \u2014 the combination determines tax treatment.",
+    "wrapper_types": [
+      "isa",
+      "pension",
+      "unwrapped",
+      "trust",
+      "company"
+    ],
+    "asset_classes": [
+      "cash",
+      "listed_equity",
+      "aim_shares",
+      "bonds",
+      "vct",
+      "eis",
+      "property_investment",
+      "property_main_residence",
+      "other"
+    ],
+    "tax_treatment_derived_from": "wrapper_type + asset_class combination. Example: aim_shares in wrapper_type=isa are taxed as ISA (growth/income tax-free, IHT in estate) not as unwrapped AIM (dividends taxable, CGT on disposal, BPR after 2 years).",
+    "required_fields_per_lot": [
+      {
+        "field": "asset_id",
+        "type": "string",
+        "description": "Unique identifier per lot"
+      },
+      {
+        "field": "wrapper_type",
+        "type": "enum",
+        "description": "isa / pension / unwrapped / trust / company. NEW in v1.1. Combined with asset_class to derive tax treatment."
+      },
+      {
+        "field": "asset_class",
+        "type": "enum",
+        "description": "Underlying asset type \u2014 see asset_classes above. Separate from wrapper_type."
+      },
+      {
+        "field": "label",
+        "type": "string",
+        "description": "Human-readable name e.g. 'Octopus Titan VCT \u2014 2021 tranche'"
+      },
+      {
+        "field": "current_value",
+        "type": "number",
+        "description": "Current market or estimated value in GBP"
+      },
+      {
+        "field": "acquisition_date",
+        "type": "date",
+        "description": "Date of purchase/subscription. Required for: CGT clock (all asset classes), BPR clock (EIS/AIM only \u2014 NOT VCT), VCT clawback clock (5yr), VCT CGT-free clock (5yr). If missing for EIS/AIM: flag and exclude from BPR calculation. If missing for VCT: flag and exclude from CGT-free and clawback calculations."
+      },
+      {
+        "field": "acquisition_cost",
+        "type": "number",
+        "description": "Amount paid at acquisition before any tax relief. Critical for CGT base cost. If missing for any asset where CGT applies on draw, flag and exclude from CGT calculation \u2014 never default to zero."
+      },
+      {
+        "field": "tax_relief_claimed",
+        "type": "number",
+        "description": "Income tax relief received on entry (e.g. 30% EIS/VCT). Affects net cost basis for loss relief calculations."
+      },
+      {
+        "field": "assumed_growth_rate",
+        "type": "number",
+        "description": "Annual growth rate assumption for this asset. Editable per lot or set by asset class default."
+      },
+      {
+        "field": "income_generated",
+        "type": "number",
+        "description": "Annual income produced by this asset (rent, dividends, interest). Used for income tax stacking calculation."
+      },
+      {
+        "field": "is_iht_exempt",
+        "type": "boolean",
+        "description": "Applies ONLY to EIS direct investments and AIM shares. Never to VCT \u2014 VCTs are listed securities that do not qualify for Business Property Relief (IHTA 1984 s.105(3), HMRC IHTM18113). For EIS/AIM: set based on adviser confirmation. Never assume true if acquisition_date is missing. For VCT lots this field must be false \u2014 warning VCT_IHT_EXEMPT_FLAG_INCORRECT fires if true on a VCT lot."
+      },
+      {
+        "field": "bpr_qualifying_date",
+        "type": "date",
+        "description": "Computed from acquisition_date + 2 years. Applies ONLY to EIS direct and AIM shares. Null for VCT (no BPR qualification). Null if acquisition_date is missing."
+      },
+      {
+        "field": "bpr_last_reviewed",
+        "type": "date|null",
+        "description": "Date BPR qualification was last confirmed. EIS/AIM only \u2014 not applicable to VCT. Flag BPR_LAST_REVIEWED_STALE if > 12 months old for EIS/AIM lots."
+      },
+      {
+        "field": "cgt_exempt_date",
+        "type": "date|null",
+        "description": "Date on which disposal becomes CGT-free. VCT: acquisition_date + 5 years. EIS: acquisition_date + 3 years. Null if acquisition_date missing."
+      },
+      {
+        "field": "mortgage_balance",
+        "type": "number",
+        "description": "For property: outstanding mortgage. Net equity = current_value - mortgage_balance."
+      },
+      {
+        "field": "pension_type",
+        "type": "enum|null",
+        "description": "For pensions: defined_contribution / defined_benefit / sipp / workplace. Affects draw rules."
+      },
+      {
+        "field": "tfls_used_amount",
+        "type": "number",
+        "description": "NEW in v1.1 \u2014 REPLACES tfls_taken boolean. Cumulative TFLS drawn from this individual's pensions across all schemes in GBP. Remaining allowance = global_parameters.tfls_lifetime_limit - tfls_used_amount. If 0: TFLS not yet used."
+      },
+      {
+        "field": "mpaa_triggered",
+        "type": "boolean",
+        "description": "NEW in v1.1. True if flexi-access drawdown has been taken and MPAA is in force. More precise than in_drawdown proxy. When true, future pension contributions capped at mpaa (\u00a310,000/year)."
+      },
+      {
+        "field": "in_drawdown",
+        "type": "boolean",
+        "description": "True if pension is already in flexible drawdown phase. Used for display/status only in v1.1 \u2014 MPAA logic uses mpaa_triggered."
+      },
+      {
+        "field": "flexible_isa",
+        "type": "boolean",
+        "description": "NEW in v1.1. True if ISA wrapper permits withdrawn funds to be redeposited in the same tax year without consuming additional annual allowance."
+      },
+      {
+        "field": "revived_deferred_gain",
+        "type": "number|null",
+        "description": "For EIS lots where CGT deferral relief was used on entry: the gain originally deferred. On disposal, this gain is REVIVED and subject to CGT \u2014 NOT added to income tax as non-savings income. Stacked on top of taxable income to determine CGT rate (18%/24%) but does not enter the income tax band calculation. If null: flag EIS_DEFERRED_GAIN_MISSING \u2014 disposal-year CGT may be understated."
+      },
+      {
+        "field": "relief_claimed_type",
+        "type": "enum|null",
+        "description": "NEW in v1.2. For VCT/EIS lots: type of relief claimed on entry \u2014 'income_tax_relief' / 'cgt_deferral' / 'both' / 'none'. Drives clawback and disposal-year tax calculations. VCT lots with relief_claimed_type=none have no clawback on early disposal."
+      },
+      {
+        "field": "allowable_improvement_costs",
+        "type": "number",
+        "description": "NEW in v1.2. For property: cumulative allowable capital improvement costs since acquisition. Added to acquisition_cost when calculating CGT gain. Default 0. Do not include repair/maintenance (revenue costs)."
+      },
+      {
+        "field": "estimated_disposal_cost_pct",
+        "type": "number",
+        "description": "NEW in v1.2. For property: estimated disposal costs as a percentage of sale proceeds (agent fees, legal costs, etc.). Default 2.5%. Deducted from disposal proceeds before CGT calculation. Alternative to estimated_disposal_cost_amount \u2014 use one or the other."
+      },
+      {
+        "field": "estimated_disposal_cost_amount",
+        "type": "number|null",
+        "description": "NEW in v1.2. For property: fixed estimated disposal cost in GBP. Takes precedence over estimated_disposal_cost_pct if both present."
+      }
+    ],
+    "lot_disposal_methodology": {
+      "description": "UK share matching rules (TCGA 1992 s.104) govern which acquisition lots are matched against disposals for CGT purposes. Full HMRC share matching is not implemented in v1. A disclosed average-cost proxy is used instead.",
+      "v1_proxy": "Average cost basis: total acquisition_cost across all lots of same asset / total units. CGT gain = disposal_proceeds - (average_cost_per_unit \u00d7 units_disposed). This is a planning approximation only \u2014 actual CGT may differ if lot-level matching produces different results.",
+      "disclosure": "This planner uses an average-cost approximation for CGT on multi-lot holdings. Actual CGT liability depends on HMRC share matching rules and may differ. For disposal decisions, users should obtain specific tax advice.",
+      "exception": "VCT and EIS lots must ALWAYS be treated at individual lot level \u2014 never averaged. Each lot has its own relief_claimed_type, revived_deferred_gain, acquisition_date, and clawback exposure. Averaging across VCT/EIS lots would produce incorrect clawback and revived-deferred-gain calculations."
+    },
+    "vct_relief_rate_by_subscription_date": {
+      "description": "VCT upfront income-tax relief rate is determined by subscription date.",
+      "rules": [
+        "Pre 6 April 2026: relief rate = 30%. Clawback on early disposal = 30% \u00d7 subscription_amount.",
+        "On or after 6 April 2026: relief rate = 20%. Clawback = 20% \u00d7 subscription_amount.",
+        "Rate is locked at subscription date \u2014 not at disposal date or current tax year.",
+        "Engine reads tax_relief_claimed from lot record. Never re-derive from a fixed global rate."
+      ],
+      "onboarding_validation": "Warn VCT_RELIEF_RATE_MISMATCH if tax_relief_claimed / subscription_amount is not ~0.30 for pre-April-2026 lots or ~0.20 for post-April-2026 lots."
+    }
+  },
+  "asset_tax_matrix": {
+    "description": "Tax treatment per asset class. Tax is derived from wrapper_type + asset_class. The treatments below assume wrapper_type=unwrapped unless stated. For assets held inside ISA or pension wrappers, the wrapper tax rules override the underlying asset rules.",
+    "wrapper_override_rules": {
+      "isa": "All growth and income tax-free within wrapper. Withdrawal tax-free. IHT: in estate at full value (no exemption). Annual contribution limit: \u00a320,000. Withdrawn funds cannot be redeposited unless flexible_isa=true.",
+      "pension": "All growth tax-free within wrapper. Contributions receive income tax relief at marginal rate. Withdrawal: 25% tax-free (subject to tfls_used_amount vs tfls_lifetime_limit), remainder taxed as income at marginal rate. IHT: see pension entry in assets array."
+    },
+    "assets": [
+      {
+        "asset_class": "cash",
+        "on_entry": "No relief",
+        "while_held": "Interest taxed as income above personal savings allowance (PSA). PSA is configurable: \u00a31,000 basic rate, \u00a3500 higher rate, \u00a30 additional rate.",
+        "on_draw": "No tax event on withdrawal. Interest taxed annually as it arises.",
+        "iht": "In estate at full value. No exemption.",
+        "cgt": "Not applicable",
+        "drawdown_priority_notes": "Draw first. No tax on withdrawal, lowest growth rate, erodes in real terms.",
+        "limits": []
+      },
+      {
+        "asset_class": "isa",
+        "wrapper_type_assumed": "isa",
+        "on_entry": "No relief. Annual contribution limit \u00a320,000.",
+        "while_held": "All growth and income tax-free within wrapper.",
+        "on_draw": "Completely tax-free. No income tax, no CGT.",
+        "iht": "In estate at full value. No exemption.",
+        "cgt": "Not applicable \u2014 CGT-exempt within wrapper",
+        "drawdown_priority_notes": "Draw after cash. Tax-free withdrawal but once drawn, contribution allowance for that tax year is permanently lost (unless flexible_isa=true). Do not over-draw from ISA.",
+        "limits": [
+          {
+            "limit": "annual_contribution",
+            "amount": 20000,
+            "period": "tax_year",
+            "note": "Cannot be refilled after withdrawal unless flexible_isa=true"
+          }
+        ],
+        "_type": "wrapper_behaviour_reference",
+        "_note": "ISA is a wrapper type, not an asset class. This entry documents wrapper_type=isa behaviour only. The canonical definition is in asset_tax_matrix.wrapper_override_rules.isa. ISA does not appear as asset_class in the register schema."
+      },
+      {
+        "asset_class": "pension",
+        "on_entry": "Tax relief at marginal rate on contributions. Annual allowance \u00a360,000 or 100% earnings (lower prevails). Carry-forward of unused allowance from 3 prior tax years permitted.",
+        "while_held": "All growth tax-free within wrapper.",
+        "on_draw": {
+          "tax_free_lump_sum": "Up to 25% of each crystallisation event is tax-free as a Pension Commencement Lump Sum (PCLS), subject to the individual's remaining Lump Sum Allowance (LSA). LSA remaining = tfls_lifetime_limit (\u00a3268,275) - tfls_used_amount.",
+          "tfls_crystallisation_formula": "CORRECTED in v1.2. For each pension draw event: (1) gross_crystallisation = total pension amount being crystallised to fund this year's draw. (2) max_pcls_this_event = 0.25 \u00d7 gross_crystallisation. (3) pcls = min(max_pcls_this_event, remaining_lsa). (4) taxable_pension_draw = gross_crystallisation - pcls. (5) remaining_lsa -= pcls. (6) Update tfls_used_amount += pcls. This formula is stable across multiple crystallisation events and matches HMRC's Lump Sum Allowance mechanics. The previous ratio-based formula in v1.1 was mathematically unstable when partial crystallisations stacked across years.",
+          "tfls_exhaustion": "Once remaining_lsa = 0, pcls = 0 for all future events. All further pension draws are 100% taxable income at marginal rate. The algorithm must track remaining_lsa as a running balance across plan years.",
+          "remainder": "All pension draws above pcls are taxable income at marginal rate. Stack on top of all other income per income_type_ordering in algorithm step 3.",
+          "mpaa": "If mpaa_triggered=true, future pension contributions are capped at \u00a310,000/year (MPAA). Triggered by taking flexi-access drawdown or UFPLS \u2014 not by PCLS alone or some annuity purchases."
+        },
+        "iht": {
+          "current_law": "Undrawn pension pots are currently outside the estate for IHT purposes \u2014 a key reason to draw pension last and preserve for heirs.",
+          "modelled_assumption_april_2027": "MODELLED ASSUMPTION (not enacted law): If scenario_toggle apply_2027_pension_iht=true, from April 2027 undrawn pension pots are included in the estate and subject to IHT at 40%. This inverts the draw-last logic. The algorithm must flag the April 2027 year in outputs and model both pre- and post-April-2027 IHT positions.",
+          "planning_implication": "If apply_2027_pension_iht=true, users with large pension pots should consider accelerating drawdown before April 2027, accepting income tax now to reduce future IHT. Algorithm should surface this comparison."
+        },
+        "cgt": "Not applicable within wrapper",
+        "drawdown_priority_notes": "Complex. Pre-April 2027 (or if toggle off): draw last \u2014 IHT-exempt. Post-April 2027 (if toggle on): model whether accelerating draws before April 2027 saves total tax. Must calculate marginal income tax rate each year before drawing.",
+        "limits": [
+          {
+            "limit": "annual_allowance_contributions",
+            "amount": 60000,
+            "period": "tax_year"
+          },
+          {
+            "limit": "mpaa_if_triggered",
+            "amount": 10000,
+            "period": "tax_year",
+            "condition": "mpaa_triggered=true"
+          },
+          {
+            "limit": "tfls_lifetime_maximum",
+            "amount": 268275,
+            "period": "lifetime",
+            "note": "Tracked via tfls_used_amount \u2014 not a per-year limit"
+          }
+        ]
+      },
+      {
+        "asset_class": "property_investment",
+        "on_entry": "No income tax relief on purchase. SDLT applies at acquisition (not modelled in drawdown phase).",
+        "while_held": "Rental income taxed as income at marginal rate. Mortgage interest relief restricted to 20% tax credit for individuals (Section 24). Maintenance, letting agent fees, and other allowable expenses deductible.",
+        "on_draw": "Disposal triggers CGT. Gain = disposal proceeds - acquisition_cost - allowable improvement costs. CGT rate: 18% if total income (including gain) in disposal year falls within basic rate band; 24% if higher/additional rate. Annual CGT exempt amount: \u00a33,000 (configurable). Property is indivisible \u2014 disposal is a full binary event, not a partial draw.",
+        "disposal_proceeds_rule": "Net disposal proceeds (after CGT and costs) are transferred to cash in the year of disposal and used as a funding source in that year and subsequent years. Any net proceeds exceeding that year's spend target remain in cash for future years. Implementers must not discard or ignore proceeds that exceed the current-year target.",
+        "iht": "In estate at full value. No BPR exemption.",
+        "cgt": "18% or 24% depending on income in disposal year. \u00a33,000 annual exempt amount. Full disposal event \u2014 model as single lump in disposal year.",
+        "drawdown_priority_notes": "Illiquid. Plan disposal year to minimise CGT rate \u2014 avoid years with high pension income. Consider sequencing property sales in years with low other income.",
+        "limits": [
+          {
+            "limit": "cgt_annual_exempt_amount",
+            "amount": 3000,
+            "period": "tax_year",
+            "note": "Configurable global parameter"
+          },
+          {
+            "limit": "indivisible",
+            "note": "Full property sale only \u2014 cannot partially dispose"
+          }
+        ]
+      },
+      {
+        "asset_class": "vct",
+        "on_entry": "30% income tax relief on investment in new shares (not secondary market). Annual subscription limit \u00a3200,000 including reinvested dividends. Reinvested dividends that are issued as new shares count toward the \u00a3200k limit \u2014 register must distinguish new share issuance from simple accumulation.",
+        "while_held": "Cash and reinvested dividends tax-free regardless of amount.",
+        "on_draw": {
+          "after_5_years": "No CGT on disposal. Tax-free. Income tax relief not clawed back. Full disposal proceeds retained.",
+          "before_5_years_CORRECTED": "CRITICAL CORRECTION from v1.1: CGT does NOT apply on disposal of qualifying VCT shares regardless of hold period. VCT shares are explicitly exempt from CGT on disposal under TCGA 1992 s.151A. The consequence of early disposal (before 5 years, or before 3 years for shares acquired before April 2004) is NOT CGT \u2014 it is clawback of the upfront income tax relief at 30%. The relief is clawed back in full if disposed within the qualifying holding period. There is no partial or tapered clawback \u2014 it is all-or-nothing based on whether the qualifying period was met.",
+          "early_disposal_mechanics": "If disposed before 5-year qualifying period: (1) Income tax relief clawback = 30% \u00d7 original subscription amount for that lot. (2) CGT = \u00a30 \u2014 no CGT on VCT disposal regardless of gain. (3) Net return = disposal_proceeds - relief_clawback. Note: if no income tax relief was originally claimed on a lot (e.g. bought on secondary market), there is no clawback even on early disposal.",
+          "lot_level_requirement": "Clawback is calculated per lot using the original subscription amount and whether relief was claimed. tax_relief_claimed field on the lot is the clawback base. Lots where tax_relief_claimed = 0 have no clawback exposure."
+        },
+        "iht": "IN ESTATE at full value. VCTs are listed securities and do NOT qualify for Business Property Relief (IHTA 1984 s.105(3), HMRC IHTM18113). Never included in the \u00a32.5M BPR/APR cap pool. is_iht_exempt must always be false for VCT lots. No BPR qualifying period applies. Any historic claim that VCTs are 'commonly BPR-qualifying' is incorrect for IHT planning purposes.",
+        "cgt": "CGT-free after 5-year hold from acquisition_date. CGT at standard rates before 5 years.",
+        "drawdown_priority_notes": "Draw after non-BPR in-estate assets (cash, ISA, property) but before EIS \u2014 VCT disposals are CGT-exempt (post 5yr), EIS are BPR-qualifying. VCTs are in-estate for IHT with no exemption. Each lot's 5yr CGT-free and clawback clocks are lot-level \u2014 acquisition_date essential.",
+        "limits": [
+          {
+            "limit": "annual_subscription",
+            "amount": 200000,
+            "period": "tax_year",
+            "note": "Includes reinvested dividends issued as new shares"
+          },
+          {
+            "limit": "cgt_free_hold_period",
+            "years": 5,
+            "note": "CGT applies on disposal before 5 years"
+          },
+          {
+            "limit": "income_tax_relief_clawback",
+            "note": "30% relief clawed back if disposed before 5 years"
+          }
+        ]
+      },
+      {
+        "asset_class": "eis",
+        "on_entry": "30% income tax relief on investment. Annual limit \u00a31,000,000 (\u00a32,000,000 for knowledge-intensive companies). CGT deferral available on gains reinvested into EIS \u2014 deferred CGT crystallises on EIS disposal.",
+        "while_held": "Growth tax-free within EIS wrapper. Dividends uncommon \u2014 EIS companies typically growth-focused.",
+        "on_draw": {
+          "after_3_years_success": "CGT-free on disposal provided: (1) 3-year hold condition met from acquisition_date, (2) income tax relief was not withdrawn.",
+          "loss": "If company fails: loss relief available against income tax at marginal rate, net of income tax relief already received on entry. Effective floor on downside.",
+          "cgt_deferral_crystallisation_CORRECTED": "EIS revived deferred gains (revived_deferred_gain) are CGT events, NOT income tax events. They crystallise on disposal as a revived deferred gain and are charged to CGT at the applicable rate (18%/24% depending on total income in the disposal year). They do NOT enter the income tax calculation as non-savings income. However, they DO affect the CGT rate calculation: the revived gain is stacked on top of taxable income when determining whether the basic-rate or higher-rate CGT band applies. Disposal-year tax: CGT += max(0, revived_deferred_gain - cgt_exempt_amount_remaining) \u00d7 cgt_rate."
+        },
+        "iht": {
+          "current_law": "100% BPR exemption after 2-year hold where company remains a qualifying trading company.",
+          "modelled_assumption_april_2026": "MODELLED ASSUMPTION (not enacted law, announced December 2025 effective April 2026): If apply_2026_bpr_cap=true, IHT relief on combined BPR/APR-qualifying assets (EIS + AIM shares only \u2014 VCT excluded) is capped at \u00a32,500,000 per estate. First \u00a32.5M at 100% relief. Above \u00a32.5M at 50% relief (effective 20% IHT on the excess). Applied per estate \u2014 spouses/civil partners each have their own \u00a32.5M allowance. Order of asset assessment: AIM first, then EIS (oldest acquisition date first within class) \u2014 algorithm must define and document ordering consistently."
+        },
+        "cgt": "CGT-free after 3-year hold if relief intact. CGT deferral from entry crystallises on disposal. Standard rates before 3 years.",
+        "drawdown_priority_notes": "Draw last. Highest growth rate assumption, BPR-qualifying (100% up to \u00a32.5M per estate combined with AIM). Loss relief limits downside. Note: VCTs are NOT in the BPR pool \u2014 this cap is EIS + AIM only.",
+        "limits": [
+          {
+            "limit": "annual_investment",
+            "amount": 1000000,
+            "period": "tax_year"
+          },
+          {
+            "limit": "knowledge_intensive_annual",
+            "amount": 2000000,
+            "period": "tax_year"
+          },
+          {
+            "limit": "cgt_free_hold_period",
+            "years": 3
+          },
+          {
+            "limit": "bpr_qualifying_hold_period",
+            "years": 2
+          },
+          {
+            "limit": "bpr_full_relief_cap",
+            "amount": 2500000,
+            "applies_if": "apply_2026_bpr_cap=true",
+            "note": "\u00a32.5M threshold in this single-individual model; spouse/civil partner has a separate threshold \u2014 aggregation not modelled. EIS direct + AIM shares only \u2014 VCT excluded."
+          }
+        ]
+      },
+      {
+        "asset_class": "aim_shares",
+        "on_entry": "No income tax relief on purchase.",
+        "while_held": "Dividends taxed above dividend allowance (\u00a3500 for 2025/26, configurable) at dividend rates. Growth not taxed until disposal.",
+        "on_draw": "Disposal triggers CGT. Gain = disposal_proceeds - acquisition_cost - cgt_exempt_amount. CGT rates for 2025/26: 18% where total income plus gain falls within basic rate band; 24% where total income plus gain exceeds basic rate threshold. These are the same rates as residential property following the October 2024 Budget unification. Lot disposal follows the v1 lot_disposal_methodology (average-cost proxy \u2014 see schema). Annual CGT exempt amount: \u00a33,000 (year-indexed via tax_parameter_schedule).",
+        "iht": {
+          "current_law": "BPR-qualifying after 2-year hold where company remains qualifying trading. 100% IHT exemption.",
+          "modelled_assumption_april_2026": "MODELLED ASSUMPTION (announced December 2025, effective April 2026): If apply_2026_bpr_cap=true, AIM shares are included in the combined \u00a32.5M BPR/APR cap per estate alongside EIS direct investments. VCTs are NOT included \u2014 they are listed and do not qualify for Business Relief."
+        },
+        "cgt": "Standard CGT rates. Annual exempt amount \u00a33,000.",
+        "drawdown_priority_notes": "Draw before VCTs and EIS but after non-BPR assets. BPR-qualifying but no income tax relief on entry makes them less tax-advantaged overall.",
+        "limits": [
+          {
+            "limit": "bpr_qualifying_hold_period",
+            "years": 2
+          },
+          {
+            "limit": "bpr_full_relief_cap",
+            "amount": 2500000,
+            "applies_if": "apply_2026_bpr_cap=true",
+            "note": "\u00a32.5M threshold in this single-individual model; spouse/civil partner has a separate threshold \u2014 aggregation not modelled. EIS direct + AIM shares only \u2014 VCT excluded."
+          }
+        ]
+      }
+    ]
+  },
+  "algorithm": {
+    "description": "The decumulation simulation runs year-by-year from year 1 to plan_years. Each year is a constrained annual optimisation: solve for the combination of asset draws that meets the income target while respecting all tax limits, wrapper rules, and BPR clocks. This is a myopic (year-by-year greedy) optimiser \u2014 it does not globally minimise tax across the full plan horizon. Multi-year global optimisation is deferred to v2.",
+    "annual_computation_sequence": [
+      {
+        "step": 1,
+        "name": "Grow all assets",
+        "description": "Apply each asset's assumed_growth_rate. For property: growth applies to gross value, not net equity. For VCTs: reinvested dividends issued as new shares are added to value and count toward the annual \u00a3200k subscription limit. State pension (if state_pension_annual > 0) is treated as baseline income \u2014 it does not 'grow' but inflation-adjusts at the same rate as the spend target."
+      },
+      {
+        "step": 2,
+        "name": "Calculate baseline income",
+        "description": "Sum all income generated by assets that does not require a draw decision: rental income, interest, dividends, state_pension_annual (inflation-adjusted). Track three parallel fields \u2014 these are not the same and must not be conflated:",
+        "income_tracks": {
+          "cash_income": "Total cash received from income-generating assets. Used for cashflow: does this year's income + draws cover spend target?",
+          "taxable_income_pre_allowances": "Gross taxable income by type before applying personal allowance, PSA, or dividend allowance. Used as input to band calculation in step 3.",
+          "taxable_income_post_allowances": "Taxable income after subtracting personal allowance, PSA (for savings income), and dividend allowance (for dividend income). This is the figure that actually consumes tax bands and drives marginal rate on pension draws."
+        },
+        "example": "A user receives \u00a35,000 bank interest. cash_income += \u00a35,000. taxable_income_pre_allowances (savings) += \u00a35,000. If basic rate taxpayer: PSA = \u00a31,000, so taxable_income_post_allowances (savings) += \u00a34,000 at 20%. The remaining \u00a31,000 is cash received but not taxable \u2014 it does NOT consume the basic rate band.",
+        "state_pension_treatment": "If state_pension_annual > 0: apply inflation uplift at same rate as spend target. Add to cash_income and to taxable_income_pre_allowances as non-savings income. It counts against the personal allowance in full.",
+        "output": "baseline_cash_income_year_N, baseline_taxable_income_pre_allowances_year_N, baseline_taxable_income_post_allowances_year_N"
+      },
+      {
+        "step": 3,
+        "name": "Calculate available tax bands",
+        "description": "Using taxable_income_post_allowances from step 2, determine remaining headroom in each band. Look up current year's parameters from tax_parameter_schedule by plan_year. Do not use flat 2025/26 constants.",
+        "income_type_ordering": "UK income tax stacks income types in this order for band consumption: (1) non-savings income first (pension draws, rental income, employment income, state pension), (2) savings income second (interest net of PSA), (3) dividend income last (net of dividend allowance). This ordering determines how much basic-rate band remains for pension draws after rental income has consumed part of it.",
+        "personal_allowance_taper_formula": "If adjusted_net_income > pa_taper_start: personal_allowance = max(0, personal_allowance - floor((adjusted_net_income - pa_taper_start) / 2)). Reaches zero at higher_rate_threshold. All values from tax_parameter_schedule[plan_year].",
+        "tax_reserve_note": "Tax due on baseline income (rental tax, interest tax, dividend tax) must be funded from cash. If baseline_cash_income is insufficient to cover both spending and this tax, the shortfall must be sourced from asset draws \u2014 it is real cash that must leave the portfolio. Step 6 must account for this.",
+        "outputs": [
+          "remaining_personal_allowance",
+          "remaining_basic_rate_band",
+          "remaining_higher_rate_band",
+          "marginal_rate_at_current_income",
+          "tax_reserve_on_baseline_income"
+        ]
+      },
+      {
+        "step": 4,
+        "name": "Process gifts and trust transfers",
+        "description": "Remove annual_gift_amount from estate. Apply gift exemptions and classify in this order: (1) Apply annual gift exemption (\u00a33,000, carry forward one year max \u00a36,000) first \u2014 this portion is immediately IHT-free and does NOT count toward CLT rolling total. (2) Remaining gift: classify as CLT (discretionary trust) or PET (bare trust/direct gift) per user's selected gift type. (3) For CLTs: check rolling 7-year cumulative total \u2014 warn if approaching \u00a3325,000 NRB. (4) For PETs: record gift date and amount for taper relief calculation if death occurs within 7 years. Draw gift from cash first, then ISA. Check NEFI conditions if gift exceeds baseline income surplus.",
+        "annual_exemption_ordering": "CRITICAL: The \u00a33,000 annual exemption (and \u00a33,000 carry-forward if available) must be applied and deducted BEFORE classifying any gift as a CLT or PET. It never counts toward the CLT 7-year rolling total."
+      },
+      {
+        "step": 5,
+        "name": "Calculate inflation-adjusted spend target",
+        "description": "spend_target_year_N = annual_income_target \u00d7 lifestyle_multiplier \u00d7 (1 + inflation_rate)^(N-1). This is in nominal GBP. Shortfall is calculated against this nominal figure.",
+        "net_required_draw": "net_required_draw_year_N = spend_target_year_N + tax_reserve_on_baseline_income - baseline_cash_income_year_N. The tax reserve is added because tax on rental/interest income is a real cash outflow that must be funded. If net_required_draw <= 0: no asset draw required this year. Record surplus cash."
+      },
+      {
+        "step": 6,
+        "name": "Draw assets in priority order",
+        "description": "For each asset in the drawdown strategy's priority queue, in order: (a) calculate maximum draw available without triggering an avoidable tax event, (b) calculate tax cost of drawing from this asset at current marginal rate, (c) draw up to what is needed to meet net_required_draw_year_N. Continue down priority queue until target is met or all assets exhausted.",
+        "pension_draw_logic": "Before drawing pension: check remaining_basic_rate_band from step 3. Draw only up to the amount that keeps total income within the current tax band unless the spend target cannot otherwise be met. Apply corrected PCLS formula: (1) gross_crystallisation = amount to draw from pension. (2) max_pcls_this_event = 0.25 \u00d7 gross_crystallisation. (3) pcls = min(max_pcls_this_event, remaining_lsa). (4) taxable_pension_draw = gross_crystallisation - pcls. (5) Update remaining_lsa and tfls_used_amount. Check that adding taxable_pension_draw to existing taxable income does not push into a higher band unnecessarily \u2014 if it does, reduce gross_crystallisation and source the shortfall from the next asset in priority order.",
+        "property_draw_logic": "Property is not a regular annual draw. Model property disposal as a discrete event in a specified year (either user-selected or algorithm-recommended as a low-income year). In the disposal year: calculate gain = disposal_proceeds - acquisition_cost - allowable_costs. Calculate CGT = max(0, gain - cgt_exempt_amount) \u00d7 cgt_rate (where cgt_rate depends on total income including gain in that year). Net proceeds = disposal_proceeds - CGT - disposal_costs. Transfer net_proceeds to cash. In the disposal year, use proceeds to meet spend target first, then carry remainder forward in cash for future years.",
+        "tax_drag_calculation": "For each draw amount by asset type: income_tax = amount \u00d7 marginal_rate (for pension draws). CGT = (disposal_proceeds - acquisition_cost - allowable_costs - cgt_exempt_amount) \u00d7 cgt_rate (for property/AIM/EIS pre-clock). Net draw = gross draw - tax_paid."
+      },
+      {
+        "step": 7,
+        "name": "Check BPR clocks and IHT position",
+        "description": "For each EIS direct and AIM lot (NOT VCT \u2014 VCTs have no BPR clock): verify acquisition_date + 2 years has passed and is_iht_exempt=true. If not yet qualifying, flag BPR_NOT_YET_QUALIFYING. Calculate estimated_iht_bill as follows.",
+        "iht_bill_calculation": {
+          "step_a": "Sum all BPR-qualifying asset values where is_iht_exempt=true and bpr_qualifying_date has passed. Call this bpr_total.",
+          "step_b_apply_bpr_cap": "If apply_2026_bpr_cap=true: bpr_exempt = min(bpr_total, bpr_full_relief_cap) + (max(0, bpr_total - bpr_full_relief_cap) \u00d7 0.5). Effective relief = bpr_exempt. If apply_2026_bpr_cap=false: bpr_exempt = bpr_total.",
+          "step_c_net_taxable_estate": "taxable_estate = total_portfolio_value - bpr_exempt. If apply_2027_pension_iht=false: subtract undrawn pension value from taxable_estate (pension outside estate). If apply_2027_pension_iht=true and plan year > April 2027: include pension in taxable_estate.",
+          "step_d_nrb_stacking": "CRITICAL FIX from v1.0: Apply nil-rate band correctly accounting for prior chargeable transfers. (1) Sum all CLTs made in the last 7 years (clt_7yr_cumulative). (2) Available NRB = max(0, nil_rate_band - clt_7yr_cumulative). (3) PETs that become chargeable (if death within 7 years) also eat into NRB \u2014 but for the annual snapshot, use CLT total only. (4) iht_on_estate = max(0, taxable_estate - available_nrb) \u00d7 iht_rate.",
+          "step_e": "estimated_iht_bill = iht_on_estate (for annual snapshot). At plan end (notional death), also add any PETs within 7 years that would crystallise as chargeable, applying taper relief schedule."
+        }
+      },
+      {
+        "step": 8,
+        "name": "Check scenario trigger years",
+        "description": "If apply_2027_pension_iht=true and plan_year crosses April 2027: add flag 'PENSION_IHT_RULE_CHANGE_YEAR' to output flags. Recalculate estimated_iht_bill for that year and all future years including pension in taxable estate. If apply_2026_bpr_cap=true and plan_year crosses April 2026: add flag 'BPR_CAP_RULE_CHANGE_YEAR'. Apply tiered BPR relief from that year forward."
+      },
+      {
+        "step": 9,
+        "name": "Record year snapshot",
+        "description": "Store all output fields per the output_schema. Evaluate all warning_triggers and populate flags array.",
+        "shortfall_behaviour": "If net_required_draw cannot be met even after drawing all liquid assets: record shortfall = spend_target_year_N - actual_income_year_N. Do not draw from property in shortfall years unless the user has pre-selected a disposal year. Flag shortfall prominently in UI."
+      }
+    ],
+    "drawdown_strategies": {
+      "tax_optimised": {
+        "description": "Minimise income tax and CGT drag over the plan period",
+        "priority_order": [
+          "cash",
+          "isa",
+          "bonds",
+          "vct",
+          "aim_shares",
+          "pension",
+          "property_investment",
+          "other",
+          "eis"
+        ],
+        "logic": "Draw cash first (no tax event). Draw ISA (tax-free). Draw pension up to band threshold. Property disposal planned in a low-income year. VCT drawn after ISA \u2014 CGT-exempt on disposal but in-estate for IHT. EIS last \u2014 CGT-exempt after 3yr and BPR-qualifying."
+      },
+      "iht_optimised": {
+        "description": "Maximise the estate value passed to heirs",
+        "priority_order": [
+          "cash",
+          "pension",
+          "property_investment",
+          "vct",
+          "bonds",
+          "other",
+          "isa",
+          "aim_shares",
+          "eis"
+        ],
+        "logic": "Draw pension early (especially pre-2027). Draw property before appreciation. Draw VCT before EIS/AIM \u2014 VCTs are in-estate with no BPR, so drawing them reduces taxable estate. Preserve EIS and AIM shares for BPR. Preserve ISA as non-BPR estate value for liquidity."
+      },
+      "income_first": {
+        "description": "Draw income-producing assets first, let growth assets compound",
+        "priority_order": [
+          "cash",
+          "bonds",
+          "property_investment",
+          "other",
+          "pension",
+          "isa",
+          "aim_shares",
+          "vct",
+          "eis"
+        ]
+      },
+      "growth_first": {
+        "description": "Draw slow-growth assets first, let high-growth assets compound",
+        "priority_order": [
+          "cash",
+          "bonds",
+          "other",
+          "property_investment",
+          "isa",
+          "pension",
+          "aim_shares",
+          "vct",
+          "eis"
+        ]
+      }
+    },
+    "property_valuation_layer": {
+      "description": "Three distinct value fields must be maintained for property throughout.",
+      "fields": {
+        "display_value_gross": "Gross market value. Used in portfolio charts and total_portfolio_value display.",
+        "funding_value_net": "Net cashflow on disposal: gross_proceeds - mortgage_balance - disposal_costs - CGT. Used in step 6 cashflow.",
+        "estate_value_iht": "Gross value minus secured deductible liabilities (mortgage) per IHTA 1984 s.162. Used in step 7 IHT calculation. Disposal costs not deducted for IHT."
+      },
+      "algorithm_step_mapping": {
+        "step_1_growth": "Apply growth rate to display_value_gross",
+        "step_6_disposal": "Use funding_value_net for cashflow and spend calculations",
+        "step_7_iht": "Use estate_value_iht for estimated_iht_bill"
+      }
+    }
+  },
+  "trust_and_gifting": {
+    "description": "Modelling of wealth transfer strategies to reduce the taxable estate. All rules are UK HMRC current law for 2025/26 unless marked MODELLED ASSUMPTION.",
+    "methods": [
+      {
+        "id": "discretionary_trust_clt",
+        "label": "Discretionary Trust \u2014 Chargeable Lifetime Transfer (CLT)",
+        "limit_per_7_year_rolling_window": 325000,
+        "limit_description": "NRB: \u00a3325,000 per rolling 7-year window per individual. Gifts above this trigger immediate IHT at 20% (half the death rate). At death, cumulative CLTs in prior 7 years reduce available NRB before 40% applies to estate.",
+        "7_year_clock": true,
+        "immediate_iht_above_limit": 0.2,
+        "algorithm_requirement": "Track clt_7yr_cumulative as a rolling time-series (not annual total). Gifts made more than 7 years ago fall out of scope and free up NRB capacity. Warn when approaching \u00a3325,000. Suggest switching to PET/bare trust when limit approached. Annual gift exemption applied first \u2014 only excess counts toward CLT total.",
+        "setup_requirement": "Requires solicitor. Ongoing trustee administration costs."
+      },
+      {
+        "id": "bare_trust_pet",
+        "label": "Bare Trust or Direct Gift \u2014 Potentially Exempt Transfer (PET)",
+        "limit_per_7_year_window": null,
+        "limit_description": "No limit. Fully exempt if donor survives 7 years. Taper relief applies for years 3\u20137.",
+        "7_year_clock": true,
+        "taper_relief_schedule": [
+          {
+            "years_survived": "0\u20133",
+            "iht_rate": 0.4,
+            "relief_pct": 0,
+            "note": "Full 40% IHT if death in this window"
+          },
+          {
+            "years_survived": "3\u20134",
+            "iht_rate": 0.32,
+            "relief_pct": 20
+          },
+          {
+            "years_survived": "4\u20135",
+            "iht_rate": 0.24,
+            "relief_pct": 40
+          },
+          {
+            "years_survived": "5\u20136",
+            "iht_rate": 0.16,
+            "relief_pct": 60
+          },
+          {
+            "years_survived": "6\u20137",
+            "iht_rate": 0.08,
+            "relief_pct": 80
+          },
+          {
+            "years_survived": "7+",
+            "iht_rate": 0.0,
+            "relief_pct": 100,
+            "note": "Fully exempt \u2014 falls outside estate"
+          }
+        ],
+        "algorithm_requirement": "Record date and amount of each PET. In IHT calculation at plan end (notional death year): for each PET within 7 years, calculate IHT using taper_relief_schedule based on years between gift date and notional death date. PETs that become chargeable eat into available NRB in the order made (oldest first)."
+      },
+      {
+        "id": "normal_expenditure_from_income",
+        "label": "Normal Expenditure from Income (NEFI)",
+        "limit_per_7_year_window": null,
+        "limit_description": "Unlimited, immediately exempt. HMRC conditions: (1) regular pattern of giving \u2014 not a one-off, (2) made from surplus income, not capital, (3) does not affect donor's standard of living.",
+        "7_year_clock": false,
+        "immediate_exempt": true,
+        "hmrc_test_nuance": "HMRC's own guidance (IHTM14250) is less rigid than a strict income-surplus test. The donor may in some circumstances use capital for living costs and still satisfy the exemption if income was overall sufficient. HMRC considers the pattern of giving, not just a single year's arithmetic.",
+        "algorithm_requirement": "Apply a conservative eligibility check: if baseline_cash_income_year_N < (spend_target_year_N + annual_gift_amount), raise warning NEFI_CONDITIONS_MAY_NOT_BE_MET. Do NOT automatically reclassify as PET \u2014 this is an advisory warning. The user or their adviser must determine whether NEFI conditions are met. The algorithm should surface the concern clearly but leave the classification decision to the user. Recommend user maintains documented evidence of regularity \u2014 HMRC form IHT403 should be completed contemporaneously each year."
+      },
+      {
+        "id": "annual_gift_exemption",
+        "label": "Annual Gift Exemption",
+        "limit_per_year": 3000,
+        "carry_forward": 3000,
+        "limit_description": "\u00a33,000 per year per individual, immediately IHT-free. One unused prior year can be carried forward (maximum \u00a36,000 in a single year). Completely separate from PET/CLT rules \u2014 does not count toward NRB.",
+        "7_year_clock": false,
+        "algorithm_requirement": "Track unused annual exemption from prior year. Apply before classifying remaining gift as CLT or PET. If annual_gift_amount <= available_annual_exemption (including carry-forward): entire gift is immediately exempt, zero CLT/PET. If annual_gift_amount > available_annual_exemption: exempt portion = available_annual_exemption; remainder classified as CLT or PET."
+      }
+    ]
+  },
+  "hard_constraints_and_failure_modes": {
+    "description": "The limits that cause incorrect or misleading results if not enforced. Primary risk areas for v1 implementation.",
+    "constraints": [
+      {
+        "id": "pension_tfls_one_time",
+        "description": "TFLS is not 25% of every annual draw. It is a lifetime allowance of \u00a3268,275 tracked via tfls_used_amount. Each crystallisation event draws down the remaining allowance. Once exhausted, all future pension draws are 100% taxable income.",
+        "failure_mode": "If modelled as 25% tax-free on every draw, income tax liability is materially understated across all plan years."
+      },
+      {
+        "id": "pension_tfls_partial_history",
+        "description": "NEW in v1.1. Users with multiple pension schemes may have taken TFLS from one scheme already. tfls_used_amount captures cumulative TFLS taken across ALL schemes. If this is incorrectly set to 0 at import for a user with prior TFLS history, the model will offer tax-free headroom that does not exist.",
+        "failure_mode": "Silent income tax understatement. No error \u2014 just wrong numbers. Data import must capture TFLS history accurately."
+      },
+      {
+        "id": "iht_nrb_stacking_from_prior_gifts",
+        "description": "NEW FIX in v1.1. The IHT estimated_iht_bill calculation must account for CLTs made in the last 7 years when applying the nil-rate band. CLTs reduce available NRB before 40% is applied to the estate. The v1.0 formula (total - iht_exempt - full_NRB) \u00d7 0.4 was incorrect when clt_7yr_cumulative > 0.",
+        "failure_mode": "IHT bill understated for users with active discretionary trusts. Silent failure \u2014 no error, just wrong numbers."
+      },
+      {
+        "id": "pension_mpaa",
+        "description": "Once flexi-access drawdown or UFPLS is taken, MPAA drops to \u00a310,000. Tracked via mpaa_triggered (not in_drawdown). Affects users still contributing to pensions during drawdown.",
+        "failure_mode": "If MPAA trigger ignored, future contribution capacity is overstated."
+      },
+      {
+        "id": "pension_iht_april_2027",
+        "description": "MODELLED ASSUMPTION. If apply_2027_pension_iht=true, from April 2027 undrawn pension pots are included in the taxable estate. This inverts the draw-last logic for IHT optimisation. Algorithm must flag the April 2027 year and model both regimes.",
+        "failure_mode": "Plans that assume pension remains IHT-exempt post-April 2027 will materially understate future IHT bills for users with large pension pots."
+      },
+      {
+        "id": "eis_bpr_cap_april_2026",
+        "description": "MODELLED ASSUMPTION (announced December 2025, effective April 2026). If apply_2026_bpr_cap=true, combined BPR/APR-qualifying assets (EIS direct + AIM shares only \u2014 VCT excluded as listed securities) are tiered: 100% relief up to \u00a32.5M per estate, 50% above. Algorithm must track combined EIS+AIM total. VCTs are never included in this pool.",
+        "failure_mode": "Users with >\u00a32.5M in combined EIS+AIM assets will have materially understated IHT bills if the cap is not modelled. Also: incorrectly including VCT in the BPR pool overstates IHT shelter."
+      },
+      {
+        "id": "wrapper_type_tax_override",
+        "description": "NEW in v1.1. AIM shares or EIS held inside an ISA wrapper must be taxed under ISA rules (growth/income tax-free, no CGT, IHT in estate) \u2014 NOT under AIM/EIS rules. wrapper_type must override asset_class for tax treatment. If this is not implemented, AIM-in-ISA will be incorrectly taxed.",
+        "failure_mode": "CGT applied to ISA-wrapped assets. BPR exemption incorrectly claimed for ISA-wrapped AIM shares."
+      },
+      {
+        "id": "vct_annual_subscription_reinvestment",
+        "description": "VCT subscriptions including reinvested dividends issued as new shares are capped at \u00a3200,000 per tax year. Reinvested dividends that push total over \u00a3200k trigger clawback of income tax relief on the excess. Register must distinguish new share issuance from simple accumulation.",
+        "failure_mode": "Reinvested dividend compounding may exceed limit without user awareness."
+      },
+      {
+        "id": "isa_permanent_loss_on_draw",
+        "description": "ISA withdrawals permanently consume that year's subscription allowance unless flexible_isa=true. Drawn funds cannot simply be re-deposited.",
+        "failure_mode": "If modelled as freely refillable, future ISA compounding is overstated."
+      },
+      {
+        "id": "property_indivisibility",
+        "description": "Investment property cannot be partially disposed of. Model as a discrete full-disposal event in a specified year. Net proceeds transfer to cash and fund subsequent years.",
+        "failure_mode": "Treating property as a liquid annual drawdown source produces meaningless numbers."
+      },
+      {
+        "id": "income_stacking",
+        "description": "Pension drawdown, rental income, interest, and employment income stack for income tax. Marginal rate on pension draws depends on total income. Algorithm must calculate blended rate for each draw decision using income_type_ordering from step 3.",
+        "failure_mode": "User with \u00a340k rental income who draws \u00a330k pension pays higher-rate tax on pension draw. Modelling as basic rate understates income tax by approximately \u00a34,000/year."
+      },
+      {
+        "id": "cgt_disposal_year_income_stacking",
+        "description": "Property CGT rate depends on total income (including the gain itself) in the disposal year. Plan disposal in a year with low other income to achieve 18% rather than 24% rate.",
+        "failure_mode": "Applying a flat CGT rate without checking disposal-year income can understate CGT by up to 6 percentage points on large gains."
+      },
+      {
+        "id": "clt_rolling_7_year_window",
+        "description": "CLT limits use a rolling 7-year time-series, not an annual total. Gifts made 7+ years ago fall out of scope, freeing up NRB capacity. Sustained gifting of ~\u00a346,500/year will breach the NRB when cumulated. Track as time-series array of {date, amount} tuples.",
+        "failure_mode": "If tracked as cumulative total without time-series, the model never resets capacity as old gifts age out, and warns incorrectly of breaches."
+      },
+      {
+        "id": "longevity_inflation_compounding",
+        "description": "At 3% inflation over 35 years, nominal spend target is 2.81\u00d7 the year-1 figure (\u00a380k/year \u2192 \u00a3225k/year nominal). Plans funded at 25 years often fail at 30\u201335 years. Always run a 35-year shadow projection alongside the user's selected plan_years.",
+        "failure_mode": "Plans capped at 25 years create false confidence for users who may live to 90\u201395."
+      },
+      {
+        "id": "data_quality_vct_dates",
+        "description": "VCT subscription certificates frequently have missing, incorrect, or conflicting dates. If acquisition_date is missing, BPR and CGT-free clocks cannot be calculated. Flag missing dates; never assume BPR qualification when date is unknown.",
+        "failure_mode": "Assuming BPR qualification overstates IHT exemption and may cause user to draw wrong assets first."
+      },
+      {
+        "id": "data_quality_missing_acquisition_cost",
+        "description": "NEW in v1.1. If acquisition_cost is missing for any asset where CGT applies on draw (property, AIM, EIS pre-3-years, VCT pre-5-years), the CGT calculation cannot proceed. Flag the asset in output; never default to zero cost (this would massively overstate the CGT liability).",
+        "failure_mode": "Missing cost data causes algorithm to either fail silently (treating as fully taxable) or default to zero (incorrect). Neither is acceptable."
+      },
+      {
+        "id": "vct_cgt_exemption_misapplied",
+        "description": "CRITICAL FIX in v1.2. VCT shares are exempt from CGT on disposal under TCGA 1992 s.151A regardless of hold period. The v1.1 spec incorrectly stated 'CGT applies at standard rates before 5 years'. Early disposal (within qualifying period) triggers income tax relief clawback only \u2014 not CGT.",
+        "failure_mode": "Applying CGT to early VCT disposals overstates disposal tax and distorts draw-order decisions. Could cause users to hold VCTs past optimal disposal point due to phantom CGT exposure."
+      },
+      {
+        "id": "pcls_formula_instability",
+        "description": "CRITICAL FIX in v1.2. The previous ratio-based TFLS formula in v1.1 was mathematically unstable when partial crystallisations stacked across plan years. Correct formula: pcls = min(0.25 \u00d7 gross_crystallisation, remaining_lsa). Applied per crystallisation event. remaining_lsa tracks as a running balance.",
+        "failure_mode": "Incorrect formula understates or overstates tax-free component of pension draws in multi-event scenarios, misrepresenting income tax across entire plan."
+      },
+      {
+        "id": "eis_deferred_gains_not_captured",
+        "description": "CRITICAL (v1.2 addition, corrected v1.5). EIS investments may have deferred a CGT gain at entry. On disposal, the revived_deferred_gain crystallises as a CGT event \u2014 it is NOT added to income tax bands. It is stacked on top of other income to determine the applicable CGT rate (18%/24%). If revived_deferred_gain is missing, disposal-year CGT will be understated.",
+        "failure_mode": "Missing revived_deferred_gain understates CGT in disposal year. Treating it as income tax (old error) overstates income tax and misrepresents the marginal rate applicable to other income in that year."
+      },
+      {
+        "id": "flat_tax_parameters_across_years",
+        "description": "CRITICAL addition in v1.2. Using 2025/26 tax parameters for all future plan years is not safe for a 20\u201335 year plan. Tax rates, thresholds, and allowances change. The engine must use tax_parameter_schedule by plan year, and hold-flat for years beyond the schedule with a disclosed assumption.",
+        "failure_mode": "Silent use of 2025/26 rates in year 15 of a plan produces precise-looking but wrong income tax and CGT calculations."
+      },
+      {
+        "id": "trust_ten_year_exit_charges_not_modelled",
+        "description": "Relevant-property (discretionary) trusts face ten-year periodic charges (up to 6% of trust value) and exit charges on distributions. These are not modelled in v1. Users actively using discretionary trusts for IHT planning will have real trust costs that reduce the benefit compared to what the planner shows.",
+        "failure_mode": "Planner overstates the net IHT benefit of discretionary trust strategy. Must be disclosed prominently wherever trust gifting outputs are shown."
+      },
+      {
+        "id": "vct_not_bpr_qualifying",
+        "description": "CRITICAL addition in v1.4. VCTs are listed securities and do NOT qualify for Business Property Relief under IHTA 1984 s.105(3) and HMRC IHTM18113. Any spec, register field, or scoring logic that treats VCT as BPR-qualifying (is_iht_exempt=true based on BPR grounds) is wrong. VCT is in the estate at full value for IHT. The is_iht_exempt field must never be set to true for VCTs on BPR grounds. VCTs are also excluded from the \u00a32.5M BPR/APR cap pool.",
+        "failure_mode": "If VCT is incorrectly treated as BPR-qualifying, IHT bill will be materially understated for users with large VCT portfolios. Draw order will also be wrong \u2014 VCTs will be over-protected."
+      },
+      {
+        "id": "property_mortgage_net_economics",
+        "description": "Mortgage liability treatment must be consistent throughout. Property value in IHT estate = gross market value minus deductible liabilities (per IHTA 1984 s.162). Net equity for funding purposes = gross disposal proceeds minus mortgage_balance minus disposal costs minus CGT. Charts may show gross asset value for portfolio visibility, but all tax and cashflow calculations must use net economics.",
+        "failure_mode": "Using gross property value for IHT when there is a large mortgage balance overstates the taxable estate. Using gross proceeds for cashflow modelling overstates available funds in a disposal year."
+      }
+    ],
+    "conflict_resolution_priority_order": {
+      "description": "When constraints conflict in a given year, resolve in this strict order:",
+      "priority": [
+        "1. Cash reserve floor is absolute \u2014 never draw cash below cash_reserve under any circumstance.",
+        "2. Living cost spend target \u2014 fund from non-cash assets if cash floor is binding. Continue down non-cash draw queue.",
+        "3. Shortfall recording \u2014 if full queue exhausted and spend target still unmet, record shortfall. Do not override floors.",
+        "4. Legacy target \u2014 soft floor only. If spend target can only be met by breaching legacy target, fund spend and flag LEGACY_FLOOR_AT_RISK. Legacy target never blocks living cost spending.",
+        "5. Gift processing \u2014 gifts are processed after spend is confirmed funded. If cash is insufficient for both spend and gift, spend takes precedence."
+      ]
+    }
+  },
+  "warning_triggers": {
+    "description": "Defines when the flags array in the annual output is populated. Each flag has an id, severity (info/warning/error), and message.",
+    "triggers": [
+      {
+        "id": "BPR_NOT_YET_QUALIFYING",
+        "severity": "warning",
+        "condition": "is_iht_exempt=false AND acquisition_date is within 2 years",
+        "message": "Lot [label] has not yet reached 2-year BPR qualifying period. It is currently in your taxable estate."
+      },
+      {
+        "id": "BPR_APPROACHING_CAP",
+        "severity": "warning",
+        "condition": "apply_2026_bpr_cap=true AND combined_bpr_total > 2000000",
+        "message": "Combined BPR/APR-qualifying assets approaching the proposed \u00a32.5M cap. Assets above \u00a32.5M will receive only 50% IHT relief under modelled 2026 rules."
+      },
+      {
+        "id": "BPR_LAST_REVIEWED_STALE",
+        "severity": "warning",
+        "condition": "bpr_last_reviewed is more than 12 months ago",
+        "message": "BPR qualification for [label] was last reviewed more than 12 months ago. Confirm with adviser that qualification still holds."
+      },
+      {
+        "id": "CLT_APPROACHING_LIMIT",
+        "severity": "warning",
+        "condition": "clt_7yr_cumulative > 260000",
+        "message": "Cumulative discretionary trust gifts in last 7 years are approaching the \u00a3325,000 nil-rate band. Further gifts above this trigger immediate 20% IHT."
+      },
+      {
+        "id": "CLT_LIMIT_BREACHED",
+        "severity": "error",
+        "condition": "clt_7yr_cumulative > 325000",
+        "message": "Cumulative discretionary trust gifts have exceeded the \u00a3325,000 nil-rate band. The excess is subject to immediate IHT at 20%."
+      },
+      {
+        "id": "PENSION_IHT_RULE_CHANGE_YEAR",
+        "severity": "info",
+        "condition": "apply_2027_pension_iht=true AND plan_year crosses April 2027",
+        "message": "This is the year the proposed pension IHT rule change takes effect (modelled assumption). Your undrawn pension pot is now included in the estimated IHT calculation."
+      },
+      {
+        "id": "BPR_CAP_RULE_CHANGE_YEAR",
+        "severity": "info",
+        "condition": "apply_2026_bpr_cap=true AND plan_year crosses April 2026",
+        "message": "This is the year the proposed BPR/APR cap takes effect (modelled assumption, announced December 2025). IHT relief on combined EIS+AIM qualifying assets above \u00a32.5M per estate is now modelled at 50%. VCT holdings are unaffected by this cap \u2014 they are not BPR-qualifying."
+      },
+      {
+        "id": "MISSING_ACQUISITION_DATE",
+        "severity": "error",
+        "condition": "acquisition_date is null for VCT, EIS, or AIM lot",
+        "message": "Acquisition date missing for [label]. BPR and CGT clock cannot be calculated. Asset excluded from BPR calculation \u2014 treated as in estate."
+      },
+      {
+        "id": "MISSING_ACQUISITION_COST",
+        "severity": "error",
+        "condition": "acquisition_cost is null for any asset where CGT applies on draw",
+        "message": "Acquisition cost missing for [label]. CGT cannot be calculated for this asset. Review register data before drawing from this asset."
+      },
+      {
+        "id": "NEFI_CONDITIONS_MAY_NOT_BE_MET",
+        "severity": "warning",
+        "condition": "annual_gift_amount > 0 AND (baseline_cash_income_year_N < spend_target_year_N + annual_gift_amount)",
+        "message": "This year's gift may require drawing capital rather than surplus income. NEFI exemption conditions may not be supported under our conservative test. Please review with an adviser before treating this gift as NEFI-exempt. No automatic reclassification applied."
+      },
+      {
+        "id": "SHORTFALL_WITHIN_10_YEARS",
+        "severity": "error",
+        "condition": "first_shortfall_year < 10",
+        "message": "Plan funds insufficient within 10 years. Consider reducing lifestyle level, delaying drawdown, or reviewing growth rate assumptions."
+      },
+      {
+        "id": "LONGEVITY_35_YEAR_WARNING",
+        "severity": "info",
+        "condition": "always shown when plan_years < 35",
+        "message": "Shadow 35-year projection shown below. At 3% inflation, your spend target grows to [nominal_target_year_35] by year 35."
+      },
+      {
+        "id": "TFLS_NEARLY_EXHAUSTED",
+        "severity": "info",
+        "condition": "tfls_used_amount > 200000",
+        "message": "Your tax-free lump sum allowance is more than 75% used. Remaining TFLS: \u00a3[remaining]. Future pension draws above this amount are fully taxable."
+      },
+      {
+        "id": "EIS_DEFERRED_GAIN_MISSING",
+        "severity": "warning",
+        "condition": "asset_class=eis AND relief_claimed_type includes cgt_deferral AND revived_deferred_gain is null",
+        "message": "EIS lot [label] may have a revived deferred CGT gain that crystallises on disposal. revived_deferred_gain is missing \u2014 disposal-year CGT may be understated. This is a CGT event, not income tax. Check original investment records and EIS3 certificate."
+      },
+      {
+        "id": "TAX_PARAMS_HOLD_FLAT",
+        "severity": "info",
+        "condition": "plan_year exceeds last entry in tax_parameter_schedule",
+        "message": "Tax parameters for year [N] are held at [last scheduled year] values. Actual future rates may differ. This is a planning estimate, not a tax forecast."
+      },
+      {
+        "id": "TRUST_ONGOING_CHARGES_NOTE",
+        "severity": "info",
+        "condition": "annual_gift_amount > 0 AND gift_type = discretionary_trust",
+        "message": "Discretionary trusts may incur ten-year periodic charges and exit charges. These are not included in this calculation. Obtain separate adviser confirmation of ongoing trust costs."
+      }
+    ]
+  },
+  "output_schema": {
+    "description": "What the algorithm must return for each simulation year and for the plan summary",
+    "per_year": [
+      {
+        "field": "year",
+        "description": "Year number 1\u2013N"
+      },
+      {
+        "field": "total_portfolio_value",
+        "description": "Sum of all asset values after draws and growth"
+      },
+      {
+        "field": "iht_exempt_total",
+        "description": "Sum of BPR-qualifying asset values (is_iht_exempt=true AND bpr_qualifying_date passed), after applying BPR cap if toggle is on"
+      },
+      {
+        "field": "estimated_iht_bill",
+        "description": "IHT payable if user died at end of this year. Uses NRB-stacking formula: taxable_estate = total_portfolio_value - bpr_exempt (cap-adjusted) - pension (if pre-2027 or toggle off). available_nrb = nil_rate_band - clt_7yr_cumulative. iht = max(0, taxable_estate - available_nrb) \u00d7 0.40."
+      },
+      {
+        "field": "income_tax_this_year",
+        "description": "Total income tax paid on pension draws and other income this year"
+      },
+      {
+        "field": "cgt_this_year",
+        "description": "CGT paid on any disposals this year"
+      },
+      {
+        "field": "spend_target_nominal",
+        "description": "Inflation-adjusted spend target for this year in nominal GBP"
+      },
+      {
+        "field": "spend_met",
+        "description": "boolean \u2014 was the full spend target met from income + draws?"
+      },
+      {
+        "field": "shortfall",
+        "description": "Amount by which spend target was not met (0 if fully met)"
+      },
+      {
+        "field": "baseline_income",
+        "description": "Total cash income generated without a draw decision: gross rental income received, gross interest received, gross dividends received (full amount before allowances), state_pension_annual (inflation-adjusted). Corresponds to cash_income track from step 2. Taxable treatment tracked separately \u2014 do not conflate with taxable_income_post_allowances."
+      },
+      {
+        "field": "gifted_this_year",
+        "description": "Amount transferred out of estate this year via trust/gift"
+      },
+      {
+        "field": "clt_7yr_cumulative",
+        "description": "Rolling 7-year CLT total as of this year for NRB monitoring"
+      },
+      {
+        "field": "tfls_remaining",
+        "description": "Remaining TFLS/LSA allowance: tfls_lifetime_limit - tfls_used_amount. Tracked as running balance \u2014 decremented each time pcls is applied."
+      },
+      {
+        "field": "remaining_lsa",
+        "description": "Alias for tfls_remaining \u2014 remaining Lump Sum Allowance available for future PCLS events."
+      },
+      {
+        "field": "draws_by_asset",
+        "description": "Object: amount drawn from each asset class this year, with tax_paid per draw and pcls_applied for pension draws"
+      },
+      {
+        "field": "flags",
+        "description": "Array of warning objects from warning_triggers \u2014 each with id, severity, message"
+      }
+    ],
+    "plan_summary": [
+      {
+        "field": "funded_years",
+        "description": "Number of years fully funded"
+      },
+      {
+        "field": "fully_funded",
+        "description": "boolean \u2014 is entire plan period funded without shortfall?"
+      },
+      {
+        "field": "first_shortfall_year",
+        "description": "Year at which funds are first insufficient, if any. Null if fully funded."
+      },
+      {
+        "field": "total_spent",
+        "description": "Total nominal spend over plan period"
+      },
+      {
+        "field": "total_income_tax_paid",
+        "description": "Total income tax paid over plan period"
+      },
+      {
+        "field": "total_cgt_paid",
+        "description": "Total CGT paid over plan period"
+      },
+      {
+        "field": "total_tax_paid",
+        "description": "total_income_tax_paid + total_cgt_paid"
+      },
+      {
+        "field": "total_gifted",
+        "description": "Total transferred to trust/gifts over plan period"
+      },
+      {
+        "field": "estate_at_end",
+        "description": "Portfolio value at end of plan period"
+      },
+      {
+        "field": "iht_at_end",
+        "description": "Estimated IHT bill at end of plan period"
+      },
+      {
+        "field": "net_estate_after_iht",
+        "description": "estate_at_end - iht_at_end. The amount beneficiaries would actually receive. Always shown in estate summary card. (F009)"
+      },
+      {
+        "field": "legacy_target",
+        "description": "The user's specified net-of-IHT bequest goal. 0 if not set. (F004)"
+      },
+      {
+        "field": "legacy_shortfall",
+        "description": "max(0, legacy_target - net_estate_after_iht). 0 if legacy target is met or not set. (F004)"
+      },
+      {
+        "field": "iht_no_plan_baseline",
+        "description": "IHT bill if no draws or gifts had ever been made \u2014 all assets grown at assumed_growth_rate for plan_years, no BPR clock resets, full BPR relief applied at death. Computed by calculateNoPlanIHT(). (F005)"
+      },
+      {
+        "field": "iht_saving_vs_no_plan",
+        "description": "iht_no_plan_baseline - iht_at_end. The IHT saving attributable to the plan. Negative means the plan increased IHT vs doing nothing (unusual but possible if growth assets were liquidated and cash held). (F005)"
+      },
+      {
+        "field": "shadow_35yr_funded_years",
+        "description": "Always calculated \u2014 funded years on age-anchored shadow projection. Shadow horizon = max(plan_years, 35, 90 - current_age). Guarantees projection reaches at least age 90 and runs at least 35 years."
+      },
+      {
+        "field": "iht_saving_suppressed",
+        "description": "boolean. True when plan_confidence_level = LOW. When true, iht_saving_vs_no_plan and iht_no_plan_baseline are set to null and UI shows: 'IHT comparison requires complete asset data. Resolve data gaps to enable this comparison.'"
+      }
+    ]
+  },
+  "drawdown_priority_scoring": {
+    "description": "Replaces the fixed four-strategy enum from v1.2. Each asset lot is scored on four dimensions; the composite score determines drawdown order. Higher score = draw LAST (more protected). Lower score = draw FIRST.",
+    "dimensions": {
+      "tax_efficiency": {
+        "description": "How much tax-shelter value does this asset retain if kept? Higher = more shelter = protect more.",
+        "convention": "10 = highest shelter remaining (protect). 1 = no shelter (draw first).",
+        "scoring_logic": {
+          "isa": 10,
+          "vct_post_5yr": 9,
+          "eis_post_3yr": 8,
+          "pension": 6,
+          "aim": 5,
+          "eis_pre_3yr": 4,
+          "vct_pre_5yr": 3,
+          "bonds": 2,
+          "cash": 1,
+          "note": "Cash = 1 (draw first). Cash held in a cash-class wrapper produces interest taxed each year; it has no shelter value and depreciates in real terms. ISA = 10 (most valuable shelter to protect). Pension = 6 (partially sheltered but complex). VCT/EIS post qualifying period = 8\u20139 (CGT-free disposal, protect). Pre-qualifying = 3\u20134 (tax event on early disposal, still some shelter). AIM = 5 (CGT applies, partial shelter via BPR if qualifying). Property = 4 (CGT on disposal, no shelter but gains are real)."
+        }
+      },
+      "iht_reduction": {
+        "description": "How much does keeping this asset reduce the IHT bill? Higher = more IHT benefit from keeping = protect more.",
+        "convention": "10 = maximum IHT benefit from keeping (protect). 1 = no IHT benefit from keeping (draw first).",
+        "scoring_logic": {
+          "eis_aim_fully_qualifying_within_cap": 10,
+          "eis_aim_qualifying_above_cap_marginal": "see bpr_marginal_relief_scoring",
+          "pension_pre_2027": 8,
+          "eis_aim_pre_qualifying": 5,
+          "property": 1,
+          "isa": 1,
+          "cash": 1,
+          "vct": 1,
+          "note": "VCT = 1 on IHT dimension \u2014 VCTs are in-estate listed securities, no BPR qualification, zero IHT benefit from keeping. Cash/ISA/property = 1 (all in estate). Pension pre-2027 = 8 (currently outside estate \u2014 strong reason to keep). EIS/AIM fully qualifying within \u00a32.5M cap = 10 (100% relief). EIS/AIM above cap = marginal score per bpr_marginal_relief_scoring."
+        }
+      },
+      "preserve_growth": {
+        "description": "How much future growth will be foregone by drawing this asset now? Higher = more growth to lose = protect more.",
+        "convention": "10 = highest assumed growth rate (protect to let compound). 1 = lowest growth rate (draw first).",
+        "scoring_logic": "Scores derived directly from each lot's assumed_growth_rate. Normalise across the register: score = round(assumed_growth_rate / max_growth_rate_in_register \u00d7 9) + 1. Cash at 1\u20132% growth \u2192 score 1\u20132. High-growth EIS/AIM at 10\u201315% \u2192 score 8\u201310. Property at 4\u20136% \u2192 score 4\u20135. Pension at 5\u20137% \u2192 score 5\u20136."
+      },
+      "liquidity": {
+        "description": "How easy is this asset to access if the plan needs to change? Higher = more liquid = more optionality = protect more (counter-intuitive but correct: liquid assets give future flexibility, so we preserve them for emergency/optionality purposes).",
+        "convention": "IMPORTANT: This dimension is optionality-preservation, not draw-first. Higher liquidity score = keep for optionality. 10 = most liquid (preserve for flexibility). 1 = least liquid.",
+        "scoring_logic": {
+          "cash": 10,
+          "isa": 9,
+          "aim_quoted": 7,
+          "vct": 5,
+          "pension": 4,
+          "eis": 2,
+          "property": 1,
+          "note": "Cash = 10 (instantly accessible \u2014 preserve for emergencies). Property = 1 (illiquid, indivisible \u2014 cannot use as buffer). Under PURE liquidity weight (1.0), cash is drawn LAST to preserve flexibility. This is appropriate behaviour for a 'keep cash accessible' preference. The combination with tax_efficiency (cash = 1) typically results in balanced treatment at equal weights."
+        },
+        "design_note": "This dimension will create tension with tax_efficiency at equal weights \u2014 cash scores 10 on liquidity (protect) but 1 on tax_efficiency (draw first). At equal weighting (0.25 each), composite cash score = roughly 3.5, which correctly places cash below tax-sheltered assets but still makeable early. This is the intended balanced behaviour."
+      }
+    },
+    "composite_score_formula": "composite_protection_score = (tax_efficiency_score \u00d7 w_tax) + (iht_reduction_score \u00d7 w_iht) + (preserve_growth_score \u00d7 w_growth) + (liquidity_score \u00d7 w_liquidity). Weights are normalised (sum to 1.0). Sort ASCENDING by composite_protection_score to get draw order. Lowest composite score = drawn first. Highest = drawn last.",
+    "preset_weight_profiles": {
+      "tax": {
+        "tax_efficiency": 0.7,
+        "iht_reduction": 0.1,
+        "preserve_growth": 0.1,
+        "liquidity": 0.1
+      },
+      "iht": {
+        "tax_efficiency": 0.1,
+        "iht_reduction": 0.7,
+        "preserve_growth": 0.1,
+        "liquidity": 0.1
+      },
+      "income": {
+        "tax_efficiency": 0.1,
+        "iht_reduction": 0.1,
+        "preserve_growth": 0.1,
+        "liquidity": 0.7
+      },
+      "growth": {
+        "tax_efficiency": 0.1,
+        "iht_reduction": 0.1,
+        "preserve_growth": 0.7,
+        "liquidity": 0.1
+      }
+    },
+    "normalisation_rule": "If weights sum to 0, default to equal weighting (0.25 each). Always normalise: w_i = raw_i / sum(raw). Normalise before scoring, not after.",
+    "edge_cases": [
+      "Equal weights (0.25 each): balanced draw \u2014 cash typically scores ~3.5 composite (low tax shelter + high liquidity preservation offset). ISA scores ~7. EIS in-cap ~8.",
+      "iht_reduction weight = 1.0: all BPR-qualifying EIS/AIM lots (in-cap) score 10 on IHT \u2014 drawn last. VCT scores 1 on IHT \u2014 drawn early. Non-exempt assets (cash/ISA/property) score 1\u20132 on IHT \u2014 drawn earliest. Tax consequences are irrelevant at this extreme.",
+      "tax_efficiency weight = 1.0: ISA scores 10 (highest shelter, drawn last). Cash scores 1 (no shelter, drawn first). Pension scores ~6. VCT post-5yr scores 9 (CGT-exempt). EIS post-3yr scores 8.",
+      "liquidity weight = 1.0: cash scores 10 (preserved for emergencies, drawn last). Property scores 1 (most illiquid, drawn first \u2014 but constrained by indivisibility rule). This is counter-intuitive but correct: high liquidity score = preserve for optionality.",
+      "preserve_growth weight = 1.0: asset with highest assumed_growth_rate scores 10 (protect). Cash scores 1 (draw first). Score derived from lot's assumed_growth_rate relative to register max."
+    ],
+    "scoring_convention": "PROTECTION SCORE \u2014 consistent across all dimensions. 10 = maximum protection, draw this asset LAST. 1 = minimum protection, draw this asset FIRST. Composite = weighted average protection score. Display order: high-to-low (most protected at top). Draw order: low-to-high (lowest score drawn first). Sort ascending by composite_protection_score to get draw order.",
+    "bpr_marginal_relief_scoring": {
+      "description": "Replaces binary BPR protection. IHT-reduction score is proportional to marginal relief benefit remaining \u2014 not a flat 10 for all qualifying lots.",
+      "algorithm": [
+        "1. Compute combined_bpr_qualifying_total across all EIS direct + AIM lots only where    is_iht_exempt=true and bpr_qualifying_date has passed. VCTs never included.",
+        "2. For each qualifying EIS/AIM lot, determine marginal position relative to bpr_full_relief_cap (\u00a32.5M):",
+        "   Within cap (lot + prior total <= \u00a32.5M): iht_reduction_score = 10",
+        "   Partially above cap: pro-rate score between 5 and 10",
+        "   Fully above cap (prior total already >= \u00a32.5M): iht_reduction_score = 5",
+        "   Pre-qualifying (BPR clock not yet complete): iht_reduction_score = 2",
+        "3. VCT lots: iht_reduction_score = 1 always (in-estate, no BPR)"
+      ],
+      "rationale": "This ensures that once a user's BPR pool is already at \u00a33M+, additional EIS/AIM above the cap gets a score of 5 not 10 \u2014 making it eligible for drawdown alongside non-BPR estate assets rather than always protected. Resolves the perverse case where over-cap BPR assets are treated as more protected than they actually are."
+    },
+    "constraint_layer_rule": {
+      "description": "CRITICAL: The constraint layer always takes precedence over the scoring layer. Scoring only determines the ORDER of draws among assets that are eligible to be drawn. It cannot override hard constraints.",
+      "constraint_layer_includes": [
+        "cash_reserve floor \u2014 never draw cash below this threshold regardless of score",
+        "property indivisibility \u2014 property is never scored as a partial annual draw; score only applies when a disposal decision has been made",
+        "wrapper rules \u2014 ISA-wrapped assets are taxed as ISA regardless of underlying asset class score",
+        "pension TFLS tracking \u2014 PCLS formula applied regardless of draw order",
+        "CLT limit \u2014 gifts processed before draws; trust limits are hard caps",
+        "legacy target \u2014 soft cap enforced after spend, surfaced as warning not a hard block"
+      ],
+      "implementation_note": "Run constraint checks FIRST to produce the eligible draw set for this year. THEN apply scoring to order the eligible set. Scoring never expands the eligible set \u2014 only orders within it."
+    }
+  },
+  "action_plan_schema": {
+    "description": "Defines the structure of the year-by-year Action Plan output (F002). Translated from simulation perYear data into plain-English user-facing instructions.",
+    "output_per_year": {
+      "year": "Plan year number",
+      "age": "current_age + year - 1",
+      "is_key_year": "boolean \u2014 true if this year meets any Key Year condition (see key_year_conditions)",
+      "actions": "Array of action objects for this year"
+    },
+    "action_types": {
+      "draw": {
+        "icon": "\u2193",
+        "color": "accent",
+        "description": "Draw from a named asset class. Message: 'Draw \u00a3X from [asset]'. Includes tax note if income or CGT applies."
+      },
+      "tax": {
+        "icon": "\u00a3",
+        "color": "warning",
+        "description": "Tax payment due. Message: 'Income tax \u00a3X due / CGT \u00a3X due on [asset] disposal'."
+      },
+      "gift": {
+        "icon": "\u2192",
+        "color": "info",
+        "description": "Gifting event. Message: 'Transfer \u00a3X to [trust type]. Running CLT total: \u00a3Y of \u00a3325k NRB'."
+      },
+      "milestone": {
+        "icon": "\u2605",
+        "color": "success",
+        "description": "Notable plan event. Examples: 'BPR qualifying date reached for [lot]', 'State pension commences', 'Pension enters IHT (2027 rule)'."
+      },
+      "shortfall": {
+        "icon": "!",
+        "color": "error",
+        "description": "Spend target not met. Message: 'Income shortfall of \u00a3X \u2014 assets insufficient to meet full spend target this year'."
+      },
+      "depletion": {
+        "icon": "\u2298",
+        "color": "orange",
+        "description": "Asset class reaches zero. Message: '[Asset class] fully depleted'. Surfaces as key year automatically."
+      },
+      "dispose": {
+        "icon": "\u27f6",
+        "color": "warning",
+        "description": "Asset disposal event (primarily property). Separate from draw. Message: 'Sell [asset]: gross proceeds \u00a3X'. Always followed by tax and transfer_to_cash events."
+      },
+      "transfer_to_cash": {
+        "icon": "\u2192",
+        "color": "muted",
+        "description": "Net disposal proceeds transferred to cash balance. Message: 'Net proceeds \u00a3X transferred to cash reserve (available for future years)'."
+      },
+      "surplus_carried_forward": {
+        "icon": "\u21aa",
+        "color": "info",
+        "description": "Disposal proceeds exceed this year's spend target. Message: 'Surplus \u00a3X carried forward in cash \u2014 funds year [N+1] and beyond'."
+      },
+      "band_management": {
+        "icon": "\u26a1",
+        "color": "info",
+        "description": "Engine stopped pension draw at tax band threshold. Message: 'Pension draw capped at \u00a3X to stay within basic-rate band. Remaining spend sourced from [next asset]'."
+      },
+      "driver_note": {
+        "icon": "\u2139",
+        "color": "muted",
+        "description": "One-line explanation of why this year's draw order changed vs prior year. Generated whenever the primary draw source changes. Message: e.g. 'Cash reserve floor prevented further cash draw this year' / 'BPR clock completed for [lot]' / '2027 pension IHT rule now active'."
+      }
+    },
+    "key_year_conditions": [
+      "Year 1 (plan start)",
+      "Final plan year",
+      "Any year with a draw source change (different asset class drawn vs prior year)",
+      "Any year with a gift",
+      "Any year with a shortfall",
+      "Any year with a depletion event",
+      "Any year with a flag/warning",
+      "April 2026 rule change year (if apply_2026_bpr_cap=true)",
+      "April 2027 rule change year (if apply_2027_pension_iht=true)",
+      "Any year a BPR qualifying date is reached"
+    ],
+    "summary_totals": {
+      "total_drawn": "Sum of all draws over plan period",
+      "total_tax_paid": "Income tax + CGT over plan period",
+      "total_gifted": "Total gifts over plan period",
+      "effective_tax_rate": "total_tax_paid / total_drawn as a percentage"
+    },
+    "multi_asset_year_rule": {
+      "description": "When more than 2 asset classes are drawn in a single year, the Action Plan switches from individual draw lines to a grouped summary plus breakdown.",
+      "grouped_format": "'Fund this year from: [income \u00a3X], [ISA \u00a3Y], [pension \u00a3Z]' followed by collapsible line-by-line breakdown.",
+      "always_separate": "Tax events, property disposal events, and gift events are always shown as separate explicit action lines \u2014 never merged into grouped draw summaries."
+    },
+    "property_disposal_year_event_order": {
+      "description": "Mandatory event sequence in any year where a property disposal occurs.",
+      "required_sequence": [
+        "1. dispose: 'Sell [label] \u2014 gross proceeds \u00a3X'",
+        "2. debt_repayment [if mortgage_balance > 0]: 'Repay mortgage \u00a3Y \u2014 net equity before tax \u00a3Z'",
+        "3. tax_provision: 'CGT provision \u00a3A (gain \u00a3B less \u00a33k exempt, at [18/24]% rate)'",
+        "4. transfer_to_cash: 'Net proceeds \u00a3C transferred to cash'",
+        "5. draw: 'Fund year [N] spending from disposal proceeds \u00a3D'",
+        "6. surplus_carried_forward [if applicable]: 'Surplus \u00a3E carried to cash \u2014 funds year [N+1] onwards'"
+      ],
+      "rationale": "Without this ordering, users read gross proceeds as spending cash. The chain makes gross/debt/tax/net/carry-forward explicit."
+    }
+  },
+  "known_simplifications_in_v1": {
+    "description": "Areas where v1 makes simplifying assumptions. These must be disclosed to users in the UI.",
+    "simplifications": [
+      "Modelled as single UK-resident individual. Spouse/civil partner NRB transfers, transferable nil-rate band (up to \u00a3650k combined), and joint ownership are not modelled.",
+      "Residential Nil-Rate Band (RNRB: \u00a3175,000) not modelled \u2014 IHT shown may be higher than actual if main residence passes to direct descendants. UI note required wherever IHT is shown.",
+      "Defined benefit pensions treated as flat income stream. Capital value, commutation, and survivor benefits not modelled.",
+      "State pension excluded by default (optional field available). Omitting it slightly overstates asset consumption.",
+      "CGT disposal-year optimisation not automatically selected \u2014 algorithm flags good disposal years but does not reschedule disposals across the plan.",
+      "Sequence-of-returns risk not modelled \u2014 flat growth rate assumptions. Monte Carlo deferred to v2.",
+      "Care costs not modelled \u2014 a major tail risk for users aged 80+.",
+      "Divorce or relationship change not modelled.",
+      "Currency risk on overseas assets not modelled.",
+      "HMRC challenge risk on NEFI gifts not modelled \u2014 algorithm flags potential NEFI eligibility risk but classification remains with user/adviser.",
+      "BPR on trading businesses, agricultural property (APR), and woodland relief not modelled. BPR logic covers EIS direct investments and AIM shares only. VCTs are explicitly excluded from the BPR pool \u2014 they are listed and do not qualify for Business Property Relief.",
+      "April 2026 BPR cap and April 2027 pension IHT changes are modelled assumptions based on announced proposals, not enacted law. Presented as toggleable scenarios with disclosure banners.",
+      "Non-domiciled status, offshore structures, and corporate ownership not modelled \u2014 UK resident individual only.",
+      "LTA protections and pre-April-2024 crystallisation history not modelled \u2014 LSA treated as fully unused unless tfls_used_amount is populated at onboarding.",
+      "Lot disposal for quoted multi-lot holdings uses average-cost approximation. Full HMRC share matching (TCGA 1992 s.104) not implemented. VCT/EIS lots are always treated individually \u2014 no averaging.",
+      "Discretionary trust ten-year periodic charges and exit charges not modelled. Trust outputs show entry and death-interaction effects only.",
+      "Post-2027 pension IHT outputs show estate-level IHT only. Beneficiary-side income tax on inherited pension drawdown is not modelled.",
+      "Tax parameters beyond the last tax_parameter_schedule entry are held flat at the most recent known values. Future rate changes will differ.",
+      "EIS deferred gains are captured where revived_deferred_gain field is populated. If missing from register data, disposal-year CGT may be understated.",
+      "Legacy target conflict resolution: if meeting living costs would cause the projected net estate to fall below the legacy target, spend is funded and LEGACY_FLOOR_AT_RISK warning fires. Legacy target influences sequencing and warnings \u2014 it does not hard-block living-cost draws.",
+      "Cash buffer conflict resolution: when cash_reserve floor prevents drawing from cash, the engine continues to eligible non-cash assets in normal priority order. Shortfall is recorded only if the full eligible queue is exhausted.",
+      "BPR-qualifying lots above the \u00a32.5M cap still receive 50% IHT relief (not 0%). The scoring system treats them as fully protected when they are only partially protected. This is a v1 known limitation \u2014 see BPR_ABOVE_CAP_NO_MARGINAL_BENEFIT warning."
+    ]
+  },
+  "data_confidence_framework": {
+    "description": "Every simulation run must produce a plan_confidence_level alongside outputs. This prevents polished-looking plans from masking weak data quality.",
+    "levels": {
+      "HIGH": "All critical fields present: acquisition_date, acquisition_cost, wrapper_type, tfls_used_amount, is_iht_exempt confirmed. No stale BPR reviews. All VCT/EIS lots have relief_claimed_type. revived_deferred_gain populated where cgt_deferral used.",
+      "MEDIUM": "One or two estimation fields missing: e.g. revived_deferred_gain null on one lot, bpr_last_reviewed stale on one lot. Outputs still reliable but individual calculations may have uncertainty.",
+      "LOW": "Core tax fields missing: acquisition_cost null on a property or AIM lot, acquisition_date missing on VCT/EIS lot, wrapper_type defaulted, tfls_used_amount = 0 with no confirmation. Outputs unreliable for tax-sensitive decisions."
+    },
+    "data_impact_classification": {
+      "BLOCKS_RELIABLE_TAX_OUTPUT": [
+        "missing acquisition_cost on CGT asset",
+        "missing tfls_used_amount confirmation",
+        "missing wrapper_type"
+      ],
+      "MAY_OVERSTATE_IHT_EFFICIENCY": [
+        "stale bpr_last_reviewed",
+        "is_iht_exempt unconfirmed",
+        "pre-qualifying BPR clock not tracked"
+      ],
+      "MAY_UNDERSTATE_DISPOSAL_TAX": [
+        "missing revived_deferred_gain on EIS cgt_deferral lot",
+        "missing allowable_improvement_costs on property"
+      ]
+    },
+    "ui_requirement": "Plan confidence level must be shown prominently on every output view \u2014 not buried in warnings panel. LOW confidence must trigger a banner: 'This plan has data gaps that affect tax calculations. Review highlighted fields before making decisions.'",
+    "blocking_checklist": {
+      "description": "Shown before first results when plan_confidence_level = LOW. User must explicitly fix or acknowledge each blocker.",
+      "blockers": [
+        {
+          "id": "missing_tfls_history",
+          "plain_english": "We don't know how much tax-free cash you've already taken from pensions.",
+          "impact": "Future pension tax calculations may be overstated.",
+          "action": "Enter your cumulative TFLS amount, or confirm it's zero."
+        },
+        {
+          "id": "wrapper_type_defaulted",
+          "plain_english": "One or more asset wrapper types were not confirmed.",
+          "impact": "Wrong wrapper = wrong tax treatment throughout.",
+          "action": "Review and confirm the wrapper type for each flagged asset."
+        },
+        {
+          "id": "vct_iht_exempt_incorrect",
+          "plain_english": "A VCT holding is flagged as IHT-exempt. VCTs don't qualify for Business Relief.",
+          "impact": "IHT estimate is understated.",
+          "action": "Remove IHT-exempt flag from VCT lots."
+        },
+        {
+          "id": "missing_acquisition_cost",
+          "plain_english": "Acquisition cost is missing for an asset where capital gains tax applies.",
+          "impact": "CGT on disposal cannot be calculated.",
+          "action": "Add acquisition cost from contract note or adviser records."
+        },
+        {
+          "id": "missing_revived_deferred_gain",
+          "plain_english": "An EIS holding used CGT deferral at entry but the deferred gain amount is missing.",
+          "impact": "Tax on EIS disposal will be understated.",
+          "action": "Check your EIS3 certificate or original investment records."
+        }
+      ],
+      "ui_behaviour": "Show each blocker with Fix now / Proceed with warning buttons. Plan results shown with LOW confidence banner if user proceeds without fixing."
+    }
+  },
+  "ux_and_onboarding_requirements": {
+    "description": "Product and UX requirements derived from v1.3 reviewer feedback. These govern how the planner is presented, not just what it computes.",
+    "first_run_acknowledgement": {
+      "required": true,
+      "user_must_confirm": [
+        "This tool produces planning estimates, not regulated financial advice.",
+        "Outputs are based on current assumptions. Proposed rule changes (BPR cap, pension IHT) are modelled scenarios, not enacted law.",
+        "Disposal and gifting decisions should be reviewed with a qualified adviser before acting."
+      ],
+      "gate": "User cannot view simulation outputs until acknowledgement is confirmed. One-time per plan, not per session."
+    },
+    "onboarding_flow_order": [
+      "Step 1: Who is this plan for? (confirm: single UK individual, age, family context note \u2014 joint/spouse not modelled)",
+      "Step 2: What matters most? (preset picker: Spend well / Balance inheritance / Protect legacy / Tax efficient)",
+      "Step 3: Asset register \u2014 pre-filled from Unlock register. Show completeness score immediately.",
+      "Step 4: Critical field review \u2014 show 7 fields that can poison the model if wrong: pension TFLS history, wrapper types, acquisition costs, acquisition dates, relief_claimed_type, revived_deferred_gain, mortgage balance. Require explicit confirm-or-skip-with-warning per field.",
+      "Step 5: Assumptions \u2014 inflation, state pension, annual gifts, scenario toggles. Advanced options (legacy target, cash buffer, weight sliders) behind 'Advanced planning controls' accordion.",
+      "Step 6: Confidence check \u2014 show plan_confidence_level before results load. LOW confidence triggers mandatory review prompt."
+    ],
+    "input_labelling": {
+      "description": "Every user-facing input must be badged by type so users understand what they control vs what the engine enforces.",
+      "hard_rule_badge": "Cash buffer floor, property indivisibility, TFLS cap, pension band limits",
+      "soft_preference_badge": "Legacy target, weighted priority sliders, preset profiles",
+      "scenario_assumption_badge": "2026 BPR cap toggle, 2027 pension IHT toggle",
+      "planning_estimate_badge": "Growth rates, inflation rate, state pension amount"
+    },
+    "slider_human_readable_labels": {
+      "tax_efficiency": {
+        "display": "Pay less tax now",
+        "technical": "Tax Efficiency"
+      },
+      "iht_reduction": {
+        "display": "Leave more to heirs",
+        "technical": "IHT Reduction"
+      },
+      "preserve_growth": {
+        "display": "Keep growth assets invested",
+        "technical": "Preserve Growth"
+      },
+      "liquidity": {
+        "display": "Keep cash accessible",
+        "technical": "Liquidity",
+        "live_example": "At this setting, cash is preserved as emergency flexibility \u2014 spending may come from ISA or other assets before cash is drawn. This is intentional.",
+        "counter_intuitive_note": "High score = PROTECT cash (draw it last). Low score = draw cash first. Explain this in the UI \u2014 users expect 'accessible' to mean draw-first, but the correct financial behaviour is the opposite."
+      },
+      "note": "Show display label large. Show technical label small below. Show slider tooltip: 'Moving this slider changes the priority order of asset draws. It does not guarantee this outcome.'"
+    },
+    "constraint_visibility": {
+      "when_cash_buffer_binds": "Show banner: 'Your cash reserve floor (\u00a3X) is limiting draws this year. Remaining spend sourced from other assets.'",
+      "when_legacy_target_at_risk": "Show banner: 'Your plan may not meet your legacy target of \u00a3X. Current projected net estate: \u00a3Y. Consider reducing spend or adjusting the target.'",
+      "when_plan_operationally_fragile": "Show warning: 'This plan is mathematically fundable but operationally tight \u2014 it depends heavily on [illiquid asset disposals / concentrated EIS exits]. Consider holding additional liquid reserves.'"
+    },
+    "action_plan_language": {
+      "preferred_framing": "Modelled sequence under selected assumptions",
+      "avoid": [
+        "recommended actions",
+        "you should",
+        "sell X",
+        "withdraw Y"
+      ],
+      "use_instead": [
+        "modelled draw from",
+        "illustrative sequence",
+        "under this scenario",
+        "review point"
+      ],
+      "disclaimer_per_year": "Each year entry should include a small footnote: 'Illustrative \u2014 not financial advice. Review with an adviser before acting.'"
+    },
+    "operational_realism_warning": {
+      "trigger": "When >60% of a future year's spend target is modelled to come from a single illiquid asset disposal (property or EIS), or when liquid assets fall below 12 months of spend target",
+      "message": "This plan is mathematically fundable but operationally tight. Year [N] relies heavily on a single asset disposal. Real-world timing, market conditions, and tax may differ."
+    },
+    "out_of_scope_disclosure": {
+      "required_at_first_run": true,
+      "items": [
+        "Spouse/civil partner exemptions and transferable nil-rate band not modelled \u2014 estate figures may be overstated for married users.",
+        "Residential Nil-Rate Band (\u00a3175k) not modelled \u2014 estate figures may be overstated if main residence passes to direct descendants.",
+        "DB pension income modelled as flat stream \u2014 commutation, survivor benefits, and capital value not modelled.",
+        "Discretionary trust ten-year and exit charges not modelled.",
+        "Care costs not modelled."
+      ]
+    },
+    "dividend_rate_update_2026_27": {
+      "description": "Tax update from reviewer: 2026/27 dividend rates changed.",
+      "dividend_basic_rate_2026_27": 0.1075,
+      "dividend_higher_rate_2026_27": 0.3575,
+      "dividend_additional_rate_2026_27": 0.3935,
+      "note": "Add 2026/27 entry to tax_parameter_schedule. Dividend allowance remains \u00a3500. All other headline rates (PA, basic/higher thresholds, CGT 18/24%, LSA, AA, MPAA, ISA allowance) held as per 2025/26."
+    },
+    "vct_relief_rate_update_april_2026": {
+      "description": "Tax update from reviewer: VCT upfront income tax relief reduces from 30% to 20% from 6 April 2026 for new subscriptions.",
+      "impact_on_engine": "For VCT lots subscribed on or after 6 April 2026: tax_relief_claimed = 20% \u00d7 subscription_amount. For pre-6-April-2026 lots: clawback basis remains 30%. The asset schema must capture subscription_date to determine applicable relief rate.",
+      "impact_on_clawback": "Early disposal clawback for post-April-2026 VCTs = 20% \u00d7 original subscription (not 30%). Engine must use the rate applicable at time of subscription.",
+      "note": "This does not affect investor annual subscription limits (\u00a3200k remains). It affects: tax_relief_claimed field, clawback calculation on early disposal, and net cost basis."
+    },
+    "three_screen_onboarding": {
+      "screen_1": {
+        "title": "What this planner does (and doesn't)",
+        "body": "This is a planning tool for a single UK individual. It models today's tax rules plus two announced future scenarios. It is not regulated financial advice.",
+        "not_modelled": [
+          "Spouse or civil partner exemptions and transferable nil-rate band",
+          "Residential nil-rate band (\u00a3175k) \u2014 your IHT estimate may be overstated if main residence passes to direct descendants",
+          "Care costs \u2014 a significant tail risk from age 80+",
+          "Defined benefit pension commutation, survivor rights, or capital value",
+          "Offshore structures, corporate ownership, or non-UK domicile",
+          "Discretionary trust ten-year and exit charges"
+        ],
+        "required_checkbox": "I understand this is a planning estimate, not personal financial advice.",
+        "gate": "Cannot proceed without checkbox confirmation.",
+        "conditional_banners": {
+          "if_property_and_children": "Your IHT figures may be overstated \u2014 Residential Nil-Rate Band (\u00a3175k) is not modelled.",
+          "if_joint_assets_or_spouse": "This planner models one individual. Spouse/CP exemptions and transferable nil-rate band are not included.",
+          "if_db_pension": "Your defined benefit pension is modelled as a flat income stream \u2014 commutation, survivor benefits, and capital value are not included."
+        }
+      },
+      "screen_2": {
+        "title": "Your target and time horizon",
+        "left_inputs": [
+          "Annual income needed \u2014 \u00a3 with presets \u00a360k / \u00a3100k / \u00a3150k",
+          "Lifestyle level \u2014 Modest / Comfortable / Generous / Unlimited (descriptions from spec)",
+          "Plan years \u2014 numeric, default to max(35, 90 - current_age)",
+          "Current age \u2014 required, 55\u201390, hint: 'Used only to anchor the long-term projection'"
+        ],
+        "right_live_preview": [
+          "Total planned lifetime spending vs current portfolio value (no tax \u2014 gut-check only)",
+          "Note: 'We always also test your plan to age 90'"
+        ]
+      },
+      "screen_3": {
+        "title": "How do you want to plan?",
+        "instruction": "Pick a planning style \u2014 you can fine-tune later.",
+        "cards": [
+          {
+            "id": "spend_focused",
+            "label": "Spend well",
+            "caption": "Prioritise income today. Inheritance is a bonus.",
+            "weights": {
+              "tax_efficiency": 0.55,
+              "iht_reduction": 0.05,
+              "preserve_growth": 0.2,
+              "liquidity": 0.2
+            },
+            "legacy_target": 0,
+            "cash_reserve": 25000
+          },
+          {
+            "id": "balanced",
+            "label": "Balanced",
+            "caption": "Sustainable income with a meaningful inheritance.",
+            "weights": {
+              "tax_efficiency": 0.3,
+              "iht_reduction": 0.3,
+              "preserve_growth": 0.2,
+              "liquidity": 0.2
+            },
+            "legacy_target_pct_of_estate": 0.4,
+            "cash_reserve": 50000
+          },
+          {
+            "id": "legacy_focused",
+            "label": "Protect my legacy",
+            "caption": "Spend comfortably, but design the plan around a large estate.",
+            "weights": {
+              "tax_efficiency": 0.15,
+              "iht_reduction": 0.55,
+              "preserve_growth": 0.2,
+              "liquidity": 0.1
+            },
+            "legacy_target_pct_of_estate": 0.7,
+            "cash_reserve": 75000
+          }
+        ],
+        "advanced_accordion_default": "hidden",
+        "advanced_accordion_contains": [
+          "weight sliders",
+          "legacy target \u00a3",
+          "cash reserve \u00a3",
+          "annual gift amount",
+          "state pension",
+          "inflation rate",
+          "scenario toggles"
+        ],
+        "first_run_results": "funded_years + net_estate_after_iht + plan_confidence_level badge only. No charts on first run if confidence is LOW."
+      }
+    }
+  },
+  "simulation_inputs_schema": {
+    "description": "Complete input schema for runSimulation(). All fields added in v1.3 are marked NEW.",
+    "fields": {
+      "annual_income_target": {
+        "type": "number",
+        "required": true,
+        "range": "20000\u2013500000",
+        "description": "Annual net income required in today's money. Inflation-adjusted each year."
+      },
+      "plan_years": {
+        "type": "integer",
+        "required": true,
+        "range": "5\u201350",
+        "description": "Plan horizon in years."
+      },
+      "lifestyle_multiplier": {
+        "type": "enum",
+        "required": true,
+        "values": [
+          "modest",
+          "comfortable",
+          "generous",
+          "unlimited"
+        ],
+        "multipliers": {
+          "modest": 0.7,
+          "comfortable": 1.0,
+          "generous": 1.5,
+          "unlimited": 2.2
+        }
+      },
+      "current_age": {
+        "type": "integer",
+        "required": true,
+        "range": "55\u201390",
+        "description": "User's current age. Range 55\u201390 in v1. Shadow horizon = max(plan_years, 35, 90 - current_age)."
+      },
+      "inflation_rate": {
+        "type": "number",
+        "required": false,
+        "default": 0.025,
+        "description": "Annual inflation assumption."
+      },
+      "state_pension_annual": {
+        "type": "number",
+        "required": false,
+        "default": 0,
+        "description": "Annual state pension income (nominal). Reduces required draws."
+      },
+      "priority_weights": {
+        "type": "object",
+        "required": true,
+        "NEW": true,
+        "description": "Four-dimension drawdown priority weights. Must sum to 1.0 (auto-normalised). See drawdown_priority_scoring section.",
+        "fields": {
+          "tax_efficiency": {
+            "type": "number",
+            "range": "0.0\u20131.0"
+          },
+          "iht_reduction": {
+            "type": "number",
+            "range": "0.0\u20131.0"
+          },
+          "preserve_growth": {
+            "type": "number",
+            "range": "0.0\u20131.0"
+          },
+          "liquidity": {
+            "type": "number",
+            "range": "0.0\u20131.0"
+          }
+        }
+      },
+      "cash_reserve": {
+        "type": "number",
+        "required": false,
+        "default": 0,
+        "NEW": true,
+        "description": "Minimum cash balance across all cash-class assets at all times. Engine enforces as hard floor \u2014 never draws cash below this threshold. If spend target cannot be met without breaching floor, the shortfall is recorded but cash is not drawn."
+      },
+      "legacy_target": {
+        "type": "number",
+        "required": false,
+        "default": 0,
+        "NEW": true,
+        "description": "Net-of-IHT bequest goal. Engine uses this to influence draw sequencing and surface LEGACY_FLOOR_AT_RISK when projected net estate falls below this figure. Does NOT hard-block living-cost spending. Legacy target is a soft optimisation preference \u2014 spend target always takes precedence."
+      },
+      "annual_gift_amount": {
+        "type": "number",
+        "required": false,
+        "default": 0
+      },
+      "gift_type": {
+        "type": "enum",
+        "required": false,
+        "values": [
+          "discretionary_trust",
+          "pet",
+          "nefi"
+        ],
+        "default": "discretionary_trust"
+      },
+      "apply_2026_bpr_cap": {
+        "type": "boolean",
+        "required": false,
+        "default": true
+      },
+      "apply_2027_pension_iht": {
+        "type": "boolean",
+        "required": false,
+        "default": true
+      }
+    }
+  },
+  "engine_functions": {
+    "calculateNoPlanIHT": {
+      "description": "Computes IHT as at end of plan_years if the user made no draws and no gifts at all \u2014 the 'do nothing' baseline. Used to calculate iht_saving_vs_no_plan. (F005)",
+      "inputs": [
+        "register: AssetLot[]",
+        "taxParams: TaxParameters",
+        "plan_years: number",
+        "toggles: ScenarioToggles"
+      ],
+      "algorithm": [
+        "1. Grow each lot at its assumed_growth_rate for plan_years years (compound, no draws).",
+        "2. No gifts, no CLTs, no PETs \u2014 available_nrb = full nil_rate_band.",
+        "3. Apply BPR relief at plan_years using the same bpr_full_relief_cap and toggle logic as the main simulation.",
+        "4. Apply apply_2027_pension_iht toggle: if ON, pension value included in estate.",
+        "5. Compute IHT: taxable = total - bpr_exempt - pension(if excluded). iht = max(0, taxable - nil_rate_band) * iht_rate.",
+        "6. Return iht_no_plan_baseline."
+      ],
+      "open_question_for_review": "Should the no-plan baseline apply the 2026/2027 scenario toggles in the same way as the main plan? If the toggles are OFF in the main plan, it seems inconsistent to apply them in the baseline. Current implementation: toggles applied identically in both main plan and baseline so the comparison is apples-to-apples."
+    },
+    "scoreAssetForDrawdown": {
+      "description": "Scores a single asset lot against the four priority dimensions using the current year's priority_weights. Returns composite score \u2014 lower = draw sooner. (F001, F007)",
+      "inputs": [
+        "lot: AssetLot",
+        "weights: PriorityWeights (normalised)",
+        "currentYear: number",
+        "planStartYear: number"
+      ],
+      "returns": "number \u2014 protection score from 1\u201310. Higher = protect (draw last). Lower = draw first. Sort ascending by this score to get draw order."
+    }
+  },
+  "additional_warning_triggers": {
+    "LEGACY_FLOOR_AT_RISK": {
+      "severity": "warning",
+      "condition": "legacy_target > 0 AND (estate_at_end - projected_iht) < legacy_target AND spend_met = true",
+      "message": "The plan is drawing down assets to fund living costs in a way that will not meet your legacy target of \u00a3X. Net estate at plan end is projected at \u00a3Y (after IHT). Consider reducing spend, increasing gifting efficiency, or adjusting the legacy target."
+    },
+    "CASH_BUFFER_CONSTRAINING_DRAW": {
+      "severity": "info",
+      "condition": "In any year: spend_met = false AND cash assets are above zero but below cash_reserve",
+      "message": "Your cash buffer floor (\u00a3X) prevented full draw from cash this year. If you need to fund the shortfall, consider drawing from another asset class or reducing the cash buffer."
+    },
+    "BPR_ABOVE_CAP_NO_MARGINAL_BENEFIT": {
+      "severity": "info",
+      "condition": "apply_2026_bpr_cap=true AND combined_bpr_qualifying_total > bpr_full_relief_cap AND asset being scored has is_iht_exempt=true",
+      "message": "Your BPR-qualifying assets (\u00a3X) exceed the proposed \u00a32.5M cap. Assets above the cap receive only 50% IHT relief. Drawing some BPR-qualifying assets above the cap may be IHT-neutral \u2014 consider reviewing the draw order with an adviser."
+    },
+    "PCLS_HISTORY_UNCERTAIN": {
+      "severity": "warning",
+      "condition": "current_age > 60 AND tfls_used_amount = 0 AND pension_balance > 100000",
+      "message": "You are over 60 with a significant pension and no TFLS history recorded. If you have previously taken tax-free cash from any pension scheme, tfls_used_amount must be updated or future PCLS calculations will be overstated. Please confirm your TFLS history."
+    },
+    "MPAA_STATUS_INCONSISTENT": {
+      "severity": "warning",
+      "condition": "mpaa_triggered = true AND recent pension contributions suggest contribution rate > \u00a310,000/year",
+      "message": "MPAA appears to be triggered for this pension, but contribution levels may exceed the \u00a310,000 MPAA limit. Please confirm MPAA status with your pension provider."
+    },
+    "LIQUIDITY_RISK": {
+      "severity": "warning",
+      "condition": "liquid_assets_value (cash + ISA + quoted investments) < 24 \u00d7 monthly_spend_target",
+      "message": "Liquid assets cover less than 2 years of planned spending. The plan may be operationally fragile. Consider maintaining a minimum liquid buffer before drawing from illiquid assets."
+    },
+    "VCT_IHT_EXEMPT_FLAG_INCORRECT": {
+      "severity": "error",
+      "condition": "asset_class = vct AND is_iht_exempt = true",
+      "message": "VCT holdings cannot qualify for Business Property Relief (HMRC IHTM18113). The is_iht_exempt flag on this VCT lot appears incorrectly set. VCTs are in your estate at full value for IHT. Please review and correct this in your asset register."
+    },
+    "ISA_GIFT_DESTROYS_SHELTER": {
+      "severity": "info",
+      "condition": "gift amount funded from ISA withdrawal in this year",
+      "message": "This year's gift requires an ISA withdrawal. ISA withdrawals permanently lose their tax-free shelter (unless flexible ISA). Consider funding gifts from unwrapped cash first to preserve ISA compounding."
+    },
+    "WRAPPER_TYPE_REVIEW_REQUIRED": {
+      "severity": "warning",
+      "condition": "any lot where wrapper_type was defaulted rather than explicitly confirmed at onboarding",
+      "message": "Wrapper type for [asset] was not explicitly confirmed at onboarding and may have been defaulted. Incorrect wrapper type causes wrong tax treatment throughout the plan. Please review."
+    }
+  }
+}

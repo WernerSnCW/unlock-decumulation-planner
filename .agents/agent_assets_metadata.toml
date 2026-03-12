@@ -6,3 +6,9 @@ id = "YNq6M2JPxbEf5h1qOKSMq"
 uri = "file://artifacts/decumulation-planner/features-added.json"
 type = "unspecified"
 title = "Features Added Beyond Original Brief"
+
+[[outputs]]
+id = "mjvFFrKdnDDtvYnjajBDB"
+uri = "file://artifacts/decumulation-planner/public/spec-v1.5.json"
+type = "unspecified"
+title = "Unlock Decumulation Engine — Technical Specification v1.5 (Full JSON)"
