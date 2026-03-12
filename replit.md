@@ -86,7 +86,11 @@ UK retirement drawdown planner. React + Vite frontend-only app (no backend, no A
   - `WarningsPanel` — severity-badged warnings
   - `YearDetailTable` — expandable rows with per-asset draws and flags
   - `DisclosurePanel` — collapsible assumptions and disclosure text
-- **Strategies**: tax_optimised, iht_optimised, income_first, growth_first
+- **Drawdown Priorities**: Weighted multi-objective system with 4 continuous dimensions (tax_efficiency, iht_reduction, preserve_growth, liquidity). Sliders auto-normalise to sum to 1.0. Preset buttons: Tax, IHT, Income, Growth. Custom blends supported.
+  - `PriorityWeights` interface replaces old `DrawdownStrategy` enum
+  - `scoreAssetForDrawdown()` computes weighted composite score per asset per year
+  - `STRATEGY_PRESETS` map: tax_optimised, iht_optimised, income_first, growth_first
+  - StrategyComparison shows 5 columns: 4 pure presets + "Your Blend" (user's current weights)
 - **Scenario toggles**: Apply 2026 BPR Cap (£1M, 50% above), Apply 2027 Pension IHT (undrawn pension in estate)
 - **Critical rules**:
   - VCT disposal: CGT always £0 (TCGA 1992 s.151A); early disposal (<5yr) may trigger income tax clawback

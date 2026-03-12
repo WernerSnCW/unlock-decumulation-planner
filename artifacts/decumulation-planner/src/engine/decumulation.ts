@@ -37,13 +37,27 @@ export type DrawdownStrategy = 'tax_optimised' | 'iht_optimised' | 'income_first
 export type LifestyleMultiplier = 'modest' | 'comfortable' | 'generous' | 'unlimited';
 export type GiftType = 'discretionary_trust' | 'pet' | 'nefi';
 
+export interface PriorityWeights {
+  tax_efficiency: number;
+  iht_reduction: number;
+  preserve_growth: number;
+  liquidity: number;
+}
+
+export const STRATEGY_PRESETS: Record<DrawdownStrategy, PriorityWeights> = {
+  tax_optimised:  { tax_efficiency: 0.70, iht_reduction: 0.10, preserve_growth: 0.10, liquidity: 0.10 },
+  iht_optimised:  { tax_efficiency: 0.10, iht_reduction: 0.70, preserve_growth: 0.10, liquidity: 0.10 },
+  income_first:   { tax_efficiency: 0.15, iht_reduction: 0.10, preserve_growth: 0.05, liquidity: 0.70 },
+  growth_first:   { tax_efficiency: 0.15, iht_reduction: 0.10, preserve_growth: 0.60, liquidity: 0.15 },
+};
+
 export interface SimulationInputs {
   annual_income_target: number;
   plan_years: number;
   lifestyle_multiplier: LifestyleMultiplier;
   current_age: number;
   inflation_rate: number;
-  drawdown_strategy: DrawdownStrategy;
+  priority_weights: PriorityWeights;
   annual_gift_amount: number;
   gift_type: GiftType;
   state_pension_annual: number;
@@ -101,52 +115,59 @@ const LIFESTYLE_MULTIPLIERS: Record<LifestyleMultiplier, number> = {
   unlimited: 2.2
 };
 
-function getDrawdownPriority(strategy: DrawdownStrategy, assets: AssetState[], planYear: number, toggles: Toggles): string[] {
-  const ids = assets.filter(a => a.value > 0).map(a => a.id);
-  const assetMap = new Map(assets.map(a => [a.id, a]));
+function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, planYear: number, toggles: Toggles): number {
+  const calendarYear = 2025 + planYear - 1;
 
-  switch (strategy) {
-    case 'tax_optimised':
-      return ids.sort((a, b) => {
-        const aa = assetMap.get(a)!;
-        const bb = assetMap.get(b)!;
-        const order: Record<string, number> = { cash: 0, pension: 1, property_investment: 2, aim_shares: 3, vct: 4, eis: 5, isa: 6 };
-        return (order[aa.assetClass] ?? 99) - (order[bb.assetClass] ?? 99);
-      });
+  const taxCostOrder: Record<string, number> = {
+    cash: 0.9,
+    isa: 1.0,
+    pension: 0.5,
+    vct: 0.85,
+    eis: 0.6,
+    aim_shares: 0.4,
+    property_investment: 0.3,
+  };
+  const taxScore = taxCostOrder[asset.assetClass] ?? 0.5;
 
-    case 'iht_optimised': {
-      const calendarYear = 2025 + planYear - 1;
-      const pensionInEstate = toggles.apply_2027_pension_iht && calendarYear >= 2027;
-      return ids.sort((a, b) => {
-        const aa = assetMap.get(a)!;
-        const bb = assetMap.get(b)!;
-        if (pensionInEstate && aa.assetClass === 'pension' && bb.assetClass !== 'pension') return -1;
-        if (pensionInEstate && bb.assetClass === 'pension' && aa.assetClass !== 'pension') return 1;
-        const ihtA = aa.isIHTExempt ? 1 : 0;
-        const ihtB = bb.isIHTExempt ? 1 : 0;
-        if (ihtA !== ihtB) return ihtA - ihtB;
-        const order: Record<string, number> = { cash: 0, property_investment: 1, aim_shares: 2, isa: 3, vct: 4, eis: 5, pension: 6 };
-        return (order[aa.assetClass] ?? 99) - (order[bb.assetClass] ?? 99);
-      });
-    }
-
-    case 'income_first':
-      return ids.sort((a, b) => {
-        const aa = assetMap.get(a)!;
-        const bb = assetMap.get(b)!;
-        return bb.growthRate - aa.growthRate;
-      });
-
-    case 'growth_first':
-      return ids.sort((a, b) => {
-        const aa = assetMap.get(a)!;
-        const bb = assetMap.get(b)!;
-        return aa.growthRate - bb.growthRate;
-      });
-
-    default:
-      return ids;
+  let ihtScore = 0;
+  if (asset.isIHTExempt) {
+    ihtScore = 0.2;
+  } else {
+    ihtScore = 0.8;
   }
+  const pensionInEstate = toggles.apply_2027_pension_iht && calendarYear >= 2027;
+  if (asset.assetClass === 'pension') {
+    ihtScore = pensionInEstate ? 0.95 : 0.1;
+  }
+
+  const maxGrowth = 0.12;
+  const preserveGrowthScore = 1 - Math.min(asset.growthRate / maxGrowth, 1);
+
+  const liquidityOrder: Record<string, number> = {
+    cash: 1.0,
+    isa: 0.85,
+    aim_shares: 0.7,
+    vct: 0.5,
+    eis: 0.4,
+    pension: 0.3,
+    property_investment: 0.1,
+  };
+  const liquidityScore = liquidityOrder[asset.assetClass] ?? 0.5;
+
+  return (
+    weights.tax_efficiency * taxScore +
+    weights.iht_reduction * ihtScore +
+    weights.preserve_growth * preserveGrowthScore +
+    weights.liquidity * liquidityScore
+  );
+}
+
+function getDrawdownPriority(weights: PriorityWeights, assets: AssetState[], planYear: number, toggles: Toggles): string[] {
+  return assets
+    .filter(a => a.value > 0)
+    .map(a => ({ id: a.id, score: scoreAssetForDrawdown(a, weights, planYear, toggles) }))
+    .sort((a, b) => b.score - a.score)
+    .map(a => a.id);
 }
 
 interface AssetState {
@@ -286,7 +307,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
     // Step 5: Draw from assets in priority order
     const drawsByAsset: Record<string, number> = {};
-    const priority = getDrawdownPriority(inputs.drawdown_strategy, assets, planYear, toggles);
+    const priority = getDrawdownPriority(inputs.priority_weights, assets, planYear, toggles);
     let pensionDrawTaxable = 0;
     let totalCGTGain = 0;
     let totalDeferredGainRealized = 0;

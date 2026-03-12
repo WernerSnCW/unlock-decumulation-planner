@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 import type { SimulationInputs, SimulationResult } from './engine/decumulation';
-import { runSimulation } from './engine/decumulation';
+import { runSimulation, STRATEGY_PRESETS } from './engine/decumulation';
 import type { Asset } from './engine/decumulation';
 import type { TaxParametersFile } from './engine/taxLogic';
 import type { Warning } from './engine/warningEvaluator';
@@ -28,7 +28,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   lifestyle_multiplier: 'comfortable',
   current_age: 65,
   inflation_rate: 0.03,
-  drawdown_strategy: 'tax_optimised',
+  priority_weights: { ...STRATEGY_PRESETS.tax_optimised },
   annual_gift_amount: 0,
   gift_type: 'pet',
   state_pension_annual: 0,
@@ -138,7 +138,6 @@ function App() {
                 inputs={inputs}
                 register={register}
                 taxParams={taxParams}
-                currentStrategy={inputs.drawdown_strategy}
               />
 
               <PortfolioChart

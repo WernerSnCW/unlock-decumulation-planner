@@ -204,21 +204,21 @@ body {
   margin: 4px 0;
 }
 
-.strategy-tabs {
+.preset-row {
   display: flex;
   gap: 4px;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-.strategy-tab {
+.preset-btn {
   flex: 1;
   min-width: 0;
-  padding: 8px 4px;
+  padding: 6px 4px;
   border: 1px solid var(--unlock-border);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--unlock-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
@@ -226,16 +226,93 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
-.strategy-tab:hover {
+.preset-btn:hover {
   border-color: var(--unlock-accent);
   color: var(--unlock-text);
 }
 
-.strategy-tab.active {
+.preset-btn.active {
   background: var(--unlock-accent);
   border-color: var(--unlock-accent);
   color: var(--unlock-bg);
   font-weight: 600;
+}
+
+.weight-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weight-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.weight-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--unlock-muted);
+}
+
+.weight-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.weight-pct {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--unlock-text);
+  min-width: 32px;
+  text-align: right;
+}
+
+.weight-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(234, 242, 247, 0.08);
+  outline: none;
+  cursor: pointer;
+}
+
+.weight-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--slider-color, var(--unlock-accent));
+  cursor: pointer;
+  border: 2px solid var(--unlock-bg);
+  box-shadow: 0 0 0 1px var(--slider-color, var(--unlock-accent));
+}
+
+.weight-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--slider-color, var(--unlock-accent));
+  cursor: pointer;
+  border: 2px solid var(--unlock-bg);
+  box-shadow: 0 0 0 1px var(--slider-color, var(--unlock-accent));
+}
+
+.blend-indicator {
+  font-size: 11px;
+  color: var(--unlock-accent);
+  font-weight: 500;
+  padding: 4px 0;
+  margin-top: 4px;
 }
 
 .toggle-row {
@@ -348,7 +425,7 @@ body {
 
 .comparison-grid {
   display: grid;
-  grid-template-columns: 180px repeat(4, 1fr);
+  grid-template-columns: 180px repeat(5, 1fr);
   gap: 0;
   border: 1px solid var(--unlock-border);
   border-radius: var(--radius-lg);

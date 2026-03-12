@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { SimulationInputs, DrawdownStrategy, LifestyleMultiplier, GiftType } from '../engine/decumulation';
+import type { SimulationInputs, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy } from '../engine/decumulation';
+import { STRATEGY_PRESETS } from '../engine/decumulation';
 import { getPETTaperRate } from '../engine/trustLogic';
 
 interface InputPanelProps {
@@ -7,18 +8,25 @@ interface InputPanelProps {
   onChange: (inputs: SimulationInputs) => void;
 }
 
-const STRATEGIES: { value: DrawdownStrategy; label: string }[] = [
-  { value: 'tax_optimised', label: 'Tax Optimised' },
-  { value: 'iht_optimised', label: 'IHT Optimised' },
-  { value: 'income_first', label: 'Income First' },
-  { value: 'growth_first', label: 'Growth First' },
+const PRESETS: { value: DrawdownStrategy; label: string }[] = [
+  { value: 'tax_optimised', label: 'Tax' },
+  { value: 'iht_optimised', label: 'IHT' },
+  { value: 'income_first', label: 'Income' },
+  { value: 'growth_first', label: 'Growth' },
+];
+
+const WEIGHT_KEYS: { key: keyof PriorityWeights; label: string; color: string }[] = [
+  { key: 'tax_efficiency', label: 'Tax Efficiency', color: '#00BB77' },
+  { key: 'iht_reduction', label: 'IHT Reduction', color: '#EF4444' },
+  { key: 'preserve_growth', label: 'Preserve Growth', color: '#3B82F6' },
+  { key: 'liquidity', label: 'Liquidity', color: '#F59E0B' },
 ];
 
 const LIFESTYLES: { value: LifestyleMultiplier; label: string; mult: string }[] = [
-  { value: 'modest', label: 'Modest', mult: '×0.7' },
-  { value: 'comfortable', label: 'Comfortable', mult: '×1.0' },
-  { value: 'generous', label: 'Generous', mult: '×1.5' },
-  { value: 'unlimited', label: 'Unlimited', mult: '×2.2' },
+  { value: 'modest', label: 'Modest', mult: '\u00D70.7' },
+  { value: 'comfortable', label: 'Comfortable', mult: '\u00D71.0' },
+  { value: 'generous', label: 'Generous', mult: '\u00D71.5' },
+  { value: 'unlimited', label: 'Unlimited', mult: '\u00D72.2' },
 ];
 
 const INFLATION_OPTIONS = [
@@ -31,23 +39,37 @@ const INFLATION_OPTIONS = [
 function validate(field: string, value: number): string | null {
   switch (field) {
     case 'annual_income_target':
-      if (value < 20000 || value > 500000) return '£20k – £500k';
+      if (value < 20000 || value > 500000) return '\u00A320k \u2013 \u00A3500k';
       return null;
     case 'plan_years':
-      if (value < 5 || value > 50) return '5 – 50 years';
+      if (value < 5 || value > 50) return '5 \u2013 50 years';
       return null;
     case 'current_age':
-      if (value < 40 || value > 90) return '40 – 90';
+      if (value < 40 || value > 90) return '40 \u2013 90';
       return null;
     case 'state_pension_annual':
-      if (value < 0 || value > 50000) return '£0 – £50k';
+      if (value < 0 || value > 50000) return '\u00A30 \u2013 \u00A350k';
       return null;
     case 'annual_gift_amount':
-      if (value < 0 || value > 500000) return '£0 – £500k';
+      if (value < 0 || value > 500000) return '\u00A30 \u2013 \u00A3500k';
       return null;
     default:
       return null;
   }
+}
+
+function getActivePreset(weights: PriorityWeights): DrawdownStrategy | null {
+  for (const [key, preset] of Object.entries(STRATEGY_PRESETS) as [DrawdownStrategy, PriorityWeights][]) {
+    if (
+      Math.abs(weights.tax_efficiency - preset.tax_efficiency) < 0.01 &&
+      Math.abs(weights.iht_reduction - preset.iht_reduction) < 0.01 &&
+      Math.abs(weights.preserve_growth - preset.preserve_growth) < 0.01 &&
+      Math.abs(weights.liquidity - preset.liquidity) < 0.01
+    ) {
+      return key;
+    }
+  }
+  return null;
 }
 
 export default function InputPanel({ inputs, onChange }: InputPanelProps) {
@@ -62,6 +84,33 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
     onChange({ ...inputs, [field]: value });
   };
 
+  const handleWeightChange = (key: keyof PriorityWeights, rawPct: number) => {
+    const newFraction = rawPct / 100;
+    const otherKeys = WEIGHT_KEYS.map(w => w.key).filter(k => k !== key);
+    const otherTotal = otherKeys.reduce((sum, k) => sum + inputs.priority_weights[k], 0);
+    const remaining = 1 - newFraction;
+
+    const newWeights = { ...inputs.priority_weights, [key]: newFraction };
+    if (otherTotal > 0) {
+      const scale = remaining / otherTotal;
+      for (const k of otherKeys) {
+        newWeights[k] = inputs.priority_weights[k] * scale;
+      }
+    } else {
+      const share = remaining / otherKeys.length;
+      for (const k of otherKeys) {
+        newWeights[k] = share;
+      }
+    }
+    onChange({ ...inputs, priority_weights: newWeights });
+  };
+
+  const applyPreset = (strategy: DrawdownStrategy) => {
+    onChange({ ...inputs, priority_weights: { ...STRATEGY_PRESETS[strategy] } });
+  };
+
+  const activePreset = getActivePreset(inputs.priority_weights);
+
   return (
     <div className="sidebar">
       <div className="section-title">Income Target</div>
@@ -69,7 +118,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
       <div className="input-group">
         <label>Annual Income Target</label>
         <div className="input-prefix">
-          <span>£</span>
+          <span>{'\u00A3'}</span>
           <input
             type="number"
             value={inputs.annual_income_target}
@@ -116,18 +165,47 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
 
       <div className="divider" />
 
-      <div className="section-title">Drawdown Strategy</div>
-      <div className="strategy-tabs">
-        {STRATEGIES.map(s => (
+      <div className="section-title">Drawdown Priorities</div>
+
+      <div className="preset-row">
+        {PRESETS.map(p => (
           <button
-            key={s.value}
-            className={`strategy-tab ${inputs.drawdown_strategy === s.value ? 'active' : ''}`}
-            onClick={() => update('drawdown_strategy', s.value)}
+            key={p.value}
+            className={`preset-btn ${activePreset === p.value ? 'active' : ''}`}
+            onClick={() => applyPreset(p.value)}
           >
-            {s.label}
+            {p.label}
           </button>
         ))}
       </div>
+
+      <div className="weight-sliders">
+        {WEIGHT_KEYS.map(w => {
+          const pct = Math.round(inputs.priority_weights[w.key] * 100);
+          return (
+            <div key={w.key} className="weight-slider-row">
+              <div className="weight-label">
+                <span className="weight-dot" style={{ background: w.color }} />
+                <span>{w.label}</span>
+                <span className="weight-pct">{pct}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={pct}
+                onChange={e => handleWeightChange(w.key, parseInt(e.target.value))}
+                className="weight-range"
+                style={{ '--slider-color': w.color } as React.CSSProperties}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {!activePreset && (
+        <div className="blend-indicator">Custom blend</div>
+      )}
 
       <div className="divider" />
 
@@ -160,7 +238,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
       <div className="input-group gifting-section">
         <label>Annual Gift Amount</label>
         <div className="input-prefix">
-          <span>£</span>
+          <span>{'\u00A3'}</span>
           <input
             type="number"
             value={inputs.annual_gift_amount}
@@ -216,7 +294,7 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
       <div className="input-group">
         <label>State Pension (annual)</label>
         <div className="input-prefix">
-          <span>£</span>
+          <span>{'\u00A3'}</span>
           <input
             type="number"
             value={inputs.state_pension_annual}
