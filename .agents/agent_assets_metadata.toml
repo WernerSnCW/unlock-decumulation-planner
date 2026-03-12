@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "YNq6M2JPxbEf5h1qOKSMq"
+uri = "file://artifacts/decumulation-planner/features-added.json"
+type = "unspecified"
+title = "Features Added Beyond Original Brief"

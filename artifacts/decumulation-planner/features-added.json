@@ -1,0 +1,107 @@
+{
+  "project": "Unlock Decumulation Planner",
+  "version": "1.0.0",
+  "last_updated": "2026-03-12",
+  "features_added_beyond_original_brief": [
+    {
+      "id": "F001",
+      "name": "Weighted Multi-Objective Drawdown Priorities",
+      "category": "Engine",
+      "description": "Replaced fixed drawdown strategy enum with a 4-dimension continuous priority weighting system. Users adjust sliders for Tax Efficiency, IHT Reduction, Preserve Growth, and Liquidity. Weights auto-normalise to sum to 1.0. Preset buttons (Tax, IHT, Income, Growth) set common profiles. Custom blends supported.",
+      "engine_fields": ["priority_weights.tax_efficiency", "priority_weights.iht_reduction", "priority_weights.preserve_growth", "priority_weights.liquidity"],
+      "ui_components": ["InputPanel (sliders + preset buttons)", "StrategyComparison (5-column grid: 4 presets + Your Blend)"],
+      "files_changed": ["src/engine/decumulation.ts", "src/components/InputPanel.tsx", "src/components/StrategyComparison.tsx"]
+    },
+    {
+      "id": "F002",
+      "name": "Action Plan (Recommended Actions Timeline)",
+      "category": "UI / Reporting",
+      "description": "Year-by-year timeline translating simulation outputs into plain-language recommended actions: what to sell/withdraw/draw, taxes due, gifts to make, and milestones. Key years mode filters to significant events (first/last year, milestones, draw-source changes, gifts, shortfalls, depletions). All years mode shows every year. Summary totals at bottom.",
+      "action_types": ["draw", "tax", "gift", "milestone", "shortfall", "depletion"],
+      "ui_components": ["ActionPlan"],
+      "files_changed": ["src/components/ActionPlan.tsx", "src/App.css"]
+    },
+    {
+      "id": "F003",
+      "name": "Cash Buffer / Minimum Cash Reserve",
+      "category": "Engine + Input",
+      "description": "Users set a minimum cash reserve amount. The engine enforces an aggregate cash floor across all cash-class assets during both income drawdowns and tax payment deductions. Cash assets are never drawn below the combined threshold.",
+      "engine_fields": ["cash_reserve"],
+      "ui_components": ["InputPanel (Cash Buffer section)"],
+      "files_changed": ["src/engine/decumulation.ts", "src/components/InputPanel.tsx", "src/App.tsx"]
+    },
+    {
+      "id": "F004",
+      "name": "Legacy Target (Bequest Protection)",
+      "category": "Engine + Input",
+      "description": "Users specify how much they want to leave in their will (net of IHT). The engine caps annual drawdowns when the portfolio approaches this threshold. Summary shows net estate after IHT, legacy shortfall amount, and met/unmet status.",
+      "engine_fields": ["legacy_target"],
+      "summary_fields": ["legacy_target", "legacy_shortfall", "net_estate_after_iht"],
+      "ui_components": ["InputPanel (Legacy Target section)", "FundedYearsIndicator (Estate card with legacy status)"],
+      "files_changed": ["src/engine/decumulation.ts", "src/components/InputPanel.tsx", "src/components/FundedYearsIndicator.tsx", "src/App.tsx"]
+    },
+    {
+      "id": "F005",
+      "name": "IHT Savings vs No-Plan Comparison",
+      "category": "Engine + Reporting",
+      "description": "Calculates a no-plan baseline IHT by growing all assets at their rates for the plan duration with no draws or gifts, then compares against the actual plan IHT at plan end. Shows the saving and baseline in the IHT summary card.",
+      "engine_function": "calculateNoPlanIHT()",
+      "summary_fields": ["iht_saving_vs_no_plan", "iht_no_plan_baseline"],
+      "ui_components": ["FundedYearsIndicator (IHT card with savings line)"],
+      "files_changed": ["src/engine/decumulation.ts", "src/components/FundedYearsIndicator.tsx"]
+    },
+    {
+      "id": "F006",
+      "name": "Asset Depletion Visibility",
+      "category": "UI / Reporting",
+      "description": "The Action Plan detects when any asset class transitions from a positive value to zero between consecutive years. Depletion events are displayed with an orange marker and automatically surface as key years in the filtered view.",
+      "ui_components": ["ActionPlan (depletion step type with ⊘ icon)"],
+      "files_changed": ["src/components/ActionPlan.tsx", "src/App.css"]
+    },
+    {
+      "id": "F007",
+      "name": "EIS IHT Optimisation (BPR-Aware Draw Scoring)",
+      "category": "Engine",
+      "description": "The drawdown priority scoring now factors in BPR qualification timing for IHT-exempt assets like EIS and AIM shares. Assets that have passed their 2-year BPR qualifying date receive the strongest protection from drawdown. Assets still in the qualifying window receive slightly less protection.",
+      "engine_logic": "scoreAssetForDrawdown() uses bprQualifyingDate to differentiate qualified vs pre-qualification BPR assets",
+      "files_changed": ["src/engine/decumulation.ts"]
+    },
+    {
+      "id": "F008",
+      "name": "BPR Cap Updated to £2.5M",
+      "category": "Data / Tax Rules",
+      "description": "Updated the BPR full relief cap from the originally implemented £1M to £2.5M combined BPR/APR allowance per taxpayer, reflecting the announced policy change. 100% relief up to £2.5M, 50% relief above. All UI text, warnings, and disclosures updated accordingly.",
+      "tax_parameter": "bpr_full_relief_cap: 2500000",
+      "files_changed": ["src/data/taxParameters.json", "src/components/ActionPlan.tsx", "src/components/DisclosurePanel.tsx", "src/engine/warningEvaluator.ts"]
+    },
+    {
+      "id": "F009",
+      "name": "Net Estate After IHT Display",
+      "category": "UI / Reporting",
+      "description": "The Estate at Plan End summary card now shows the net estate value after deducting IHT — the amount beneficiaries would actually receive. Always visible regardless of whether a legacy target is set.",
+      "summary_fields": ["net_estate_after_iht"],
+      "ui_components": ["FundedYearsIndicator (Estate card)"],
+      "files_changed": ["src/components/FundedYearsIndicator.tsx"]
+    }
+  ],
+  "original_brief_features": [
+    "8 asset type simulation (cash, ISA, pension, property, VCT, EIS, AIM, residential property)",
+    "UK income tax with personal allowance taper",
+    "Capital gains tax with basic/higher rate split",
+    "PCLS / tax-free lump sum with lifetime allowance tracking",
+    "IHT calculation with nil-rate band and BPR relief",
+    "Gifting: PET, CLT (discretionary trust), NEFI types",
+    "CLT 7-year rolling window and PET taper relief",
+    "Lifestyle multiplier (modest/comfortable/generous/unlimited)",
+    "Inflation adjustment",
+    "State pension income",
+    "Scenario toggles (2026 BPR cap, 2027 pension IHT)",
+    "Portfolio value stacked area chart by asset class",
+    "IHT trajectory line chart with reference lines",
+    "Year detail table with expandable rows",
+    "Warnings panel with severity badges",
+    "Disclosure panel with assumptions",
+    "Shadow year projection to age 90",
+    "Funded years indicator with shortfall detection"
+  ]
+}
