@@ -58,6 +58,24 @@ export interface GloryYearsConfig {
   multiplier: number;
 }
 
+export interface StrategyMechanisms {
+  preserve_eis_bpr: boolean;
+  preserve_aim_bpr: boolean;
+  preserve_vct_income: boolean;
+  draw_isa_early: boolean;
+  draw_pension_early: boolean;
+  protect_property: boolean;
+}
+
+export const DEFAULT_MECHANISMS: StrategyMechanisms = {
+  preserve_eis_bpr: true,
+  preserve_aim_bpr: true,
+  preserve_vct_income: false,
+  draw_isa_early: false,
+  draw_pension_early: false,
+  protect_property: true,
+};
+
 export interface SimulationInputs {
   annual_income_target: number;
   plan_years: number;
@@ -65,6 +83,7 @@ export interface SimulationInputs {
   current_age: number;
   inflation_rate: number;
   priority_weights: PriorityWeights;
+  strategy_mechanisms: StrategyMechanisms;
   annual_gift_amount: number;
   gift_type: GiftType;
   state_pension_annual: number;
@@ -129,64 +148,112 @@ const LIFESTYLE_MULTIPLIERS: Record<LifestyleMultiplier, number> = {
   unlimited: 2.2
 };
 
-function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, planYear: number, toggles: Toggles, allAssets: AssetState[]): number {
+function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, planYear: number, toggles: Toggles, allAssets: AssetState[], mechanisms: StrategyMechanisms): number {
   const calendarYear = 2025 + planYear - 1;
 
   const taxCostOrder: Record<string, number> = {
     cash: 0.9,
-    isa: 1.0,
-    pension: 0.5,
-    vct: 0.85,
+    isa: mechanisms.draw_isa_early ? 1.0 : 0.7,
+    pension: mechanisms.draw_pension_early ? 0.8 : 0.5,
+    vct: mechanisms.preserve_vct_income ? 0.5 : 0.85,
     eis: 0.6,
     aim_shares: 0.4,
-    property_investment: 0.3,
+    property_investment: mechanisms.protect_property ? 0.15 : 0.3,
   };
   const taxScore = taxCostOrder[asset.assetClass] ?? 0.5;
 
   let ihtScore = 0;
   if (asset.assetClass === 'vct') {
     ihtScore = 0.8;
-  } else if (asset.isIHTExempt && (asset.assetClass === 'eis' || asset.assetClass === 'aim_shares')) {
-    if (asset.bprQualifyingDate) {
-      const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();
-      if (calendarYear >= qualifyingYear) {
-        if (toggles.apply_2026_bpr_cap && calendarYear >= 2026) {
-          const bprPool = allAssets
-            .filter(a => (a.assetClass === 'eis' || a.assetClass === 'aim_shares') && a.isIHTExempt && a.value > 0)
-            .reduce((sum, a) => {
-              if (a.bprQualifyingDate) {
-                const qy = new Date(a.bprQualifyingDate).getFullYear();
-                if (calendarYear >= qy) return sum + a.value;
-              }
-              return sum;
-            }, 0);
-          const cap = 2500000;
-          const priorTotal = bprPool - Math.max(0, asset.value);
-          if (priorTotal >= cap) {
-            ihtScore = 0.4;
-          } else if (priorTotal + Math.max(0, asset.value) <= cap) {
-            ihtScore = 0.1;
+  } else if (asset.isIHTExempt && asset.assetClass === 'eis') {
+    if (mechanisms.preserve_eis_bpr) {
+      if (asset.bprQualifyingDate) {
+        const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();
+        if (calendarYear >= qualifyingYear) {
+          if (toggles.apply_2026_bpr_cap && calendarYear >= 2026) {
+            const bprPool = allAssets
+              .filter(a => (a.assetClass === 'eis' || a.assetClass === 'aim_shares') && a.isIHTExempt && a.value > 0)
+              .reduce((sum, a) => {
+                if (a.bprQualifyingDate) {
+                  const qy = new Date(a.bprQualifyingDate).getFullYear();
+                  if (calendarYear >= qy) return sum + a.value;
+                }
+                return sum;
+              }, 0);
+            const cap = 2500000;
+            const priorTotal = bprPool - Math.max(0, asset.value);
+            if (priorTotal >= cap) {
+              ihtScore = 0.4;
+            } else if (priorTotal + Math.max(0, asset.value) <= cap) {
+              ihtScore = 0.05;
+            } else {
+              const withinCap = cap - priorTotal;
+              const ratio = withinCap / Math.max(1, Math.max(0, asset.value));
+              ihtScore = 0.05 * ratio + 0.4 * (1 - ratio);
+            }
           } else {
-            const withinCap = cap - priorTotal;
-            const aboveCap = Math.max(0, asset.value) - withinCap;
-            const ratio = withinCap / Math.max(1, Math.max(0, asset.value));
-            ihtScore = 0.1 * ratio + 0.4 * (1 - ratio);
+            ihtScore = 0.05;
           }
         } else {
-          ihtScore = 0.1;
+          ihtScore = 0.6;
         }
       } else {
-        ihtScore = 0.65;
+        ihtScore = 0.05;
       }
     } else {
-      ihtScore = 0.1;
+      ihtScore = 0.7;
+    }
+  } else if (asset.isIHTExempt && asset.assetClass === 'aim_shares') {
+    if (mechanisms.preserve_aim_bpr) {
+      if (asset.bprQualifyingDate) {
+        const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();
+        if (calendarYear >= qualifyingYear) {
+          if (toggles.apply_2026_bpr_cap && calendarYear >= 2026) {
+            const bprPool = allAssets
+              .filter(a => (a.assetClass === 'eis' || a.assetClass === 'aim_shares') && a.isIHTExempt && a.value > 0)
+              .reduce((sum, a) => {
+                if (a.bprQualifyingDate) {
+                  const qy = new Date(a.bprQualifyingDate).getFullYear();
+                  if (calendarYear >= qy) return sum + a.value;
+                }
+                return sum;
+              }, 0);
+            const cap = 2500000;
+            const priorTotal = bprPool - Math.max(0, asset.value);
+            if (priorTotal >= cap) {
+              ihtScore = 0.4;
+            } else if (priorTotal + Math.max(0, asset.value) <= cap) {
+              ihtScore = 0.05;
+            } else {
+              const withinCap = cap - priorTotal;
+              const ratio = withinCap / Math.max(1, Math.max(0, asset.value));
+              ihtScore = 0.05 * ratio + 0.4 * (1 - ratio);
+            }
+          } else {
+            ihtScore = 0.05;
+          }
+        } else {
+          ihtScore = 0.6;
+        }
+      } else {
+        ihtScore = 0.05;
+      }
+    } else {
+      ihtScore = 0.7;
     }
   } else {
     ihtScore = 0.8;
   }
   const pensionInEstate = toggles.apply_2027_pension_iht && calendarYear >= 2027;
   if (asset.assetClass === 'pension') {
-    ihtScore = pensionInEstate ? 0.95 : 0.1;
+    if (mechanisms.draw_pension_early) {
+      ihtScore = 0.9;
+    } else {
+      ihtScore = pensionInEstate ? 0.95 : 0.1;
+    }
+  }
+  if (asset.assetClass === 'property_investment' && mechanisms.protect_property) {
+    ihtScore = Math.min(ihtScore, 0.3);
   }
 
   const maxGrowth = 0.12;
@@ -194,12 +261,12 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
 
   const liquidityOrder: Record<string, number> = {
     cash: 1.0,
-    isa: 0.85,
+    isa: mechanisms.draw_isa_early ? 0.95 : 0.85,
     aim_shares: 0.7,
     vct: 0.5,
     eis: 0.4,
-    pension: 0.3,
-    property_investment: 0.1,
+    pension: mechanisms.draw_pension_early ? 0.6 : 0.3,
+    property_investment: mechanisms.protect_property ? 0.05 : 0.1,
   };
   const liquidityScore = liquidityOrder[asset.assetClass] ?? 0.5;
 
@@ -211,10 +278,10 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
   );
 }
 
-function getDrawdownPriority(weights: PriorityWeights, assets: AssetState[], planYear: number, toggles: Toggles): string[] {
+function getDrawdownPriority(weights: PriorityWeights, assets: AssetState[], planYear: number, toggles: Toggles, mechanisms: StrategyMechanisms): string[] {
   return assets
     .filter(a => a.value > 0)
-    .map(a => ({ id: a.id, score: scoreAssetForDrawdown(a, weights, planYear, toggles, assets) }))
+    .map(a => ({ id: a.id, score: scoreAssetForDrawdown(a, weights, planYear, toggles, assets, mechanisms) }))
     .sort((a, b) => b.score - a.score)
     .map(a => a.id);
 }
@@ -397,7 +464,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         };
       }
     }
-    const priority = getDrawdownPriority(effectiveWeights, assets, planYear, toggles);
+    const priority = getDrawdownPriority(effectiveWeights, assets, planYear, toggles, inputs.strategy_mechanisms);
     let pensionDrawTaxable = 0;
     let totalCGTGain = 0;
     let totalDeferredGainRealized = 0;

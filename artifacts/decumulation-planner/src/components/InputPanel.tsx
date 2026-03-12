@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { SimulationInputs, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig } from '../engine/decumulation';
+import type { SimulationInputs, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms } from '../engine/decumulation';
 import { STRATEGY_PRESETS } from '../engine/decumulation';
 import { getPETTaperRate } from '../engine/trustLogic';
 
@@ -283,6 +283,93 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
       {!activePreset && (
         <div className="blend-indicator">Custom blend</div>
       )}
+
+      <div className="divider" />
+
+      <div className="section-title">Strategy Mechanisms</div>
+      <span style={{ fontSize: 11, color: 'var(--unlock-muted)', display: 'block', marginBottom: 8 }}>
+        Control which asset types to protect or draw from first
+      </span>
+
+      <div className="mechanism-group">
+        <div className="mechanism-header">IHT Reduction</div>
+        <div className="toggle-row compact">
+          <label>Preserve EIS for BPR</label>
+          <button
+            className={`toggle-switch ${inputs.strategy_mechanisms.preserve_eis_bpr ? 'active' : 'inactive'}`}
+            onClick={() => onChange({
+              ...inputs,
+              strategy_mechanisms: { ...inputs.strategy_mechanisms, preserve_eis_bpr: !inputs.strategy_mechanisms.preserve_eis_bpr }
+            })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+        <div className="toggle-row compact">
+          <label>Preserve AIM for BPR</label>
+          <button
+            className={`toggle-switch ${inputs.strategy_mechanisms.preserve_aim_bpr ? 'active' : 'inactive'}`}
+            onClick={() => onChange({
+              ...inputs,
+              strategy_mechanisms: { ...inputs.strategy_mechanisms, preserve_aim_bpr: !inputs.strategy_mechanisms.preserve_aim_bpr }
+            })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+        <div className="toggle-row compact">
+          <label>Protect property</label>
+          <button
+            className={`toggle-switch ${inputs.strategy_mechanisms.protect_property ? 'active' : 'inactive'}`}
+            onClick={() => onChange({
+              ...inputs,
+              strategy_mechanisms: { ...inputs.strategy_mechanisms, protect_property: !inputs.strategy_mechanisms.protect_property }
+            })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mechanism-group">
+        <div className="mechanism-header">Tax / Income</div>
+        <div className="toggle-row compact">
+          <label>Draw ISAs early (tax-free)</label>
+          <button
+            className={`toggle-switch ${inputs.strategy_mechanisms.draw_isa_early ? 'active' : 'inactive'}`}
+            onClick={() => onChange({
+              ...inputs,
+              strategy_mechanisms: { ...inputs.strategy_mechanisms, draw_isa_early: !inputs.strategy_mechanisms.draw_isa_early }
+            })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+        <div className="toggle-row compact">
+          <label>Draw pension early</label>
+          <button
+            className={`toggle-switch ${inputs.strategy_mechanisms.draw_pension_early ? 'active' : 'inactive'}`}
+            onClick={() => onChange({
+              ...inputs,
+              strategy_mechanisms: { ...inputs.strategy_mechanisms, draw_pension_early: !inputs.strategy_mechanisms.draw_pension_early }
+            })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+        <div className="toggle-row compact">
+          <label>Preserve VCT dividend income</label>
+          <button
+            className={`toggle-switch ${inputs.strategy_mechanisms.preserve_vct_income ? 'active' : 'inactive'}`}
+            onClick={() => onChange({
+              ...inputs,
+              strategy_mechanisms: { ...inputs.strategy_mechanisms, preserve_vct_income: !inputs.strategy_mechanisms.preserve_vct_income }
+            })}
+          >
+            <div className="toggle-knob" />
+          </button>
+        </div>
+      </div>
 
       <div className="divider" />
 

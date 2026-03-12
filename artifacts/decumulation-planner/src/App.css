@@ -365,6 +365,47 @@ body {
   left: 2px;
 }
 
+.mechanism-group {
+  margin-bottom: 10px;
+}
+
+.mechanism-header {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--unlock-accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+  margin-top: 4px;
+}
+
+.toggle-row.compact {
+  margin-bottom: 6px;
+}
+
+.toggle-row.compact label {
+  font-size: 11px;
+}
+
+.toggle-row.compact .toggle-switch {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+}
+
+.toggle-row.compact .toggle-switch .toggle-knob {
+  width: 14px;
+  height: 14px;
+}
+
+.toggle-row.compact .toggle-switch.active .toggle-knob {
+  left: 16px;
+}
+
+.toggle-row.compact .toggle-switch.inactive .toggle-knob {
+  left: 2px;
+}
+
 .scenario-banner {
   padding: 12px 20px;
   background: rgba(245, 158, 11, 0.08);

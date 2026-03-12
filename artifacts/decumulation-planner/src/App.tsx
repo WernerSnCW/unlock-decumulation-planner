@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 import type { SimulationInputs, SimulationResult, OptimiserResult } from './engine/decumulation';
-import { runSimulation, runOptimiser, STRATEGY_PRESETS } from './engine/decumulation';
+import { runSimulation, runOptimiser, STRATEGY_PRESETS, DEFAULT_MECHANISMS } from './engine/decumulation';
 import type { Asset } from './engine/decumulation';
 import type { TaxParametersFile } from './engine/taxLogic';
 import type { Warning } from './engine/warningEvaluator';
@@ -34,6 +34,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   annual_gift_amount: 0,
   gift_type: 'pet',
   state_pension_annual: 0,
+  strategy_mechanisms: { ...DEFAULT_MECHANISMS },
   apply_2026_bpr_cap: true,
   apply_2027_pension_iht: true,
   cash_reserve: 0,
