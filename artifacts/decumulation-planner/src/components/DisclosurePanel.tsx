@@ -29,7 +29,7 @@ export default function DisclosurePanel({ taxParams }: Props) {
             <li>CGT uses average-cost basis as a proxy. Full HMRC share matching rules are not implemented.</li>
             <li>VCT disposals are CGT-exempt (TCGA 1992 s.151A). Early disposal triggers income tax relief clawback.</li>
             <li>EIS shares held &gt;3 years are CGT-exempt. Deferred gains crystallise on disposal.</li>
-            <li>BPR relief requires 2+ years' qualifying ownership. The April 2026 cap (£1M full, 50% above) is a proposed rule — toggle to compare impact.</li>
+            <li>BPR relief requires 2+ years' qualifying ownership. The April 2026 cap (£2.5M combined BPR/APR at 100%, 50% above) reflects announced policy — toggle to compare impact.</li>
             <li>From April 2027 (proposed), undrawn pension funds are included in the IHT-liable estate. Toggle to compare impact.</li>
             <li>PCLS (tax-free lump sum) is 25% of crystallisation, capped at the remaining Lump Sum Allowance (£268,275 lifetime).</li>
             <li>IHT nil-rate band is reduced by chargeable lifetime transfers (CLTs) in the preceding 7 years.</li>

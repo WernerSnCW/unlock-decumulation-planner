@@ -133,7 +133,16 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
 
   let ihtScore = 0;
   if (asset.isIHTExempt) {
-    ihtScore = 0.2;
+    if (asset.bprQualifyingDate) {
+      const qualifyingYear = new Date(asset.bprQualifyingDate).getFullYear();
+      if (calendarYear >= qualifyingYear) {
+        ihtScore = 0.1;
+      } else {
+        ihtScore = 0.15;
+      }
+    } else {
+      ihtScore = 0.1;
+    }
   } else {
     ihtScore = 0.8;
   }

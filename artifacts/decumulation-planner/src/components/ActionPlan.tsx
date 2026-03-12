@@ -134,7 +134,7 @@ function buildYearActions(
   if (yr.year === 2026 && inputs.apply_2026_bpr_cap) {
     steps.push({
       type: 'milestone',
-      label: 'BPR cap takes effect — relief limited to 50% above £1M',
+      label: 'BPR cap takes effect — 100% relief up to £2.5M, 50% above',
     });
   }
 

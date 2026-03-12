@@ -95,7 +95,7 @@ export function evaluateYearWarnings(
     warnings.push({
       id: 'SCENARIO_2026_BPR',
       severity: 'info',
-      message: 'Scenario: April 2026 BPR cap at £1M (50% relief above) is active.'
+      message: 'Scenario: April 2026 BPR cap at £2.5M (50% relief above) is active.'
     });
   }
 

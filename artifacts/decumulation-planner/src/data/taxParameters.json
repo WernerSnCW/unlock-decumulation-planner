@@ -31,7 +31,7 @@
       "vct_annual_limit": 200000,
       "eis_annual_limit": 1000000,
       "eis_ki_annual_limit": 2000000,
-      "bpr_full_relief_cap": 1000000
+      "bpr_full_relief_cap": 2500000
     }
   ],
   "hold_flat_from": "2025/26",
