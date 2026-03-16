@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import type { SimulationInputs, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms } from '../engine/decumulation';
+import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms } from '../engine/decumulation';
 import { STRATEGY_PRESETS } from '../engine/decumulation';
 import { getPETTaperRate } from '../engine/trustLogic';
 
 interface InputPanelProps {
   inputs: SimulationInputs;
+  summary: SimulationSummary | null;
   onChange: (inputs: SimulationInputs) => void;
 }
 
@@ -50,6 +51,9 @@ function validate(field: string, value: number): string | null {
     case 'state_pension_annual':
       if (value < 0 || value > 50000) return '\u00A30 \u2013 \u00A350k';
       return null;
+    case 'private_pension_income':
+      if (value < 0 || value > 500000) return '\u00A30 \u2013 \u00A3500k';
+      return null;
     case 'annual_gift_amount':
       if (value < 0 || value > 500000) return '\u00A30 \u2013 \u00A3500k';
       return null;
@@ -72,7 +76,11 @@ function getActivePreset(weights: PriorityWeights): DrawdownStrategy | null {
   return null;
 }
 
-export default function InputPanel({ inputs, onChange }: InputPanelProps) {
+function formatMoney(v: number): string {
+  return '\u00A3' + Math.round(v).toLocaleString('en-GB');
+}
+
+export default function InputPanel({ inputs, summary, onChange }: InputPanelProps) {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   const update = (field: keyof SimulationInputs, value: any) => {
@@ -127,6 +135,26 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
           />
         </div>
         {errors.annual_income_target && <span className="error-text">{errors.annual_income_target}</span>}
+        <div className="gross-net-row">
+          <button
+            className={`gross-net-btn ${!inputs.income_is_net ? 'active' : ''}`}
+            onClick={() => onChange({ ...inputs, income_is_net: false })}
+          >Gross</button>
+          <button
+            className={`gross-net-btn ${inputs.income_is_net ? 'active' : ''}`}
+            onClick={() => onChange({ ...inputs, income_is_net: true })}
+          >Net</button>
+        </div>
+        {inputs.income_is_net && summary && (
+          <div className="gross-net-hint">
+            Gross equivalent: {formatMoney(summary.grossed_up_income)}
+          </div>
+        )}
+        {!inputs.income_is_net && inputs.annual_income_target > 0 && summary && (
+          <div className="gross-net-hint">
+            Est. net after tax: {formatMoney(inputs.annual_income_target - (summary.total_income_tax_paid / Math.max(1, inputs.plan_years)))}
+          </div>
+        )}
       </div>
 
       <div className="input-group">
@@ -491,6 +519,21 @@ export default function InputPanel({ inputs, onChange }: InputPanelProps) {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+      </div>
+
+      <div className="input-group">
+        <label>Private Pension Income</label>
+        <div className="input-prefix">
+          <span>{'\u00A3'}</span>
+          <input
+            type="number"
+            value={inputs.private_pension_income}
+            onChange={e => update('private_pension_income', parseInt(e.target.value) || 0)}
+            className={errors.private_pension_income ? 'input-error' : ''}
+          />
+        </div>
+        {errors.private_pension_income && <span className="error-text">{errors.private_pension_income}</span>}
+        <div className="field-hint">Regular pension income (excl. SIPP draws & state pension)</div>
       </div>
 
       <div className="input-group">

@@ -45,6 +45,7 @@ function buildYearActions(
 
   if (yr.baselineCashIncome > 0) {
     const parts: string[] = [];
+    if (inputs.private_pension_income > 0) parts.push('Private Pension');
     if (inputs.state_pension_annual > 0) parts.push('State Pension');
     for (const a of register) {
       if (a.income_generated > 0 && (yr.valuesByAssetClass[a.asset_class] ?? 0) > 0) {

@@ -50,7 +50,10 @@ function assetHasOverrides(asset: Asset, orig: Asset | undefined): boolean {
     asset.assumed_growth_rate !== orig.assumed_growth_rate ||
     asset.income_generated !== orig.income_generated ||
     asset.mortgage_balance !== orig.mortgage_balance ||
-    (asset.acquisition_cost ?? 0) !== (orig.acquisition_cost ?? 0);
+    (asset.acquisition_cost ?? 0) !== (orig.acquisition_cost ?? 0) ||
+    (asset.reinvested_pct ?? 0) !== (orig.reinvested_pct ?? 0) ||
+    (asset.disposal_type ?? 'none') !== (orig.disposal_type ?? 'none') ||
+    (asset.transfer_year ?? null) !== (orig.transfer_year ?? null);
 }
 
 export default function AssetEditor({ assets, defaults, onChange, onClose }: AssetEditorProps) {
@@ -64,7 +67,10 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
       a.assumed_growth_rate !== current.assumed_growth_rate ||
       a.income_generated !== current.income_generated ||
       a.mortgage_balance !== current.mortgage_balance ||
-      (a.acquisition_cost ?? 0) !== (current.acquisition_cost ?? 0);
+      (a.acquisition_cost ?? 0) !== (current.acquisition_cost ?? 0) ||
+      (a.reinvested_pct ?? 0) !== (current.reinvested_pct ?? 0) ||
+      (a.disposal_type ?? 'none') !== (current.disposal_type ?? 'none') ||
+      (a.transfer_year ?? null) !== (current.transfer_year ?? null);
   });
 
   const updateAsset = (index: number, field: keyof Asset, value: number) => {
@@ -206,6 +212,59 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
                         )}
                       </div>
                     </div>
+
+                    {asset.asset_class === 'vct' && (
+                      <div className="field-row">
+                        <label>Reinvested %</label>
+                        <div className="field-input-wrap">
+                          <input
+                            type="number"
+                            value={asset.reinvested_pct ?? 0}
+                            onChange={(e) => updateAsset(idx, 'reinvested_pct', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                            min={0}
+                            max={100}
+                            step={5}
+                          />
+                          <span className="field-suffix">%</span>
+                          <span className="field-hint-inline">Portion of dividends reinvested (not drawn as cash)</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {(asset.asset_class === 'property_investment' || asset.asset_class === 'property_residential') && (
+                      <div className="field-row">
+                        <label>Transfer to Beneficiary</label>
+                        <div className="field-input-wrap transfer-fields">
+                          <label className="transfer-toggle-label">
+                            <input
+                              type="checkbox"
+                              checked={(asset.disposal_type ?? 'none') === 'transfer'}
+                              onChange={(e) => {
+                                const updated = local.map((a, i) => i === idx ? {
+                                  ...a,
+                                  disposal_type: e.target.checked ? 'transfer' as const : 'none' as const,
+                                  transfer_year: e.target.checked ? (a.transfer_year ?? 1) : null
+                                } : a);
+                                setLocal(updated);
+                              }}
+                            />
+                            Transfer as PET
+                          </label>
+                          {(asset.disposal_type ?? 'none') === 'transfer' && (
+                            <div className="transfer-year-input">
+                              <label>Transfer in year</label>
+                              <input
+                                type="number"
+                                value={asset.transfer_year ?? 1}
+                                onChange={(e) => updateAsset(idx, 'transfer_year', Math.max(1, Number(e.target.value) || 1))}
+                                min={1}
+                                max={50}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {asset.acquisition_cost !== null && (
                       <div className="field-row">

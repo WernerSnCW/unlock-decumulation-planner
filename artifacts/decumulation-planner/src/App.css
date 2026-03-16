@@ -207,6 +207,46 @@ body {
   color: var(--tone-error);
 }
 
+.gross-net-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.gross-net-btn {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--unlock-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.gross-net-btn.active {
+  background: rgba(0, 187, 119, 0.15);
+  border-color: var(--unlock-accent);
+  color: var(--unlock-accent);
+}
+
+.gross-net-hint {
+  font-size: 11px;
+  color: var(--unlock-muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--unlock-muted);
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
 .input-prefix {
   position: relative;
 }
@@ -1575,4 +1615,53 @@ body {
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 500;
+}
+
+.field-hint-inline {
+  font-size: 10px;
+  color: var(--unlock-muted);
+  opacity: 0.7;
+  flex-basis: 100%;
+  margin-top: 2px;
+}
+
+.transfer-fields {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transfer-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--unlock-text);
+  cursor: pointer;
+}
+
+.transfer-toggle-label input[type="checkbox"] {
+  accent-color: var(--unlock-accent);
+}
+
+.transfer-year-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.transfer-year-input label {
+  color: var(--unlock-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.transfer-year-input input {
+  width: 60px;
+  padding: 4px 8px;
+  background: var(--unlock-bg);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-sm);
+  color: var(--unlock-text);
+  font-size: 12px;
 }

@@ -17,6 +17,7 @@ export interface Asset {
   tax_relief_claimed: number;
   assumed_growth_rate: number;
   income_generated: number;
+  reinvested_pct: number;
   is_iht_exempt: boolean;
   bpr_qualifying_date: string | null;
   bpr_last_reviewed: string | null;
@@ -32,6 +33,8 @@ export interface Asset {
   allowable_improvement_costs: number;
   estimated_disposal_cost_pct: number;
   estimated_disposal_cost_amount: number | null;
+  disposal_type: 'none' | 'transfer';
+  transfer_year: number | null;
 }
 
 export type DrawdownStrategy = 'tax_optimised' | 'iht_optimised' | 'income_first' | 'growth_first';
@@ -78,6 +81,7 @@ export const DEFAULT_MECHANISMS: StrategyMechanisms = {
 
 export interface SimulationInputs {
   annual_income_target: number;
+  income_is_net: boolean;
   plan_years: number;
   lifestyle_multiplier: LifestyleMultiplier;
   current_age: number;
@@ -87,6 +91,7 @@ export interface SimulationInputs {
   annual_gift_amount: number;
   gift_type: GiftType;
   state_pension_annual: number;
+  private_pension_income: number;
   apply_2026_bpr_cap: boolean;
   apply_2027_pension_iht: boolean;
   cash_reserve: number;
@@ -133,6 +138,7 @@ export interface SimulationSummary {
   legacy_target: number;
   legacy_shortfall: number;
   net_estate_after_iht: number;
+  grossed_up_income: number;
 }
 
 export interface SimulationResult {
@@ -297,6 +303,7 @@ interface AssetState {
   originalSubscriptionAmount: number | null;
   growthRate: number;
   incomeGenerated: number;
+  reinvestedPct: number;
   isIHTExempt: boolean;
   bprQualifyingDate: string | null;
   pensionType: string | null;
@@ -307,6 +314,26 @@ interface AssetState {
   allowableImprovementCosts: number;
   estimatedDisposalCostPct: number;
   cgtExemptDate: string | null;
+  disposalType: 'none' | 'transfer';
+  transferYear: number | null;
+  transferred: boolean;
+}
+
+function grossUpFromNet(netTarget: number, taxParams: TaxParametersFile): number {
+  const params = getParamsForYear(taxParams, 1);
+  let lo = netTarget;
+  let hi = netTarget * 2.5;
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2;
+    const tax = calculateIncomeTax(mid, 0, 0, params);
+    const net = mid - tax;
+    if (net < netTarget) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return Math.round((lo + hi) / 2);
 }
 
 export function runSimulation(inputs: SimulationInputs, register: Asset[], taxParams: TaxParametersFile): SimulationResult {
@@ -331,7 +358,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         shadow_funded_years: 0,
         legacy_target: inputs.legacy_target,
         legacy_shortfall: inputs.legacy_target,
-        net_estate_after_iht: 0
+        net_estate_after_iht: 0,
+        grossed_up_income: inputs.annual_income_target
       },
       registerWarnings
     };
@@ -342,6 +370,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     apply_2026_bpr_cap: inputs.apply_2026_bpr_cap,
     apply_2027_pension_iht: inputs.apply_2027_pension_iht
   };
+
+  let grossIncomeTarget = inputs.annual_income_target;
+  if (inputs.income_is_net) {
+    grossIncomeTarget = grossUpFromNet(inputs.annual_income_target, taxParams);
+  }
+  const effectiveInputs = { ...inputs, annual_income_target: grossIncomeTarget };
 
   let assets: AssetState[] = register.map(a => ({
     id: a.asset_id,
@@ -354,6 +388,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     originalSubscriptionAmount: a.original_subscription_amount,
     growthRate: a.assumed_growth_rate,
     incomeGenerated: a.income_generated,
+    reinvestedPct: a.reinvested_pct ?? 0,
     isIHTExempt: a.is_iht_exempt,
     bprQualifyingDate: a.bpr_qualifying_date,
     pensionType: a.pension_type,
@@ -363,7 +398,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     mortgageBalance: a.mortgage_balance,
     allowableImprovementCosts: a.allowable_improvement_costs,
     estimatedDisposalCostPct: a.estimated_disposal_cost_pct,
-    cgtExemptDate: a.cgt_exempt_date
+    cgtExemptDate: a.cgt_exempt_date,
+    disposalType: a.disposal_type ?? 'none',
+    transferYear: a.transfer_year ?? null,
+    transferred: false
   }));
 
   let tflsRemaining = taxParams.schedule[0].tfls_lifetime_limit - (register.find(a => a.pension_type)?.tfls_used_amount ?? 0);
@@ -386,35 +424,54 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const inflationFactor = Math.pow(1 + inputs.inflation_rate, planYear - 1);
     const gloryMultiplier = (inputs.glory_years.enabled && planYear <= inputs.glory_years.duration)
       ? inputs.glory_years.multiplier : 1.0;
-    const spendTarget = inputs.annual_income_target * multiplier * gloryMultiplier * inflationFactor;
+    const totalPensionIncome = inputs.state_pension_annual + inputs.private_pension_income;
+    const spendTarget = effectiveInputs.annual_income_target * multiplier * gloryMultiplier * inflationFactor;
 
     // Step 1: Apply growth to all assets
     for (const asset of assets) {
       asset.value *= (1 + asset.growthRate);
     }
 
+    // Step 1b: Handle property transfers (PET disposal)
+    for (const asset of assets) {
+      if (asset.disposalType === 'transfer' && !asset.transferred && asset.transferYear !== null && planYear >= asset.transferYear) {
+        const transferValue = asset.value;
+        if (transferValue > 0) {
+          giftHistory.push({ year: planYear, amount: transferValue });
+        }
+        asset.value = 0;
+        asset.incomeGenerated = 0;
+        asset.mortgageBalance = 0;
+        asset.transferred = true;
+      }
+    }
+
     // Step 2: Collect baseline income (interest, rent, dividends)
     // Income is extracted from asset values — growth rate is total return,
     // income_generated is the yield portion paid out to the client
-    let baselineCashIncome = inputs.state_pension_annual;
+    let baselineCashIncome = totalPensionIncome;
     let rentalIncome = 0;
     let savingsIncome = 0;
     let dividendIncome = 0;
 
     for (const asset of assets) {
-      if (asset.value <= 0) continue;
-      const income = Math.min(asset.incomeGenerated, asset.value);
-      if (income <= 0) continue;
+      if (asset.value <= 0 || asset.transferred) continue;
+      const totalIncome = Math.min(asset.incomeGenerated, asset.value);
+      if (totalIncome <= 0) continue;
+
+      const reinvestedFraction = (asset.reinvestedPct ?? 0) / 100;
+      const reinvested = totalIncome * reinvestedFraction;
+      const cashIncome = totalIncome - reinvested;
 
       if (asset.assetClass === 'cash') {
-        savingsIncome += income;
+        savingsIncome += cashIncome;
       } else if (asset.assetClass === 'property_investment') {
-        rentalIncome += income;
+        rentalIncome += cashIncome;
       } else if (asset.assetClass === 'vct' || asset.assetClass === 'eis' || asset.assetClass === 'aim_shares') {
-        dividendIncome += income;
+        dividendIncome += cashIncome;
       }
-      baselineCashIncome += income;
-      asset.value -= income;
+      baselineCashIncome += cashIncome;
+      asset.value -= cashIncome;
     }
 
     // Step 3: Calculate remaining needed from drawdowns (including estimated tax)
@@ -480,7 +537,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     for (const assetId of priority) {
       if (remaining <= 0) break;
       const asset = assets.find(a => a.id === assetId);
-      if (!asset || asset.value <= 0) continue;
+      if (!asset || asset.value <= 0 || asset.transferred) continue;
 
       let available = asset.value;
       if (asset.assetClass === 'cash' && cashFloor > 0) {
@@ -567,7 +624,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     // Step 6: Calculate taxes
-    const nonSavingsIncome = inputs.state_pension_annual + rentalIncome + pensionDrawTaxable;
+    const nonSavingsIncome = totalPensionIncome + rentalIncome + pensionDrawTaxable;
     const incomeTax = calculateIncomeTax(nonSavingsIncome, savingsIncome, dividendIncome, params);
     const taxableIncomeAfterPA = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - params.personal_allowance);
     const totalCGTGainWithDeferred = totalCGTGain + totalDeferredGainRealized;
@@ -730,7 +787,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       shadow_funded_years: shadowFundedYears,
       legacy_target: inputs.legacy_target,
       legacy_shortfall: legacyShortfall,
-      net_estate_after_iht: netEstateAfterIHT
+      net_estate_after_iht: netEstateAfterIHT,
+      grossed_up_income: grossIncomeTarget
     },
     registerWarnings
   };
@@ -822,7 +880,7 @@ export function runOptimiser(
     while (hi - lo > 500 && iterations < maxIterations) {
       iterations++;
       const mid = Math.round((lo + hi) / 2);
-      const testInputs = { ...baseInputs, annual_income_target: mid };
+      const testInputs = { ...baseInputs, annual_income_target: mid, income_is_net: false };
       const result = runSimulation(testInputs, register, taxParams);
       if (isFeasible(result)) {
         bestIncome = mid;
@@ -843,7 +901,7 @@ export function runOptimiser(
       for (const income of incomeCandidates) {
         iterations++;
         if (iterations > 200) break;
-        const testInputs = { ...baseInputs, annual_income_target: income, cash_reserve: buffer };
+        const testInputs = { ...baseInputs, annual_income_target: income, cash_reserve: buffer, income_is_net: false };
         const result = runSimulation(testInputs, register, taxParams);
         if (isFeasible(result) && result.summary.net_estate_after_iht > bestEstate) {
           bestEstate = result.summary.net_estate_after_iht;
@@ -867,7 +925,7 @@ export function runOptimiser(
         subIter++;
         iterations++;
         const mid = Math.round((incLo + incHi) / 2);
-        const testInputs = { ...baseInputs, annual_income_target: mid, cash_reserve: buffer };
+        const testInputs = { ...baseInputs, annual_income_target: mid, cash_reserve: buffer, income_is_net: false };
         const result = runSimulation(testInputs, register, taxParams);
         if (isFeasible(result)) {
           bufBestIncome = mid;
@@ -892,7 +950,7 @@ export function runOptimiser(
   }
 
   if (!bestResult) {
-    const testInputs = { ...baseInputs, annual_income_target: bestIncome, cash_reserve: bestBuffer };
+    const testInputs = { ...baseInputs, annual_income_target: bestIncome, cash_reserve: bestBuffer, income_is_net: false };
     bestResult = runSimulation(testInputs, register, taxParams);
   }
 

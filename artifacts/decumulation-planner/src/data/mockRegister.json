@@ -25,7 +25,10 @@
     "relief_claimed_type": "none",
     "allowable_improvement_costs": 0,
     "estimated_disposal_cost_pct": 0,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   },
   {
     "asset_id": "isa-001",
@@ -53,7 +56,10 @@
     "relief_claimed_type": "none",
     "allowable_improvement_costs": 0,
     "estimated_disposal_cost_pct": 0,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   },
   {
     "asset_id": "pension-001",
@@ -81,7 +87,10 @@
     "relief_claimed_type": "none",
     "allowable_improvement_costs": 0,
     "estimated_disposal_cost_pct": 0,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   },
   {
     "asset_id": "property-001",
@@ -109,7 +118,10 @@
     "relief_claimed_type": "none",
     "allowable_improvement_costs": 35000,
     "estimated_disposal_cost_pct": 0.025,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   },
   {
     "asset_id": "vct-001",
@@ -137,7 +149,10 @@
     "relief_claimed_type": "income_tax_relief",
     "allowable_improvement_costs": 0,
     "estimated_disposal_cost_pct": 0,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   },
   {
     "asset_id": "vct-002",
@@ -165,7 +180,10 @@
     "relief_claimed_type": "income_tax_relief",
     "allowable_improvement_costs": 0,
     "estimated_disposal_cost_pct": 0,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   },
   {
     "asset_id": "eis-001",
@@ -193,7 +211,10 @@
     "relief_claimed_type": "both",
     "allowable_improvement_costs": 0,
     "estimated_disposal_cost_pct": 0,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   },
   {
     "asset_id": "aim-001",
@@ -221,6 +242,9 @@
     "relief_claimed_type": "none",
     "allowable_improvement_costs": 0,
     "estimated_disposal_cost_pct": 0.01,
-    "estimated_disposal_cost_amount": null
+    "estimated_disposal_cost_amount": null,
+    "reinvested_pct": 0,
+    "disposal_type": "none",
+    "transfer_year": null
   }
 ]

@@ -46,10 +46,10 @@ The monorepo leverages TypeScript's composite project features. Each package ext
     - Trust logic for CLTs, PETs, and NEFI checks.
     - Warning evaluation system at register and year levels.
 - **Frontend Features:**
-    - **Data Input**: `InputPanel` for core simulation parameters (income target, plan years, age, strategy, scenario toggles, gifting, inflation).
+    - **Data Input**: `InputPanel` for core simulation parameters (income target with gross/net toggle, plan years, age, strategy, scenario toggles, gifting, inflation, private pension income, state pension).
     - **Summary & Comparison**: `FundedYearsIndicator`, `StrategyComparison` (compares four preset strategies plus user's blend), `PortfolioChart`, `IHTChart`.
     - **Detailed Views**: `WarningsPanel`, `YearDetailTable` (expandable rows with per-asset draws), `ActionPlan` (timeline of modelled sequence with disclaimers and key year modes).
-    - **Asset Management**: `AssetEditor` modal for overriding asset values with unsaved changes guard and reset functionality.
+    - **Asset Management**: `AssetEditor` modal for overriding asset values, VCT reinvested dividend %, property transfer-to-beneficiary (PET disposal with year), unsaved changes guard and reset functionality.
     - **State Persistence**: Inputs and asset overrides auto-save to `localStorage` (`unlock-planner-inputs`, `unlock-planner-assets`) and restore on page load. Merges saved inputs over defaults to handle schema additions gracefully.
     - **Strategy Mechanisms**: Boolean toggles for IHT and tax/income optimization, influencing asset drawdown scoring.
     - **Drawdown Priorities**: Weighted multi-objective system (tax efficiency, IHT reduction, preserve growth, liquidity) with sliders and preset buttons.
@@ -59,6 +59,10 @@ The monorepo leverages TypeScript's composite project features. Each package ext
     - **Optimiser Panel**: Collapsible panel with `Max Income`, `Max Estate`, and `Balanced` modes to find optimal income/buffer combinations.
     - **Glory Years**: Two-phase spending profile with configurable duration and multiplier.
 - **Critical Rules & Logic:**
+    - Gross/net income: when `income_is_net=true`, engine grosses up via binary search over `calculateIncomeTax`. Optimiser always works in gross terms.
+    - VCT reinvested dividends: `reinvested_pct` field splits income into cash (drawable) and reinvested (stays in asset value). Only cash portion counted as baseline income.
+    - Property transfer (PET): `disposal_type='transfer'` + `transfer_year` removes asset from portfolio at that year, records as PET in 7-year gift history. Income ceases from transfer year.
+    - Private pension income: separate from state pension and SIPP draws. Added to baseline income and taxed as non-savings income.
     - VCT specific rules: CGT exemption, early disposal clawback, never BPR-qualifying.
     - Pension IHT scoring changes based on year and toggle.
     - Property mortgage balance deducted for IHT calculations.

@@ -28,6 +28,7 @@ const taxParams = taxParameters as TaxParametersFile;
 
 const DEFAULT_INPUTS: SimulationInputs = {
   annual_income_target: 80000,
+  income_is_net: false,
   plan_years: 25,
   lifestyle_multiplier: 'comfortable',
   current_age: 65,
@@ -36,6 +37,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   annual_gift_amount: 0,
   gift_type: 'pet',
   state_pension_annual: 0,
+  private_pension_income: 0,
   strategy_mechanisms: { ...DEFAULT_MECHANISMS },
   apply_2026_bpr_cap: true,
   apply_2027_pension_iht: true,
@@ -137,6 +139,7 @@ function App() {
       ...inputs,
       annual_income_target: optimiserResult.optimal_income,
       cash_reserve: optimiserResult.optimal_buffer,
+      income_is_net: false,
     };
     setInputs(newInputs);
     saveTo(STORAGE_KEY_INPUTS, newInputs);
@@ -163,7 +166,10 @@ function App() {
       a.assumed_growth_rate !== orig.assumed_growth_rate ||
       a.income_generated !== orig.income_generated ||
       a.mortgage_balance !== orig.mortgage_balance ||
-      (a.acquisition_cost ?? 0) !== (orig.acquisition_cost ?? 0);
+      (a.acquisition_cost ?? 0) !== (orig.acquisition_cost ?? 0) ||
+      (a.reinvested_pct ?? 0) !== (orig.reinvested_pct ?? 0) ||
+      (a.disposal_type ?? 'none') !== (orig.disposal_type ?? 'none') ||
+      (a.transfer_year ?? null) !== (orig.transfer_year ?? null);
   }) || assets.length !== defaultRegister.length;
 
   if (assets.length === 0) {
@@ -206,7 +212,7 @@ function App() {
       )}
 
       <div className="app-body">
-        <InputPanel inputs={inputs} onChange={handleInputChange} />
+        <InputPanel inputs={inputs} summary={result?.summary ?? null} onChange={handleInputChange} />
 
         <div className="main-content">
           {scenarioActive && (
