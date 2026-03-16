@@ -50,6 +50,7 @@ The monorepo leverages TypeScript's composite project features. Each package ext
     - **Summary & Comparison**: `FundedYearsIndicator`, `StrategyComparison` (compares four preset strategies plus user's blend), `PortfolioChart`, `IHTChart`.
     - **Detailed Views**: `WarningsPanel`, `YearDetailTable` (expandable rows with per-asset draws), `ActionPlan` (timeline of modelled sequence with disclaimers and key year modes).
     - **Asset Management**: `AssetEditor` modal for overriding asset values with unsaved changes guard and reset functionality.
+    - **State Persistence**: Inputs and asset overrides auto-save to `localStorage` (`unlock-planner-inputs`, `unlock-planner-assets`) and restore on page load. Merges saved inputs over defaults to handle schema additions gracefully.
     - **Strategy Mechanisms**: Boolean toggles for IHT and tax/income optimization, influencing asset drawdown scoring.
     - **Drawdown Priorities**: Weighted multi-objective system (tax efficiency, IHT reduction, preserve growth, liquidity) with sliders and preset buttons.
     - **Legacy Target**: Soft preference input; engine raises warnings for shortfalls but does not hard-block draws.

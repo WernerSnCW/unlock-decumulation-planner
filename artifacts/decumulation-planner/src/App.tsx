@@ -44,9 +44,42 @@ const DEFAULT_INPUTS: SimulationInputs = {
   glory_years: { enabled: false, duration: 5, multiplier: 1.5 },
 };
 
+const STORAGE_KEY_INPUTS = 'unlock-planner-inputs';
+const STORAGE_KEY_ASSETS = 'unlock-planner-assets';
+
+function loadSaved<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveTo(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch { /* quota exceeded — silently ignore */ }
+}
+
+function restoreInputs(): SimulationInputs {
+  const saved = loadSaved<Partial<SimulationInputs>>(STORAGE_KEY_INPUTS, {});
+  return {
+    ...DEFAULT_INPUTS,
+    ...saved,
+    priority_weights: { ...DEFAULT_INPUTS.priority_weights, ...(saved.priority_weights ?? {}) },
+    strategy_mechanisms: { ...DEFAULT_INPUTS.strategy_mechanisms, ...(saved.strategy_mechanisms ?? {}) },
+    glory_years: { ...DEFAULT_INPUTS.glory_years, ...(saved.glory_years ?? {}) },
+  };
+}
+
 function App() {
-  const [inputs, setInputs] = useState<SimulationInputs>(DEFAULT_INPUTS);
-  const [assets, setAssets] = useState<Asset[]>(() => defaultRegister.map(a => ({ ...a })));
+  const [inputs, setInputs] = useState<SimulationInputs>(restoreInputs);
+  const [assets, setAssets] = useState<Asset[]>(() => {
+    const saved = loadSaved<Asset[] | null>(STORAGE_KEY_ASSETS, null);
+    return saved ?? defaultRegister.map(a => ({ ...a }));
+  });
   const [assetEditorOpen, setAssetEditorOpen] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [optimiserResult, setOptimiserResult] = useState<OptimiserResult | null>(null);
@@ -70,6 +103,7 @@ function App() {
   const handleInputChange = useCallback((newInputs: SimulationInputs) => {
     setInputs(newInputs);
     setOptimiserResult(null);
+    saveTo(STORAGE_KEY_INPUTS, newInputs);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       runSim(newInputs);
@@ -80,6 +114,7 @@ function App() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setAssets(newAssets);
     setOptimiserResult(null);
+    saveTo(STORAGE_KEY_ASSETS, newAssets);
     runSim(inputs, newAssets);
   }, [inputs, runSim]);
 
@@ -104,6 +139,7 @@ function App() {
       cash_reserve: optimiserResult.optimal_buffer,
     };
     setInputs(newInputs);
+    saveTo(STORAGE_KEY_INPUTS, newInputs);
     runSim(newInputs);
   }, [optimiserResult, inputs, runSim]);
 
