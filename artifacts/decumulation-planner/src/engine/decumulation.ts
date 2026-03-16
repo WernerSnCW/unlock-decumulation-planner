@@ -394,6 +394,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     // Step 2: Collect baseline income (interest, rent, dividends)
+    // Income is extracted from asset values — growth rate is total return,
+    // income_generated is the yield portion paid out to the client
     let baselineCashIncome = inputs.state_pension_annual;
     let rentalIncome = 0;
     let savingsIncome = 0;
@@ -401,7 +403,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
     for (const asset of assets) {
       if (asset.value <= 0) continue;
-      const income = asset.incomeGenerated;
+      const income = Math.min(asset.incomeGenerated, asset.value);
       if (income <= 0) continue;
 
       if (asset.assetClass === 'cash') {
@@ -412,6 +414,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         dividendIncome += income;
       }
       baselineCashIncome += income;
+      asset.value -= income;
     }
 
     // Step 3: Calculate remaining needed from drawdowns (including estimated tax)
@@ -737,6 +740,7 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
   const assets = register.map(a => ({
     value: a.current_value,
     growthRate: a.assumed_growth_rate,
+    incomeGenerated: a.income_generated,
     assetClass: a.asset_class,
     isIHTExempt: a.is_iht_exempt,
     bprQualifyingDate: a.bpr_qualifying_date,
@@ -747,6 +751,8 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
   for (let planYear = 1; planYear <= inputs.plan_years; planYear++) {
     for (const asset of assets) {
       asset.value *= (1 + asset.growthRate);
+      const income = Math.min(asset.incomeGenerated, asset.value);
+      if (income > 0) asset.value -= income;
     }
   }
 

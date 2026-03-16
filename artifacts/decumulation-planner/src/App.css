@@ -1284,6 +1284,12 @@ body {
   background: rgba(0, 187, 119, 0.18);
 }
 
+.optimiser-apply-btn.applied {
+  background: var(--unlock-accent);
+  color: var(--unlock-bg);
+  cursor: default;
+}
+
 .optimiser-footnote {
   font-size: 11px;
   color: var(--unlock-muted);

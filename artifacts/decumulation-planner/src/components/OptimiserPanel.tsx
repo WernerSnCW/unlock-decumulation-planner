@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { SimulationInputs, OptimiserResult } from '../engine/decumulation';
 
 type OptMode = 'max_income' | 'max_estate' | 'balanced';
@@ -24,6 +24,17 @@ function fmt(n: number): string {
 export default function OptimiserPanel({ inputs, optimiserResult, optimiserRunning, onRunOptimiser, onApply }: OptimiserPanelProps) {
   const [mode, setMode] = useState<OptMode>('max_income');
   const [expanded, setExpanded] = useState(true);
+  const [applied, setApplied] = useState(false);
+  const applyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => { clearTimeout(applyTimer.current); }, []);
+
+  const handleApply = () => {
+    onApply();
+    setApplied(true);
+    clearTimeout(applyTimer.current);
+    applyTimer.current = setTimeout(() => setApplied(false), 2000);
+  };
 
   return (
     <div className="card optimiser-panel">
@@ -110,13 +121,19 @@ export default function OptimiserPanel({ inputs, optimiserResult, optimiserRunni
                 )}
               </div>
 
-              <button className="optimiser-apply-btn" onClick={onApply}>
-                Apply to Plan
+              <button
+                className={`optimiser-apply-btn ${applied ? 'applied' : ''}`}
+                onClick={handleApply}
+                disabled={applied}
+              >
+                {applied ? '\u2713 Applied — plan updated' : 'Apply to Plan'}
               </button>
 
               <div className="optimiser-footnote">
-                Applying will update your income target and cash buffer to match these results.
-                The optimiser ran {optimiserResult.iterations} iterations.
+                {applied
+                  ? 'Your income target and cash buffer have been updated.'
+                  : `Applying will update your income target and cash buffer to match these results. The optimiser ran ${optimiserResult.iterations} iterations.`
+                }
               </div>
             </div>
           )}
