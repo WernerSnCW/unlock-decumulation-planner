@@ -59,6 +59,7 @@ export interface GloryYearsConfig {
   enabled: boolean;
   duration: number;
   multiplier: number;
+  target_is_glory: boolean;
 }
 
 export interface StrategyMechanisms {
@@ -422,8 +423,15 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const calendarYear = 2025 + planYear - 1;
     const age = inputs.current_age + planYear - 1;
     const inflationFactor = Math.pow(1 + inputs.inflation_rate, planYear - 1);
-    const gloryMultiplier = (inputs.glory_years.enabled && planYear <= inputs.glory_years.duration)
-      ? inputs.glory_years.multiplier : 1.0;
+    let gloryMultiplier = 1.0;
+    if (inputs.glory_years.enabled) {
+      const inGlory = planYear <= inputs.glory_years.duration;
+      if (inputs.glory_years.target_is_glory) {
+        gloryMultiplier = inGlory ? 1.0 : (1.0 / inputs.glory_years.multiplier);
+      } else {
+        gloryMultiplier = inGlory ? inputs.glory_years.multiplier : 1.0;
+      }
+    }
     const totalPensionIncome = inputs.state_pension_annual + inputs.private_pension_income;
     const spendTarget = effectiveInputs.annual_income_target * multiplier * gloryMultiplier * inflationFactor;
 
@@ -955,10 +963,17 @@ export function runOptimiser(
   }
 
   const gloryEnabled = baseInputs.glory_years.enabled;
-  const gloryPhaseIncome = gloryEnabled
-    ? bestIncome * baseInputs.glory_years.multiplier
-    : bestIncome;
-  const calmPhaseIncome = bestIncome;
+  let gloryPhaseIncome = bestIncome;
+  let calmPhaseIncome = bestIncome;
+  if (gloryEnabled) {
+    if (baseInputs.glory_years.target_is_glory) {
+      gloryPhaseIncome = bestIncome;
+      calmPhaseIncome = Math.round(bestIncome / baseInputs.glory_years.multiplier);
+    } else {
+      gloryPhaseIncome = Math.round(bestIncome * baseInputs.glory_years.multiplier);
+      calmPhaseIncome = bestIncome;
+    }
+  }
 
   return {
     optimal_income: bestIncome,

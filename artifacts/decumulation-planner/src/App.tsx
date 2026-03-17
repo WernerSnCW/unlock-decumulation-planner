@@ -43,7 +43,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   apply_2027_pension_iht: true,
   cash_reserve: 0,
   legacy_target: 0,
-  glory_years: { enabled: false, duration: 5, multiplier: 1.5 },
+  glory_years: { enabled: false, duration: 5, multiplier: 1.5, target_is_glory: false },
 };
 
 const STORAGE_KEY_INPUTS = 'unlock-planner-inputs';

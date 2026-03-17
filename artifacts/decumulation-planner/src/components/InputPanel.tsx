@@ -254,8 +254,39 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         </button>
       </div>
 
-      {inputs.glory_years.enabled && (
+      {inputs.glory_years.enabled && (() => {
+        const t = inputs.annual_income_target;
+        const m = inputs.glory_years.multiplier;
+        const isGlory = inputs.glory_years.target_is_glory;
+        const gloryAmt = isGlory ? t : Math.round(t * m);
+        const calmAmt = isGlory ? Math.round(t / m) : t;
+        return (
         <>
+          <div className="input-group">
+            <label>Income target represents</label>
+            <div className="gross-net-row">
+              <button
+                className={`gross-net-btn ${isGlory ? 'active' : ''}`}
+                onClick={() => onChange({
+                  ...inputs,
+                  glory_years: { ...inputs.glory_years, target_is_glory: true }
+                })}
+              >Glory amount</button>
+              <button
+                className={`gross-net-btn ${!isGlory ? 'active' : ''}`}
+                onClick={() => onChange({
+                  ...inputs,
+                  glory_years: { ...inputs.glory_years, target_is_glory: false }
+                })}
+              >Reduced amount</button>
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--unlock-muted)' }}>
+              {isGlory
+                ? 'Your income target is the higher glory phase amount — it reduces after'
+                : 'Your income target is the lower calm phase amount — glory years are higher'}
+            </span>
+          </div>
+
           <div className="input-group">
             <label>Glory Period (years)</label>
             <input
@@ -272,18 +303,20 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
             />
             <div className="glory-years-label">
               <span>First {inputs.glory_years.duration} years</span>
-              <span className="glory-years-value">{Math.round(inputs.glory_years.multiplier * 100)}% of base income</span>
+              <span className="glory-years-value">
+                {isGlory ? 'at full target' : `${Math.round(m * 100)}% of target`}
+              </span>
             </div>
           </div>
 
           <div className="input-group">
-            <label>Spending Multiplier</label>
+            <label>Spending Ratio</label>
             <input
               type="range"
               min="110"
               max="300"
               step="10"
-              value={Math.round(inputs.glory_years.multiplier * 100)}
+              value={Math.round(m * 100)}
               onChange={e => onChange({
                 ...inputs,
                 glory_years: { ...inputs.glory_years, multiplier: parseInt(e.target.value) / 100 }
@@ -292,8 +325,12 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
               style={{ '--slider-color': '#F59E0B' } as React.CSSProperties}
             />
             <div className="glory-years-label">
-              <span>{'\u00D7'}{inputs.glory_years.multiplier.toFixed(1)} for {inputs.glory_years.duration}yr</span>
-              <span className="glory-years-value">then {'\u00D7'}1.0 after</span>
+              <span>{'\u00D7'}{m.toFixed(1)} ratio</span>
+              <span className="glory-years-value">
+                {isGlory
+                  ? `calm = target \u00F7 ${m.toFixed(1)}`
+                  : `glory = target \u00D7 ${m.toFixed(1)}`}
+              </span>
             </div>
           </div>
 
@@ -301,18 +338,19 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
             <div className="glory-phase">
               <span className="phase-label">Glory phase</span>
               <span className="phase-amount">
-                {'\u00A3'}{Math.round(inputs.annual_income_target * inputs.glory_years.multiplier).toLocaleString('en-GB')}/yr
+                {'\u00A3'}{gloryAmt.toLocaleString('en-GB')}/yr
               </span>
             </div>
             <div className="glory-phase calm">
               <span className="phase-label">Calm phase</span>
               <span className="phase-amount">
-                {'\u00A3'}{inputs.annual_income_target.toLocaleString('en-GB')}/yr
+                {'\u00A3'}{calmAmt.toLocaleString('en-GB')}/yr
               </span>
             </div>
           </div>
         </>
-      )}
+        );
+      })()}
 
       <div className="divider" />
 
