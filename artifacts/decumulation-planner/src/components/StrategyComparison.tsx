@@ -11,6 +11,7 @@ interface Props {
 }
 
 const STRATEGIES: { value: DrawdownStrategy; label: string }[] = [
+  { value: 'balanced', label: 'Balanced' },
   { value: 'tax_optimised', label: 'Tax Optimised' },
   { value: 'iht_optimised', label: 'IHT Optimised' },
   { value: 'income_first', label: 'Income First' },

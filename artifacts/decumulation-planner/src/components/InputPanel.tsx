@@ -57,6 +57,7 @@ interface InputPanelProps {
 }
 
 const PRESETS: { value: DrawdownStrategy; label: string }[] = [
+  { value: 'balanced', label: 'Balanced' },
   { value: 'tax_optimised', label: 'Tax' },
   { value: 'iht_optimised', label: 'IHT' },
   { value: 'income_first', label: 'Income' },

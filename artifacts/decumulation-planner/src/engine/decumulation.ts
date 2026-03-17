@@ -37,7 +37,7 @@ export interface Asset {
   transfer_year: number | null;
 }
 
-export type DrawdownStrategy = 'tax_optimised' | 'iht_optimised' | 'income_first' | 'growth_first';
+export type DrawdownStrategy = 'balanced' | 'tax_optimised' | 'iht_optimised' | 'income_first' | 'growth_first';
 export type LifestyleMultiplier = 'modest' | 'comfortable' | 'generous' | 'unlimited';
 export type GiftType = 'discretionary_trust' | 'pet' | 'nefi';
 
@@ -49,6 +49,7 @@ export interface PriorityWeights {
 }
 
 export const STRATEGY_PRESETS: Record<DrawdownStrategy, PriorityWeights> = {
+  balanced:       { tax_efficiency: 0.25, iht_reduction: 0.25, preserve_growth: 0.25, liquidity: 0.25 },
   tax_optimised:  { tax_efficiency: 0.70, iht_reduction: 0.10, preserve_growth: 0.10, liquidity: 0.10 },
   iht_optimised:  { tax_efficiency: 0.10, iht_reduction: 0.70, preserve_growth: 0.10, liquidity: 0.10 },
   income_first:   { tax_efficiency: 0.15, iht_reduction: 0.10, preserve_growth: 0.05, liquidity: 0.70 },

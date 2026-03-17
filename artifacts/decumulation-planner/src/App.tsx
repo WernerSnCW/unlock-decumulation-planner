@@ -34,7 +34,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   lifestyle_multiplier: 'comfortable',
   current_age: 65,
   inflation_rate: 0.03,
-  priority_weights: { ...STRATEGY_PRESETS.tax_optimised },
+  priority_weights: { ...STRATEGY_PRESETS.balanced },
   annual_gift_amount: 0,
   gift_type: 'pet',
   state_pension_annual: 0,
