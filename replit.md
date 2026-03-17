@@ -49,7 +49,8 @@ The monorepo leverages TypeScript's composite project features. Each package ext
     - **Data Input**: `InputPanel` for core simulation parameters (income target with gross/net toggle, plan years, age, strategy, scenario toggles, gifting, inflation, private pension income, state pension).
     - **Summary & Comparison**: `FundedYearsIndicator`, `StrategyComparison` (compares four preset strategies plus user's blend), `PortfolioChart`, `IHTChart`.
     - **Detailed Views**: `WarningsPanel`, `YearDetailTable` (expandable rows with per-asset draws), `ActionPlan` (timeline of modelled sequence with disclaimers and key year modes).
-    - **Asset Management**: `AssetEditor` modal for overriding asset values, VCT reinvested dividend %, property transfer-to-beneficiary (PET disposal with year), unsaved changes guard and reset functionality.
+    - **Asset Management**: `AssetEditor` modal for overriding asset values, adding new assets by type (with smart defaults per asset class), removing assets, VCT reinvested dividend %, property transfer-to-beneficiary (PET disposal with year), unsaved changes guard and reset functionality.
+    - **Session Management**: `SessionManager` dropdown in header. Save named sessions (full snapshot of inputs + assets), load previous sessions, delete sessions. Stored in `localStorage` (`unlock-planner-sessions`). Active session name shown in header button.
     - **State Persistence**: Inputs and asset overrides auto-save to `localStorage` (`unlock-planner-inputs`, `unlock-planner-assets`) and restore on page load. Merges saved inputs over defaults to handle schema additions gracefully.
     - **Strategy Mechanisms**: Boolean toggles for IHT and tax/income optimization, influencing asset drawdown scoring.
     - **Drawdown Priorities**: Weighted multi-objective system (tax efficiency, IHT reduction, preserve growth, liquidity) with sliders and preset buttons.

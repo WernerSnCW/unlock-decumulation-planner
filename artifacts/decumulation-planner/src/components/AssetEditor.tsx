@@ -12,10 +12,11 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
   cash: 'Cash',
   isa: 'ISA',
   pension: 'Pension',
-  property_investment: 'Property',
+  property_investment: 'Property (Investment)',
+  property_residential: 'Property (Residential)',
   vct: 'VCT',
   eis: 'EIS',
-  aim_shares: 'AIM',
+  aim_shares: 'AIM Shares',
 };
 
 const ASSET_CLASS_COLORS: Record<string, string> = {
@@ -23,10 +24,109 @@ const ASSET_CLASS_COLORS: Record<string, string> = {
   isa: '#22c55e',
   pension: '#f59e0b',
   property_investment: '#ef4444',
+  property_residential: '#f87171',
   vct: '#8b5cf6',
   eis: '#ec4899',
   aim_shares: '#06b6d4',
 };
+
+interface AssetTemplate {
+  asset_class: string;
+  wrapper_type: string;
+  assumed_growth_rate: number;
+  income_generated: number;
+  is_iht_exempt: boolean;
+  pension_type: string | null;
+  relief_claimed_type: string;
+  estimated_disposal_cost_pct: number;
+  hint: string;
+}
+
+const ASSET_TEMPLATES: Record<string, AssetTemplate> = {
+  cash: {
+    asset_class: 'cash', wrapper_type: 'unwrapped', assumed_growth_rate: 0.045,
+    income_generated: 0, is_iht_exempt: false, pension_type: null,
+    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0,
+    hint: 'Savings accounts, current accounts, NS&I. Interest taxed as savings income.',
+  },
+  isa: {
+    asset_class: 'isa', wrapper_type: 'isa', assumed_growth_rate: 0.06,
+    income_generated: 0, is_iht_exempt: false, pension_type: null,
+    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0,
+    hint: 'Tax-free growth and income. No CGT on disposal. Part of estate for IHT.',
+  },
+  pension: {
+    asset_class: 'pension', wrapper_type: 'pension', assumed_growth_rate: 0.055,
+    income_generated: 0, is_iht_exempt: false, pension_type: 'sipp',
+    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0,
+    hint: 'SIPP or SSAS. Draws taxed as income. PCLS/TFLS available. Currently outside estate pre-2027.',
+  },
+  property_investment: {
+    asset_class: 'property_investment', wrapper_type: 'unwrapped', assumed_growth_rate: 0.03,
+    income_generated: 0, is_iht_exempt: false, pension_type: null,
+    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.025,
+    hint: 'Buy-to-let or commercial. Rental income taxed as non-savings. CGT on sale with ATED/letting relief.',
+  },
+  property_residential: {
+    asset_class: 'property_residential', wrapper_type: 'unwrapped', assumed_growth_rate: 0.03,
+    income_generated: 0, is_iht_exempt: false, pension_type: null,
+    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.025,
+    hint: 'Primary or secondary residence. Main residence may qualify for PPR relief on CGT.',
+  },
+  vct: {
+    asset_class: 'vct', wrapper_type: 'unwrapped', assumed_growth_rate: 0.07,
+    income_generated: 0, is_iht_exempt: false, pension_type: null,
+    relief_claimed_type: 'income_tax_relief', estimated_disposal_cost_pct: 0,
+    hint: 'Tax-free dividends, CGT-exempt after 5yr hold. Early disposal claws back income tax relief.',
+  },
+  eis: {
+    asset_class: 'eis', wrapper_type: 'unwrapped', assumed_growth_rate: 0.12,
+    income_generated: 0, is_iht_exempt: true, pension_type: null,
+    relief_claimed_type: 'both', estimated_disposal_cost_pct: 0,
+    hint: 'IHT-exempt via BPR after 2yr hold. CGT-exempt if held 3yr+. Loss relief available.',
+  },
+  aim_shares: {
+    asset_class: 'aim_shares', wrapper_type: 'unwrapped', assumed_growth_rate: 0.065,
+    income_generated: 0, is_iht_exempt: true, pension_type: null,
+    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.01,
+    hint: 'IHT-exempt via BPR after 2yr hold (subject to 2026 cap). Standard CGT applies on disposal.',
+  },
+};
+
+function createNewAsset(templateKey: string, label: string): Asset {
+  const t = ASSET_TEMPLATES[templateKey];
+  return {
+    asset_id: `${t.asset_class}-${Date.now()}`,
+    wrapper_type: t.wrapper_type,
+    asset_class: t.asset_class,
+    label: label || `New ${ASSET_CLASS_LABELS[t.asset_class] ?? t.asset_class}`,
+    current_value: 0,
+    acquisition_date: null,
+    acquisition_cost: null,
+    original_subscription_amount: null,
+    tax_relief_claimed: 0,
+    assumed_growth_rate: t.assumed_growth_rate,
+    income_generated: t.income_generated,
+    reinvested_pct: 0,
+    is_iht_exempt: t.is_iht_exempt,
+    bpr_qualifying_date: null,
+    bpr_last_reviewed: null,
+    cgt_exempt_date: null,
+    mortgage_balance: 0,
+    pension_type: t.pension_type,
+    tfls_used_amount: 0,
+    mpaa_triggered: false,
+    in_drawdown: false,
+    flexible_isa: false,
+    deferred_gain_amount: null,
+    relief_claimed_type: t.relief_claimed_type,
+    allowable_improvement_costs: 0,
+    estimated_disposal_cost_pct: t.estimated_disposal_cost_pct,
+    estimated_disposal_cost_amount: null,
+    disposal_type: 'none',
+    transfer_year: null,
+  };
+}
 
 function isOverridden(current: number | null, original: number | null): boolean {
   return (current ?? 0) !== (original ?? 0);
@@ -59,8 +159,12 @@ function assetHasOverrides(asset: Asset, orig: Asset | undefined): boolean {
 export default function AssetEditor({ assets, defaults, onChange, onClose }: AssetEditorProps) {
   const [local, setLocal] = useState<Asset[]>(() => assets.map(a => ({ ...a })));
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [addType, setAddType] = useState<string>('cash');
+  const [addLabel, setAddLabel] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const isDirty = local.some((a, i) => {
+  const isDirty = local.length !== assets.length || local.some((a, i) => {
     const current = assets[i];
     if (!current) return true;
     return a.current_value !== current.current_value ||
@@ -70,12 +174,35 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
       (a.acquisition_cost ?? 0) !== (current.acquisition_cost ?? 0) ||
       (a.reinvested_pct ?? 0) !== (current.reinvested_pct ?? 0) ||
       (a.disposal_type ?? 'none') !== (current.disposal_type ?? 'none') ||
-      (a.transfer_year ?? null) !== (current.transfer_year ?? null);
+      (a.transfer_year ?? null) !== (current.transfer_year ?? null) ||
+      a.label !== current.label ||
+      a.asset_id !== current.asset_id;
   });
 
   const updateAsset = (index: number, field: keyof Asset, value: number) => {
     const updated = local.map((a, i) => i === index ? { ...a, [field]: value } : a);
     setLocal(updated);
+  };
+
+  const handleAddAsset = () => {
+    const template = ASSET_TEMPLATES[addType];
+    if (!template) return;
+    const label = addLabel.trim() || `New ${ASSET_CLASS_LABELS[template.asset_class] ?? addType}`;
+    const newAsset = createNewAsset(addType, label);
+    setLocal([...local, newAsset]);
+    setExpandedId(newAsset.asset_id);
+    setShowAddPanel(false);
+    setAddLabel('');
+  };
+
+  const handleDeleteAsset = (assetId: string) => {
+    if (confirmDeleteId !== assetId) {
+      setConfirmDeleteId(assetId);
+      return;
+    }
+    setLocal(local.filter(a => a.asset_id !== assetId));
+    setConfirmDeleteId(null);
+    if (expandedId === assetId) setExpandedId(null);
   };
 
   const resetAsset = (index: number) => {
@@ -121,6 +248,9 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
             </div>
           </div>
           <div className="asset-editor-actions">
+            <button className="ae-btn accent" onClick={() => setShowAddPanel(!showAddPanel)}>
+              + Add Asset
+            </button>
             {hasAnyOverride && (
               <button className="ae-btn secondary" onClick={resetAll}>Reset All</button>
             )}
@@ -128,6 +258,41 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
             <button className="ae-btn ghost" onClick={handleClose}>{'\u2715'}</button>
           </div>
         </div>
+
+        {showAddPanel && (
+          <div className="add-asset-panel">
+            <div className="add-asset-type-grid">
+              {Object.entries(ASSET_TEMPLATES).map(([key, t]) => (
+                <button
+                  key={key}
+                  className={`add-asset-type-btn ${addType === key ? 'selected' : ''}`}
+                  onClick={() => setAddType(key)}
+                  style={{ borderColor: addType === key ? (ASSET_CLASS_COLORS[t.asset_class] ?? '#888') : undefined }}
+                >
+                  <span className="add-type-badge" style={{ background: ASSET_CLASS_COLORS[t.asset_class] ?? '#888' }}>
+                    {ASSET_CLASS_LABELS[t.asset_class] ?? key}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="add-asset-hint">
+              {ASSET_TEMPLATES[addType]?.hint}
+            </div>
+            <div className="add-asset-form">
+              <input
+                type="text"
+                placeholder={`Name, e.g. "ISA — Vanguard"`}
+                value={addLabel}
+                onChange={e => setAddLabel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddAsset()}
+                maxLength={60}
+              />
+              <button className="ae-btn primary small" onClick={handleAddAsset}>
+                Add
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="asset-editor-body">
           {local.map((asset, idx) => {
@@ -311,11 +476,19 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
                       {asset.pension_type && <span>Pension: {asset.pension_type}</span>}
                     </div>
 
-                    {assetHasOverride && (
-                      <button className="ae-btn secondary small" onClick={() => resetAsset(idx)}>
-                        Reset to default
+                    <div className="asset-card-bottom-actions">
+                      {assetHasOverride && (
+                        <button className="ae-btn secondary small" onClick={() => resetAsset(idx)}>
+                          Reset to default
+                        </button>
+                      )}
+                      <button
+                        className={`ae-btn small ${confirmDeleteId === asset.asset_id ? 'danger' : 'danger-outline'}`}
+                        onClick={() => handleDeleteAsset(asset.asset_id)}
+                      >
+                        {confirmDeleteId === asset.asset_id ? 'Confirm Remove' : 'Remove Asset'}
                       </button>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>

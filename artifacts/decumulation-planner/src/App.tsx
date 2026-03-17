@@ -17,6 +17,7 @@ import YearDetailTable from './components/YearDetailTable';
 import ActionPlan from './components/ActionPlan';
 import DisclosurePanel from './components/DisclosurePanel';
 import OptimiserPanel from './components/OptimiserPanel';
+import SessionManager from './components/SessionManager';
 
 import AssetEditor from './components/AssetEditor';
 
@@ -146,6 +147,22 @@ function App() {
     runSim(newInputs);
   }, [optimiserResult, inputs, runSim]);
 
+  const handleLoadSession = useCallback((sessionInputs: SimulationInputs, sessionAssets: Asset[]) => {
+    const mergedInputs: SimulationInputs = {
+      ...DEFAULT_INPUTS,
+      ...sessionInputs,
+      priority_weights: { ...DEFAULT_INPUTS.priority_weights, ...(sessionInputs.priority_weights ?? {}) },
+      strategy_mechanisms: { ...DEFAULT_INPUTS.strategy_mechanisms, ...(sessionInputs.strategy_mechanisms ?? {}) },
+      glory_years: { ...DEFAULT_INPUTS.glory_years, ...(sessionInputs.glory_years ?? {}) },
+    };
+    setInputs(mergedInputs);
+    setAssets(sessionAssets.map(a => ({ ...a })));
+    setOptimiserResult(null);
+    saveTo(STORAGE_KEY_INPUTS, mergedInputs);
+    saveTo(STORAGE_KEY_ASSETS, sessionAssets);
+    runSim(mergedInputs, sessionAssets);
+  }, [runSim]);
+
   const registerWarnings = useMemo(() => evaluateRegisterWarnings(assets), [assets]);
 
   const allWarnings = useMemo(() => {
@@ -178,10 +195,36 @@ function App() {
         <header className="app-header">
           <div className="logo">U</div>
           <h1>Decumulation Planner</h1>
+          <div className="header-spacer" />
+          <SessionManager
+            currentInputs={inputs}
+            currentAssets={assets}
+            onLoad={handleLoadSession}
+          />
         </header>
+        {assetEditorOpen && (
+          <AssetEditor
+            assets={assets}
+            defaults={defaultRegister}
+            onChange={handleAssetsChange}
+            onClose={() => setAssetEditorOpen(false)}
+          />
+        )}
         <div className="empty-state">
-          <h2>No assets found in your register</h2>
-          <p>Add assets to the register to begin planning.</p>
+          <h2>No assets in your register</h2>
+          <p>Add assets to get started, or load a saved session.</p>
+          <div style={{ display: 'flex', gap: 12, marginTop: 16, justifyContent: 'center' }}>
+            <button className="edit-assets-btn has-overrides" onClick={() => setAssetEditorOpen(true)}>
+              + Add Assets
+            </button>
+            <button className="edit-assets-btn" onClick={() => {
+              setAssets(defaultRegister.map(a => ({ ...a })));
+              saveTo(STORAGE_KEY_ASSETS, defaultRegister);
+              runSim(inputs, defaultRegister);
+            }}>
+              Restore Defaults
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -193,6 +236,11 @@ function App() {
         <div className="logo">U</div>
         <h1>Decumulation Planner</h1>
         <div className="header-spacer" />
+        <SessionManager
+          currentInputs={inputs}
+          currentAssets={assets}
+          onLoad={handleLoadSession}
+        />
         <button
           className={`edit-assets-btn ${hasOverrides ? 'has-overrides' : ''}`}
           onClick={() => setAssetEditorOpen(true)}
