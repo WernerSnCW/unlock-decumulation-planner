@@ -20,6 +20,7 @@ import OptimiserPanel from './components/OptimiserPanel';
 import SessionManager from './components/SessionManager';
 
 import AssetEditor from './components/AssetEditor';
+import ExportPDF from './components/ExportPDF';
 
 import mockRegister from './data/mockRegister.json';
 import taxParameters from './data/taxParameters.json';
@@ -247,6 +248,14 @@ function App() {
         >
           {hasOverrides ? 'Assets (edited)' : 'Edit Assets'}
         </button>
+        {result && (
+          <ExportPDF
+            inputs={inputs}
+            result={result}
+            assets={assets}
+            taxParams={taxParams}
+          />
+        )}
         <span className="subtitle">Planning estimate — not financial advice</span>
       </header>
 

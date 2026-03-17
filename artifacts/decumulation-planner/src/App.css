@@ -1985,6 +1985,27 @@ body {
   border-top: 1px solid var(--unlock-border);
 }
 
+.export-pdf-btn {
+  background: transparent;
+  border: 1px solid var(--unlock-border);
+  color: var(--unlock-muted);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.export-pdf-btn:hover {
+  border-color: var(--unlock-accent);
+  color: var(--unlock-accent);
+}
+.export-pdf-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
 .info-tip {
   position: relative;
   display: inline-flex;
