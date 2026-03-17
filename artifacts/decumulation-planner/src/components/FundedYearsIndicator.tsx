@@ -1,5 +1,14 @@
 import type { SimulationSummary } from '../engine/decumulation';
 
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="info-tip">
+      <span className="info-tip-icon">i</span>
+      <span className="info-tip-bubble">{text}</span>
+    </span>
+  );
+}
+
 interface Props {
   summary: SimulationSummary;
   planYears: number;
@@ -28,7 +37,7 @@ export default function FundedYearsIndicator({ summary, planYears, currentAge }:
   return (
     <div className="summary-grid">
       <div className="summary-card accent-glow">
-        <div className="label">Funded Years</div>
+        <div className="label">Funded Years<InfoTip text="How many years your portfolio can sustain your target income. Green means you're fully funded for the plan duration." /></div>
         <div className={`value ${statusClass}`}>{summary.funded_years}</div>
         <div style={{ fontSize: 12, color: 'var(--unlock-muted)', marginTop: 4 }}>
           of {planYears} planned
@@ -39,7 +48,7 @@ export default function FundedYearsIndicator({ summary, planYears, currentAge }:
       </div>
 
       <div className="summary-card">
-        <div className="label">Total Tax Paid</div>
+        <div className="label">Total Tax Paid<InfoTip text="Combined income tax and Capital Gains Tax (CGT) paid across all years of the plan." /></div>
         <div className="mono" style={{ color: 'var(--unlock-text)' }}>
           {formatMoney(summary.total_tax_paid)}
         </div>
@@ -49,7 +58,7 @@ export default function FundedYearsIndicator({ summary, planYears, currentAge }:
       </div>
 
       <div className="summary-card">
-        <div className="label">Estate at Plan End</div>
+        <div className="label">Estate at Plan End<InfoTip text="Total value of all assets remaining at the end of your plan, before any inheritance tax is deducted." /></div>
         <div className="mono" style={{ color: 'var(--unlock-text)' }}>
           {formatMoney(summary.estate_at_end)}
         </div>
@@ -72,7 +81,7 @@ export default function FundedYearsIndicator({ summary, planYears, currentAge }:
       </div>
 
       <div className="summary-card">
-        <div className="label">IHT at Plan End</div>
+        <div className="label">IHT at Plan End<InfoTip text="Inheritance Tax (IHT) — tax on your estate when you die. Currently 40% above the nil-rate band (£325k) plus residence nil-rate band (£175k for qualifying homes)." /></div>
         <div className="mono" style={{ color: 'var(--chart-iht)' }}>
           {formatMoney(summary.iht_at_end)}
         </div>

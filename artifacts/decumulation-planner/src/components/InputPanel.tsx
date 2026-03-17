@@ -1,5 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms } from '../engine/decumulation';
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="info-tip">
+      <span className="info-tip-icon">i</span>
+      <span className="info-tip-bubble">{text}</span>
+    </span>
+  );
+}
 
 function NumInput({ value, onChange, className, min, max, step }: {
   value: number;
@@ -64,11 +73,11 @@ const PRESETS: { value: DrawdownStrategy; label: string }[] = [
   { value: 'growth_first', label: 'Growth' },
 ];
 
-const WEIGHT_KEYS: { key: keyof PriorityWeights; label: string; color: string }[] = [
-  { key: 'tax_efficiency', label: 'Tax Efficiency', color: '#00BB77' },
-  { key: 'iht_reduction', label: 'IHT Reduction', color: '#EF4444' },
-  { key: 'preserve_growth', label: 'Preserve Growth', color: '#3B82F6' },
-  { key: 'liquidity', label: 'Liquidity', color: '#F59E0B' },
+const WEIGHT_KEYS: { key: keyof PriorityWeights; label: string; color: string; tip: string }[] = [
+  { key: 'tax_efficiency', label: 'Tax Efficiency', color: '#00BB77', tip: 'Prioritise drawing from assets that minimise income tax and CGT each year.' },
+  { key: 'iht_reduction', label: 'IHT Reduction', color: '#EF4444', tip: 'Inheritance Tax — prioritise spending assets that would be taxed at 40% on death.' },
+  { key: 'preserve_growth', label: 'Preserve Growth', color: '#3B82F6', tip: 'Keep high-growth assets invested longer so the portfolio compounds more over time.' },
+  { key: 'liquidity', label: 'Liquidity', color: '#F59E0B', tip: 'Prefer drawing from easily accessible assets first (cash, ISAs) before illiquid ones (property, pensions).' },
 ];
 
 const LIFESTYLES: { value: LifestyleMultiplier; label: string; mult: string }[] = [
@@ -365,7 +374,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
             <div key={w.key} className="weight-slider-row">
               <div className="weight-label">
                 <span className="weight-dot" style={{ background: w.color }} />
-                <span>{w.label}</span>
+                <span>{w.label}<InfoTip text={w.tip} /></span>
                 <span className="weight-pct">{pct}%</span>
               </div>
               <input
@@ -396,7 +405,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       <div className="mechanism-group">
         <div className="mechanism-header">IHT Reduction</div>
         <div className="toggle-row compact">
-          <label>Preserve EIS for BPR</label>
+          <label>Preserve EIS for BPR<InfoTip text="Business Property Relief (BPR) — EIS shares held 2+ years qualify for up to 100% IHT relief. Keeping them protects your estate from inheritance tax." /></label>
           <button
             className={`toggle-switch ${inputs.strategy_mechanisms.preserve_eis_bpr ? 'active' : 'inactive'}`}
             onClick={() => onChange({
@@ -408,7 +417,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
           </button>
         </div>
         <div className="toggle-row compact">
-          <label>Preserve AIM for BPR</label>
+          <label>Preserve AIM for BPR<InfoTip text="AIM shares can qualify for Business Property Relief (BPR) after 2 years, giving up to 100% IHT relief — subject to the 2026 cap if enabled." /></label>
           <button
             className={`toggle-switch ${inputs.strategy_mechanisms.preserve_aim_bpr ? 'active' : 'inactive'}`}
             onClick={() => onChange({
@@ -420,7 +429,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
           </button>
         </div>
         <div className="toggle-row compact">
-          <label>Protect property</label>
+          <label>Protect property<InfoTip text="Avoids selling property assets during drawdown. Property is illiquid and selling incurs CGT and disposal costs." /></label>
           <button
             className={`toggle-switch ${inputs.strategy_mechanisms.protect_property ? 'active' : 'inactive'}`}
             onClick={() => onChange({
@@ -436,7 +445,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       <div className="mechanism-group">
         <div className="mechanism-header">Tax / Income</div>
         <div className="toggle-row compact">
-          <label>Draw ISAs early (tax-free)</label>
+          <label>Draw ISAs early<InfoTip text="ISA withdrawals are completely tax-free, but spending ISAs early means losing their tax-free growth. Best used when you need to reduce IHT exposure." /></label>
           <button
             className={`toggle-switch ${inputs.strategy_mechanisms.draw_isa_early ? 'active' : 'inactive'}`}
             onClick={() => onChange({
@@ -448,7 +457,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
           </button>
         </div>
         <div className="toggle-row compact">
-          <label>Draw pension early</label>
+          <label>Draw pension early<InfoTip text="Pension withdrawals are taxed as income. Drawing early can use up your personal allowance and basic rate band, but pensions are currently outside IHT (until 2027 rule)." /></label>
           <button
             className={`toggle-switch ${inputs.strategy_mechanisms.draw_pension_early ? 'active' : 'inactive'}`}
             onClick={() => onChange({
@@ -460,7 +469,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
           </button>
         </div>
         <div className="toggle-row compact">
-          <label>Preserve VCT dividend income</label>
+          <label>Preserve VCT income<InfoTip text="VCT dividends are tax-free. Keeping VCT holdings preserves this income stream, but VCTs are not IHT-exempt." /></label>
           <button
             className={`toggle-switch ${inputs.strategy_mechanisms.preserve_vct_income ? 'active' : 'inactive'}`}
             onClick={() => onChange({
@@ -478,7 +487,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       <div className="section-title">Scenario Toggles</div>
 
       <div className="toggle-row">
-        <label>Apply 2026 BPR Cap</label>
+        <label>Apply 2026 BPR Cap<InfoTip text="From April 2026, BPR relief is capped at £1M for AIM/unlisted shares. Above this, only 50% relief applies. This is a proposed rule change." /></label>
         <button
           className={`toggle-switch ${inputs.apply_2026_bpr_cap ? 'active' : 'inactive'}`}
           onClick={() => update('apply_2026_bpr_cap', !inputs.apply_2026_bpr_cap)}
@@ -488,7 +497,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       </div>
 
       <div className="toggle-row">
-        <label>Apply 2027 Pension IHT</label>
+        <label>Apply 2027 Pension IHT<InfoTip text="From April 2027, unused pension funds may be included in your estate for IHT. Currently pensions pass outside your estate. This is a proposed rule change." /></label>
         <button
           className={`toggle-switch ${inputs.apply_2027_pension_iht ? 'active' : 'inactive'}`}
           onClick={() => update('apply_2027_pension_iht', !inputs.apply_2027_pension_iht)}
@@ -515,14 +524,14 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       </div>
 
       <div className="input-group">
-        <label>Gift Type</label>
+        <label>Gift Type<InfoTip text="PET: Gift to individuals, IHT-free if you survive 7 years. CLT: Gift into a trust, taxed at 20% above nil-rate band. NEFI: Regular gifts from surplus income, immediately IHT-free." /></label>
         <select
           value={inputs.gift_type}
           onChange={e => update('gift_type', e.target.value as GiftType)}
         >
           <option value="pet">Potentially Exempt Transfer (PET)</option>
-          <option value="discretionary_trust">Discretionary Trust (CLT)</option>
-          <option value="nefi">Normal Expenditure (NEFI)</option>
+          <option value="discretionary_trust">Chargeable Lifetime Transfer (CLT)</option>
+          <option value="nefi">Normal Expenditure from Income (NEFI)</option>
         </select>
       </div>
 
@@ -593,7 +602,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       </div>
 
       <div className="input-group">
-        <label>Private Pension Income</label>
+        <label>Private Pension Income<InfoTip text="Guaranteed income from defined benefit or final salary pensions (e.g. Remploy, civil service). Not SIPP drawdown — that's handled separately." /></label>
         <div className="input-prefix">
           <span>{'\u00A3'}</span>
           <NumInput
