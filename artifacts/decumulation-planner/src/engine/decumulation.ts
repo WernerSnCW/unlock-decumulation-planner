@@ -166,6 +166,7 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
     eis: 0.6,
     aim_shares: 0.4,
     property_investment: mechanisms.protect_property ? 0.15 : 0.3,
+    property_residential: 0.1,
   };
   const taxScore = taxCostOrder[asset.assetClass] ?? 0.5;
 
@@ -259,7 +260,7 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
       ihtScore = pensionInEstate ? 0.95 : 0.1;
     }
   }
-  if (asset.assetClass === 'property_investment' && mechanisms.protect_property) {
+  if ((asset.assetClass === 'property_investment' || asset.assetClass === 'property_residential') && mechanisms.protect_property) {
     ihtScore = Math.min(ihtScore, 0.3);
   }
 
@@ -274,6 +275,7 @@ function scoreAssetForDrawdown(asset: AssetState, weights: PriorityWeights, plan
     eis: 0.4,
     pension: mechanisms.draw_pension_early ? 0.6 : 0.3,
     property_investment: mechanisms.protect_property ? 0.05 : 0.1,
+    property_residential: 0.05,
   };
   const liquidityScore = liquidityOrder[asset.assetClass] ?? 0.5;
 
@@ -473,7 +475,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
       if (asset.assetClass === 'cash') {
         savingsIncome += cashIncome;
-      } else if (asset.assetClass === 'property_investment') {
+      } else if (asset.assetClass === 'property_investment' || asset.assetClass === 'property_residential') {
         rentalIncome += cashIncome;
       } else if (asset.assetClass === 'vct' || asset.assetClass === 'eis' || asset.assetClass === 'aim_shares') {
         dividendIncome += cashIncome;
@@ -604,7 +606,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
             totalDeferredGainRealized += deferredRealized;
             asset.deferredGainAmount -= deferredRealized;
           }
-        } else if (asset.assetClass === 'property_investment') {
+        } else if (asset.assetClass === 'property_investment' || asset.assetClass === 'property_residential') {
           const preDrawValue = draw + asset.value;
           const costBasis = asset.acquisitionCost ?? preDrawValue * 0.5;
           const proportion = preDrawValue > 0 ? draw / preDrawValue : 1;
@@ -647,7 +649,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const taxPayPriority = [...assets]
       .filter(a => a.value > 0)
       .sort((a, b) => {
-        const liq: Record<string, number> = { cash: 0, isa: 1, pension: 5, vct: 3, eis: 4, aim_shares: 2, property_investment: 6 };
+        const liq: Record<string, number> = { cash: 0, isa: 1, pension: 5, vct: 3, eis: 4, aim_shares: 2, property_investment: 6, property_residential: 7 };
         return (liq[a.assetClass] ?? 99) - (liq[b.assetClass] ?? 99);
       });
     for (const asset of taxPayPriority) {

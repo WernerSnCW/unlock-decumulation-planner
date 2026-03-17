@@ -1,0 +1,183 @@
+import type { Asset } from '../engine/decumulation';
+
+export interface PortfolioPreset {
+  name: string;
+  description: string;
+  assets: Asset[];
+  suggested_inputs?: {
+    private_pension_income?: number;
+    state_pension_annual?: number;
+  };
+}
+
+function makeAsset(overrides: Partial<Asset> & { asset_id: string; asset_class: string; label: string; current_value: number }): Asset {
+  return {
+    wrapper_type: 'unwrapped',
+    acquisition_date: null,
+    acquisition_cost: null,
+    original_subscription_amount: null,
+    tax_relief_claimed: 0,
+    assumed_growth_rate: 0.05,
+    income_generated: 0,
+    reinvested_pct: 0,
+    is_iht_exempt: false,
+    bpr_qualifying_date: null,
+    bpr_last_reviewed: null,
+    cgt_exempt_date: null,
+    mortgage_balance: 0,
+    pension_type: null,
+    tfls_used_amount: 0,
+    mpaa_triggered: false,
+    in_drawdown: false,
+    flexible_isa: false,
+    deferred_gain_amount: null,
+    relief_claimed_type: 'none',
+    allowable_improvement_costs: 0,
+    estimated_disposal_cost_pct: 0,
+    estimated_disposal_cost_amount: null,
+    disposal_type: 'none',
+    transfer_year: null,
+    ...overrides,
+  };
+}
+
+export const PORTFOLIO_PRESETS: PortfolioPreset[] = [
+  {
+    name: 'Martin',
+    description: '£2.3M mixed portfolio — ISAs, GIAs (SAP-heavy), pensions, BTL, classic cars, home',
+    suggested_inputs: {
+      private_pension_income: 10548,
+      state_pension_annual: 11502,
+    },
+    assets: [
+      makeAsset({
+        asset_id: 'martin-cash-001',
+        asset_class: 'cash',
+        wrapper_type: 'unwrapped',
+        label: 'NatWest Capital Account',
+        current_value: 96625,
+        assumed_growth_rate: 0.045,
+        income_generated: 4348,
+      }),
+      makeAsset({
+        asset_id: 'martin-cash-002',
+        asset_class: 'cash',
+        wrapper_type: 'unwrapped',
+        label: 'Premium Bonds — Post Office',
+        current_value: 50000,
+        assumed_growth_rate: 0.04,
+        income_generated: 2000,
+      }),
+      makeAsset({
+        asset_id: 'martin-isa-001',
+        asset_class: 'isa',
+        wrapper_type: 'isa',
+        label: 'ISA — True Potential',
+        current_value: 70216,
+        assumed_growth_rate: 0.06,
+        income_generated: 0,
+      }),
+      makeAsset({
+        asset_id: 'martin-isa-002',
+        asset_class: 'isa',
+        wrapper_type: 'isa',
+        label: 'ISA — ClearWater Capital',
+        current_value: 26330,
+        assumed_growth_rate: 0.06,
+        income_generated: 0,
+      }),
+      makeAsset({
+        asset_id: 'martin-gia-001',
+        asset_class: 'isa',
+        wrapper_type: 'unwrapped',
+        label: 'GIA — FundSmith',
+        current_value: 11155,
+        acquisition_cost: 11155,
+        assumed_growth_rate: 0.07,
+        income_generated: 0,
+      }),
+      makeAsset({
+        asset_id: 'martin-gia-002',
+        asset_class: 'isa',
+        wrapper_type: 'unwrapped',
+        label: 'GIA — Interactive Investor',
+        current_value: 20077,
+        acquisition_cost: 16800,
+        assumed_growth_rate: 0.06,
+        income_generated: 0,
+      }),
+      makeAsset({
+        asset_id: 'martin-gia-003',
+        asset_class: 'isa',
+        wrapper_type: 'unwrapped',
+        label: 'GIA — ClearWater Capital',
+        current_value: 31951,
+        acquisition_cost: 17300,
+        assumed_growth_rate: 0.05,
+        income_generated: 0,
+      }),
+      makeAsset({
+        asset_id: 'martin-gia-004',
+        asset_class: 'isa',
+        wrapper_type: 'unwrapped',
+        label: 'GIA — SAP/CWC',
+        current_value: 340451,
+        acquisition_cost: 0,
+        assumed_growth_rate: 0.06,
+        income_generated: 0,
+      }),
+      makeAsset({
+        asset_id: 'martin-gia-005',
+        asset_class: 'vct',
+        wrapper_type: 'unwrapped',
+        label: 'Unlock VCT',
+        current_value: 40000,
+        acquisition_cost: 40000,
+        original_subscription_amount: 40000,
+        tax_relief_claimed: 12000,
+        assumed_growth_rate: 0.07,
+        income_generated: 2000,
+        is_iht_exempt: false,
+        relief_claimed_type: 'income_tax_relief',
+      }),
+      makeAsset({
+        asset_id: 'martin-pension-001',
+        asset_class: 'pension',
+        wrapper_type: 'pension',
+        label: 'Pension 1 — True Potential',
+        current_value: 52784,
+        assumed_growth_rate: 0.055,
+        pension_type: 'sipp',
+      }),
+      makeAsset({
+        asset_id: 'martin-pension-002',
+        asset_class: 'pension',
+        wrapper_type: 'pension',
+        label: 'Pension 2 — True Potential',
+        current_value: 693504,
+        assumed_growth_rate: 0.055,
+        pension_type: 'sipp',
+      }),
+      makeAsset({
+        asset_id: 'martin-property-001',
+        asset_class: 'property_investment',
+        wrapper_type: 'unwrapped',
+        label: 'BTL — 3-bed house',
+        current_value: 54000,
+        assumed_growth_rate: 0.03,
+        income_generated: 0,
+        estimated_disposal_cost_pct: 0.025,
+      }),
+      makeAsset({
+        asset_id: 'martin-property-002',
+        asset_class: 'property_residential',
+        wrapper_type: 'unwrapped',
+        label: 'Home',
+        current_value: 425000,
+        assumed_growth_rate: 0.03,
+        income_generated: 0,
+        estimated_disposal_cost_pct: 0.025,
+      }),
+    ],
+  },
+];

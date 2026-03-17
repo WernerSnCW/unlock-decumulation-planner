@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { SimulationInputs, Asset } from '../engine/decumulation';
+import { PORTFOLIO_PRESETS } from '../data/presets';
 
 interface Session {
   name: string;
@@ -27,7 +28,7 @@ function loadSessions(): Session[] {
 
 function saveSessions(sessions: Session[]): void {
   try { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions)); }
-  catch { /* quota */ }
+  catch {}
 }
 
 function getActiveSessionName(): string {
@@ -37,7 +38,7 @@ function getActiveSessionName(): string {
 
 function setActiveSessionName(name: string): void {
   try { localStorage.setItem(ACTIVE_SESSION_KEY, name); }
-  catch { /* quota */ }
+  catch {}
 }
 
 export default function SessionManager({ currentInputs, currentAssets, onLoad }: SessionManagerProps) {
@@ -83,6 +84,17 @@ export default function SessionManager({ currentInputs, currentAssets, onLoad }:
     onLoad(session.inputs, session.assets);
     setActiveName(session.name);
     setActiveSessionName(session.name);
+    setOpen(false);
+  };
+
+  const handleLoadPreset = (preset: typeof PORTFOLIO_PRESETS[0]) => {
+    const patchedInputs = {
+      ...currentInputs,
+      ...(preset.suggested_inputs ?? {}),
+    };
+    onLoad(patchedInputs, preset.assets.map(a => ({ ...a })));
+    setActiveName(preset.name);
+    setActiveSessionName(preset.name);
     setOpen(false);
   };
 
@@ -143,30 +155,55 @@ export default function SessionManager({ currentInputs, currentAssets, onLoad }:
             </button>
           </div>
 
-          <div className="session-list">
-            {sessions.length === 0 && (
-              <div className="session-empty">No saved sessions yet</div>
-            )}
-            {sessions.map(s => (
-              <div
-                key={s.name}
-                className={`session-item ${activeName === s.name ? 'active' : ''}`}
-              >
-                <div className="session-item-info" onClick={() => handleLoad(s)}>
-                  <span className="session-item-name">{s.name}</span>
-                  <span className="session-item-meta">
-                    {s.assets.length} assets &middot; {formatDate(s.created)}
-                  </span>
-                </div>
-                <button
-                  className={`session-delete-btn ${confirmDelete === s.name ? 'confirm' : ''}`}
-                  onClick={() => handleDelete(s.name)}
-                  title={confirmDelete === s.name ? 'Click again to confirm' : 'Delete session'}
+          {PORTFOLIO_PRESETS.length > 0 && (
+            <div className="session-section">
+              <div className="session-section-label">Portfolio Presets</div>
+              {PORTFOLIO_PRESETS.map(p => (
+                <div
+                  key={p.name}
+                  className={`session-item preset ${activeName === p.name ? 'active' : ''}`}
                 >
-                  {confirmDelete === s.name ? 'Sure?' : '\u2715'}
-                </button>
-              </div>
-            ))}
+                  <div className="session-item-info" onClick={() => handleLoadPreset(p)}>
+                    <span className="session-item-name">
+                      <span className="preset-badge">PRESET</span>
+                      {p.name}
+                    </span>
+                    <span className="session-item-meta">{p.description}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="session-section">
+            {sessions.length > 0 && (
+              <div className="session-section-label">Saved Sessions</div>
+            )}
+            <div className="session-list">
+              {sessions.length === 0 && PORTFOLIO_PRESETS.length === 0 && (
+                <div className="session-empty">No saved sessions yet</div>
+              )}
+              {sessions.map(s => (
+                <div
+                  key={s.name}
+                  className={`session-item ${activeName === s.name ? 'active' : ''}`}
+                >
+                  <div className="session-item-info" onClick={() => handleLoad(s)}>
+                    <span className="session-item-name">{s.name}</span>
+                    <span className="session-item-meta">
+                      {s.assets.length} assets &middot; {formatDate(s.created)}
+                    </span>
+                  </div>
+                  <button
+                    className={`session-delete-btn ${confirmDelete === s.name ? 'confirm' : ''}`}
+                    onClick={() => handleDelete(s.name)}
+                    title={confirmDelete === s.name ? 'Click again to confirm' : 'Delete session'}
+                  >
+                    {confirmDelete === s.name ? 'Sure?' : '\u2715'}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           {activeName && (

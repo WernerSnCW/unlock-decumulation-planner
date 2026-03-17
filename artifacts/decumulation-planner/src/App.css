@@ -1839,6 +1839,45 @@ body {
   color: #fff !important;
 }
 
+.session-section {
+  border-bottom: 1px solid var(--unlock-border);
+}
+
+.session-section:last-of-type {
+  border-bottom: none;
+}
+
+.session-section-label {
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--unlock-muted);
+  opacity: 0.7;
+}
+
+.session-item.preset {
+  background: rgba(0, 187, 119, 0.03);
+}
+
+.session-item.preset:hover {
+  background: rgba(0, 187, 119, 0.08);
+}
+
+.preset-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--unlock-accent);
+  color: var(--unlock-bg);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
 .add-asset-panel {
   padding: 16px 20px;
   background: rgba(0, 187, 119, 0.04);

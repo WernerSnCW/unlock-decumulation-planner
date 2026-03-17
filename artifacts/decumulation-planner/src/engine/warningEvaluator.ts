@@ -54,7 +54,7 @@ export function evaluateRegisterWarnings(register: Asset[]): Warning[] {
     }
 
     if (asset.acquisition_cost === null || asset.acquisition_cost === undefined) {
-      const cgtApplies = ['property_investment', 'aim_shares'].includes(asset.asset_class) ||
+      const cgtApplies = ['property_investment', 'property_residential', 'aim_shares'].includes(asset.asset_class) ||
         (asset.asset_class === 'eis' && asset.cgt_exempt_date !== null);
       if (cgtApplies) {
         warnings.push({
