@@ -258,37 +258,36 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         const t = inputs.annual_income_target;
         const m = inputs.glory_years.multiplier;
         const isGlory = inputs.glory_years.target_is_glory;
-        const gloryAmt = isGlory ? t : Math.round(t * m);
-        const calmAmt = isGlory ? Math.round(t / m) : t;
+        const earlyAmt = isGlory ? t : Math.round(t * m);
+        const laterAmt = isGlory ? Math.round(t / m) : t;
         return (
         <>
           <div className="input-group">
-            <label>Income target represents</label>
             <div className="gross-net-row">
-              <button
-                className={`gross-net-btn ${isGlory ? 'active' : ''}`}
-                onClick={() => onChange({
-                  ...inputs,
-                  glory_years: { ...inputs.glory_years, target_is_glory: true }
-                })}
-              >Glory amount</button>
               <button
                 className={`gross-net-btn ${!isGlory ? 'active' : ''}`}
                 onClick={() => onChange({
                   ...inputs,
                   glory_years: { ...inputs.glory_years, target_is_glory: false }
                 })}
-              >Reduced amount</button>
+              >Increase early years</button>
+              <button
+                className={`gross-net-btn ${isGlory ? 'active' : ''}`}
+                onClick={() => onChange({
+                  ...inputs,
+                  glory_years: { ...inputs.glory_years, target_is_glory: true }
+                })}
+              >Reduce later years</button>
             </div>
-            <span style={{ fontSize: 11, color: 'var(--unlock-muted)' }}>
+            <span style={{ fontSize: 11, color: 'var(--unlock-muted)', marginTop: 4, display: 'block' }}>
               {isGlory
-                ? 'Your income target is the higher glory phase amount — it reduces after'
-                : 'Your income target is the lower calm phase amount — glory years are higher'}
+                ? `Your £${t.toLocaleString('en-GB')} target stays for the first ${inputs.glory_years.duration} years, then drops to £${laterAmt.toLocaleString('en-GB')}`
+                : `Your £${t.toLocaleString('en-GB')} target increases to £${earlyAmt.toLocaleString('en-GB')} for the first ${inputs.glory_years.duration} years`}
             </span>
           </div>
 
           <div className="input-group">
-            <label>Glory Period (years)</label>
+            <label>How many early years</label>
             <input
               type="range"
               min="1"
@@ -303,14 +302,12 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
             />
             <div className="glory-years-label">
               <span>First {inputs.glory_years.duration} years</span>
-              <span className="glory-years-value">
-                {isGlory ? 'at full target' : `${Math.round(m * 100)}% of target`}
-              </span>
+              <span className="glory-years-value">then {inputs.plan_years - inputs.glory_years.duration} years after</span>
             </div>
           </div>
 
           <div className="input-group">
-            <label>Spending Ratio</label>
+            <label>By how much ({Math.round(m * 100 - 100)}% {isGlory ? 'reduction' : 'increase'})</label>
             <input
               type="range"
               min="110"
@@ -324,27 +321,19 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
               className="weight-range"
               style={{ '--slider-color': '#F59E0B' } as React.CSSProperties}
             />
-            <div className="glory-years-label">
-              <span>{'\u00D7'}{m.toFixed(1)} ratio</span>
-              <span className="glory-years-value">
-                {isGlory
-                  ? `calm = target \u00F7 ${m.toFixed(1)}`
-                  : `glory = target \u00D7 ${m.toFixed(1)}`}
-              </span>
-            </div>
           </div>
 
           <div className="glory-years-summary">
             <div className="glory-phase">
-              <span className="phase-label">Glory phase</span>
+              <span className="phase-label">Early years (yr 1{'\u2013'}{inputs.glory_years.duration})</span>
               <span className="phase-amount">
-                {'\u00A3'}{gloryAmt.toLocaleString('en-GB')}/yr
+                {'\u00A3'}{earlyAmt.toLocaleString('en-GB')}/yr
               </span>
             </div>
             <div className="glory-phase calm">
-              <span className="phase-label">Calm phase</span>
+              <span className="phase-label">Later years (yr {inputs.glory_years.duration + 1}+)</span>
               <span className="phase-amount">
-                {'\u00A3'}{calmAmt.toLocaleString('en-GB')}/yr
+                {'\u00A3'}{laterAmt.toLocaleString('en-GB')}/yr
               </span>
             </div>
           </div>
