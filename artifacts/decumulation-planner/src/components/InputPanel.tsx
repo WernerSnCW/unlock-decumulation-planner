@@ -1,5 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms } from '../engine/decumulation';
+
+function NumInput({ value, onChange, className, min, max, step }: {
+  value: number;
+  onChange: (v: number) => void;
+  className?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}) {
+  const [raw, setRaw] = useState(String(value));
+  const ref = useRef(value);
+
+  useEffect(() => {
+    if (value !== ref.current) {
+      setRaw(String(value));
+      ref.current = value;
+    }
+  }, [value]);
+
+  return (
+    <input
+      type="number"
+      value={raw}
+      onChange={e => {
+        setRaw(e.target.value);
+        const n = parseFloat(e.target.value);
+        if (!isNaN(n)) {
+          ref.current = n;
+          onChange(n);
+        }
+      }}
+      onBlur={() => {
+        const n = parseFloat(raw);
+        if (isNaN(n) || raw.trim() === '') {
+          const fallback = min ?? 0;
+          setRaw(String(fallback));
+          ref.current = fallback;
+          onChange(fallback);
+        }
+      }}
+      className={className}
+      min={min}
+      max={max}
+      step={step}
+    />
+  );
+}
 import { STRATEGY_PRESETS } from '../engine/decumulation';
 import { getPETTaperRate } from '../engine/trustLogic';
 
@@ -127,10 +174,9 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         <label>Annual Income Target</label>
         <div className="input-prefix">
           <span>{'\u00A3'}</span>
-          <input
-            type="number"
+          <NumInput
             value={inputs.annual_income_target}
-            onChange={e => update('annual_income_target', parseInt(e.target.value) || 0)}
+            onChange={v => update('annual_income_target', v)}
             className={errors.annual_income_target ? 'input-error' : ''}
           />
         </div>
@@ -159,11 +205,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
 
       <div className="input-group">
         <label>Plan Duration (years)</label>
-        <input
-          type="number"
+        <NumInput
           value={inputs.plan_years}
-          onChange={e => update('plan_years', parseInt(e.target.value) || 5)}
+          onChange={v => update('plan_years', v)}
           className={errors.plan_years ? 'input-error' : ''}
+          min={1}
         />
         {errors.plan_years && <span className="error-text">{errors.plan_years}</span>}
       </div>
@@ -182,11 +228,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
 
       <div className="input-group">
         <label>Current Age</label>
-        <input
-          type="number"
+        <NumInput
           value={inputs.current_age}
-          onChange={e => update('current_age', parseInt(e.target.value) || 65)}
+          onChange={v => update('current_age', v)}
           className={errors.current_age ? 'input-error' : ''}
+          min={55}
         />
         {errors.current_age && <span className="error-text">{errors.current_age}</span>}
       </div>
@@ -431,10 +477,9 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         <label>Annual Gift Amount</label>
         <div className="input-prefix">
           <span>{'\u00A3'}</span>
-          <input
-            type="number"
+          <NumInput
             value={inputs.annual_gift_amount}
-            onChange={e => update('annual_gift_amount', parseInt(e.target.value) || 0)}
+            onChange={v => update('annual_gift_amount', v)}
             className={errors.annual_gift_amount ? 'input-error' : ''}
           />
         </div>
@@ -475,10 +520,9 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         <label>Minimum Cash Reserve</label>
         <div className="input-prefix">
           <span>{'\u00A3'}</span>
-          <input
-            type="number"
+          <NumInput
             value={inputs.cash_reserve}
-            onChange={e => update('cash_reserve', parseInt(e.target.value) || 0)}
+            onChange={v => update('cash_reserve', v)}
           />
         </div>
         <span style={{ fontSize: 11, color: 'var(--unlock-muted)' }}>
@@ -494,10 +538,9 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         <label>Amount to Leave in Will</label>
         <div className="input-prefix">
           <span>{'\u00A3'}</span>
-          <input
-            type="number"
+          <NumInput
             value={inputs.legacy_target}
-            onChange={e => update('legacy_target', parseInt(e.target.value) || 0)}
+            onChange={v => update('legacy_target', v)}
           />
         </div>
         <span style={{ fontSize: 11, color: 'var(--unlock-muted)' }}>
@@ -525,10 +568,9 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         <label>Private Pension Income</label>
         <div className="input-prefix">
           <span>{'\u00A3'}</span>
-          <input
-            type="number"
+          <NumInput
             value={inputs.private_pension_income}
-            onChange={e => update('private_pension_income', parseInt(e.target.value) || 0)}
+            onChange={v => update('private_pension_income', v)}
             className={errors.private_pension_income ? 'input-error' : ''}
           />
         </div>
@@ -540,10 +582,9 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         <label>State Pension (annual)</label>
         <div className="input-prefix">
           <span>{'\u00A3'}</span>
-          <input
-            type="number"
+          <NumInput
             value={inputs.state_pension_annual}
-            onChange={e => update('state_pension_annual', parseInt(e.target.value) || 0)}
+            onChange={v => update('state_pension_annual', v)}
             className={errors.state_pension_annual ? 'input-error' : ''}
           />
         </div>
