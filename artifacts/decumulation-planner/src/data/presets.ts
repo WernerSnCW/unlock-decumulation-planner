@@ -5,8 +5,15 @@ export interface PortfolioPreset {
   description: string;
   assets: Asset[];
   suggested_inputs?: {
+    current_age?: number;
+    annual_income_target?: number;
+    income_is_net?: boolean;
+    plan_years?: number;
     private_pension_income?: number;
     state_pension_annual?: number;
+    inflation_rate?: number;
+    cash_reserve?: number;
+    annual_gift_amount?: number;
   };
 }
 
@@ -46,8 +53,15 @@ export const PORTFOLIO_PRESETS: PortfolioPreset[] = [
     name: 'Martin',
     description: '£2.3M mixed portfolio — ISAs, GIAs (SAP-heavy), pensions, BTL, classic cars, home',
     suggested_inputs: {
+      current_age: 65,
+      annual_income_target: 75000,
+      income_is_net: false,
+      plan_years: 25,
       private_pension_income: 10548,
       state_pension_annual: 11502,
+      inflation_rate: 0.03,
+      cash_reserve: 0,
+      annual_gift_amount: 0,
     },
     assets: [
       makeAsset({
