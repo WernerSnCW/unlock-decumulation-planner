@@ -226,11 +226,9 @@ function generatePDF(
 
   if (s.iht_saving_vs_no_plan > 0) {
     p.sectionTitle('How IHT Is Saved');
-    p.explanationText('The IHT saving is not a single action \u2014 it is the cumulative effect of the drawdown strategy over the plan. Here is how each mechanism contributes:');
+    p.explanationText(`You need to draw income regardless \u2014 the IHT saving of ${fmt(s.iht_saving_vs_no_plan)} does not come from spending itself, but from choosing which assets to spend and which to preserve. A na\u00EFve approach (e.g. drawing from cash first, or proportionally) would leave a larger IHT bill. This plan saves tax by drawing strategically:`);
 
     const lastYear = realYears[realYears.length - 1];
-    const totalPortfolioStart = assets.reduce((t, a) => t + a.current_value, 0);
-    const totalDrawn = realYears.reduce((t, yr) => t + Object.values(yr.drawsByAsset).reduce((s2, v) => s2 + v, 0), 0);
     const totalGifted = s.total_gifted;
 
     const pensionAssets = assets.filter(a => a.asset_class === 'pension');
@@ -243,49 +241,27 @@ function generatePDF(
     const bprStartVal = [...eisAssets, ...aimAssets].reduce((t, a) => t + a.current_value, 0);
     const bprEndVal = lastYear?.ihtExemptTotal ?? 0;
 
-    const ihtSaving = s.iht_saving_vs_no_plan;
     const mechanisms: { icon: string; title: string; explanation: string; color: RGB }[] = [];
-
-    mechanisms.push({
-      icon: '\u2193',
-      title: `Spending down the estate: ${fmt(totalDrawn)} drawn over ${inputs.plan_years} years`,
-      explanation: `Every pound drawn for income reduces the estate that is taxable on death. By drawing ${fmt(totalDrawn)} over ${inputs.plan_years} years, that amount is removed from the IHT-liable estate. At 40% IHT, this alone could save up to ${fmt(Math.round(totalDrawn * 0.4))} in IHT \u2014 though actual savings depend on which assets are drawn and whether they would have been exempt.`,
-      color: ACCENT,
-    });
-
-    if (totalGifted > 0) {
-      const giftExplanation = inputs.gift_type === 'pet'
-        ? `These are Potentially Exempt Transfers (PETs) \u2014 if you survive 7 years after each gift, it falls entirely outside your estate. Taper relief applies between 3\u20137 years.`
-        : inputs.gift_type === 'discretionary_trust'
-          ? `These are Chargeable Lifetime Transfers (CLTs) into a discretionary trust. The first \u00A3325k (nil-rate band, less any prior CLTs in the last 7 years) is tax-free; excess is taxed at 20% when given.`
-          : `These are Normal Expenditure from Income (NEFI) \u2014 regular gifts from surplus income that are immediately exempt from IHT. They must be habitual, from income (not capital), and leave you with enough to maintain your standard of living.`;
-      mechanisms.push({
-        icon: '\u2665',
-        title: `Gifting: ${fmt(totalGifted)} given away over the plan`,
-        explanation: `Gifts remove value from your estate. ${giftExplanation} At 40% IHT, ${fmt(totalGifted)} of gifts could save up to ${fmt(Math.round(totalGifted * 0.4))} in IHT.`,
-        color: AMBER,
-      });
-    }
 
     const drawdownOrder = inputs.priority_weights;
     if (drawdownOrder.iht_reduction > 0) {
       const ihtWeight = Math.round(drawdownOrder.iht_reduction * 100);
       mechanisms.push({
         icon: '\u2191',
-        title: `IHT-aware drawdown order (weight: ${ihtWeight}%)`,
-        explanation: `Your strategy prioritises drawing from IHT-liable assets first (GIAs, cash, ISAs) before tax-advantaged ones. This means the assets that would be taxed at 40% on death are spent during your lifetime, while assets with reliefs (BPR, pension exemption) are preserved. The higher the IHT weight, the more aggressively the plan targets IHT-liable assets.`,
+        title: `Drawing from IHT-liable assets first (IHT weight: ${ihtWeight}%)`,
+        explanation: `The key saving comes from which assets you spend. Cash, GIAs, and ISAs are all fully taxable in your estate at 40%. Pensions and BPR-qualifying assets are not. By spending the IHT-liable assets for your income and preserving the IHT-exempt ones, you shift the composition of your estate towards sheltered assets \u2014 same lifestyle, lower tax bill.`,
         color: BLUE,
       });
     }
 
     if (hasPensions) {
       const pensionExplanation = inputs.apply_2027_pension_iht
-        ? `Note: From April 2027 (if enacted), unused pension funds will be included in the estate for IHT purposes. Your plan models this rule change, which reduces the pension IHT advantage for later years.`
-        : `Pension funds currently sit outside the estate for IHT purposes. By preserving pension pots and spending other assets first, the plan keeps more wealth in this IHT-sheltered wrapper.`;
+        ? `From April 2027 (if enacted), unused pensions will be included in the estate for IHT. Your plan models this change, which reduces the pension advantage in later years.`
+        : `Pension funds currently pass outside the estate on death entirely. By spending other assets first and letting pensions grow, you shift more of your wealth into this IHT-free wrapper.`;
       mechanisms.push({
         icon: '\u26C1',
-        title: `Pension preservation: ${fmt(pensionStartVal)} in SIPPs at start`,
-        explanation: `Pensions (SIPPs/drawdown) are among the most IHT-efficient assets because they currently pass outside the estate on death. The drawdown strategy can delay pension withdrawals, letting them grow tax-free while spending IHT-liable assets first. ${pensionExplanation}`,
+        title: `Preserving pensions: ${fmt(pensionStartVal)} in SIPPs`,
+        explanation: `Pensions are the most IHT-efficient asset \u2014 they currently sit entirely outside the estate. If you drew from your SIPP to fund income and left your GIA untouched, you would be spending IHT-free money and keeping IHT-liable money. This plan does the opposite: spend the GIA, keep the pension. ${pensionExplanation}`,
         color: BLUE,
       });
     }
@@ -293,8 +269,8 @@ function generatePDF(
     if (hasBPR) {
       mechanisms.push({
         icon: '\u2606',
-        title: `Business Property Relief (BPR): ${fmt(bprStartVal)} qualifying at start`,
-        explanation: `EIS and AIM shares held for 2+ years qualify for up to 100% BPR \u2014 meaning they pass IHT-free on death. The strategy preserves these assets rather than spending them, keeping the relief intact. BPR-qualifying value at plan end: ${fmt(bprEndVal)}.${inputs.apply_2026_bpr_cap ? ' Note: The 2026 BPR cap limits AIM/unlisted relief to 100% on the first \u00A31M, then 50% above.' : ''}`,
+        title: `Preserving BPR assets: ${fmt(bprStartVal)} qualifying`,
+        explanation: `EIS and AIM shares held 2+ years qualify for Business Property Relief \u2014 up to 100% IHT exempt. Selling these to fund income would destroy the relief. By drawing from non-exempt assets instead, these holdings pass to beneficiaries IHT-free. Projected BPR value at plan end: ${fmt(bprEndVal)}.${inputs.apply_2026_bpr_cap ? ' The 2026 BPR cap limits AIM/unlisted relief to 100% on the first \u00A31M, then 50% above.' : ''}`,
         color: ACCENT,
       });
     }
@@ -305,17 +281,31 @@ function generatePDF(
       if (isaStartVal > 0) {
         mechanisms.push({
           icon: '\u25CB',
-          title: `Draw ISAs early: ${fmt(isaStartVal)} in ISAs at start`,
-          explanation: `ISAs provide tax-free growth and income, but they remain fully in the estate for IHT. By drawing ISAs early, the plan converts this IHT-liable wealth into spending money, while leaving pensions and BPR-qualifying assets (which have IHT shelters) untouched.`,
+          title: `Spending ISAs before pensions: ${fmt(isaStartVal)} in ISAs`,
+          explanation: `ISAs give tax-free growth and income, which makes them feel valuable \u2014 but they sit fully inside the estate for IHT. Pensions do not. By spending ISAs first and keeping pensions, you get the same tax-free income now while reducing the IHT-liable estate. This is a common area where intuition ("keep ISAs, they\u2019re tax-free") leads to worse outcomes.`,
           color: AMBER,
         });
       }
     }
 
+    if (totalGifted > 0) {
+      const giftExplanation = inputs.gift_type === 'pet'
+        ? `As Potentially Exempt Transfers (PETs), these fall outside your estate entirely if you survive 7 years. Taper relief applies between 3\u20137 years.`
+        : inputs.gift_type === 'discretionary_trust'
+          ? `As Chargeable Lifetime Transfers (CLTs), the first \u00A3325k uses your nil-rate band; excess is taxed at 20% when given but reduces the estate.`
+          : `As Normal Expenditure from Income (NEFI), these are immediately IHT-exempt provided they are regular, from income, and leave you with enough to live on.`;
+      mechanisms.push({
+        icon: '\u2665',
+        title: `Gifting: ${fmt(totalGifted)} transferred out of the estate`,
+        explanation: `Unlike spending (which converts assets to lifestyle), gifting genuinely removes wealth from the estate and passes it to beneficiaries now rather than at death \u2014 avoiding the 40% IHT charge. ${giftExplanation}`,
+        color: AMBER,
+      });
+    }
+
     mechanisms.push({
       icon: '\u2261',
-      title: 'Net effect: plan vs no plan',
-      explanation: `Without this plan, your estate would grow unchecked to ${fmt(s.estate_at_end + s.iht_saving_vs_no_plan / 0.4)} (approx) and face IHT of ${fmt(s.iht_no_plan_baseline)}. With the plan, the estate is ${fmt(s.estate_at_end)} with IHT of ${fmt(s.iht_at_end)} \u2014 a saving of ${fmt(s.iht_saving_vs_no_plan)}. The saving comes from the combined effect of all the mechanisms above, not any single action.`,
+      title: `Net result: ${fmt(s.iht_saving_vs_no_plan)} less IHT than a na\u00EFve approach`,
+      explanation: `The "no plan" baseline assumes you draw income but without optimising the order \u2014 all assets grow and deplete proportionally. That baseline produces IHT of ${fmt(s.iht_no_plan_baseline)}. This plan, by drawing strategically, produces IHT of ${fmt(s.iht_at_end)}. The ${fmt(s.iht_saving_vs_no_plan)} difference is genuine tax saved \u2014 your beneficiaries receive more, for the same lifestyle cost to you.`,
       color: ACCENT,
     });
 
