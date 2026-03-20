@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 import type { SimulationInputs, SimulationResult, OptimiserResult } from './engine/decumulation';
-import { runSimulation, runOptimiser, STRATEGY_PRESETS, DEFAULT_MECHANISMS } from './engine/decumulation';
+import { runSimulation, runOptimiser, STRATEGY_PRESETS, DEFAULT_MECHANISMS, DEFAULT_EIS_STRATEGY } from './engine/decumulation';
 import type { Asset } from './engine/decumulation';
 import type { TaxParametersFile } from './engine/taxLogic';
 import type { Warning } from './engine/warningEvaluator';
@@ -46,6 +46,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   cash_reserve: 0,
   legacy_target: 0,
   glory_years: { enabled: false, duration: 5, multiplier: 1.5, target_is_glory: false },
+  eis_strategy: { ...DEFAULT_EIS_STRATEGY },
 };
 
 const STORAGE_KEY_INPUTS = 'unlock-planner-inputs';
@@ -75,6 +76,7 @@ function restoreInputs(): SimulationInputs {
     priority_weights: { ...DEFAULT_INPUTS.priority_weights, ...(saved.priority_weights ?? {}) },
     strategy_mechanisms: { ...DEFAULT_INPUTS.strategy_mechanisms, ...(saved.strategy_mechanisms ?? {}) },
     glory_years: { ...DEFAULT_INPUTS.glory_years, ...(saved.glory_years ?? {}) },
+    eis_strategy: { ...DEFAULT_EIS_STRATEGY, ...(saved.eis_strategy ?? {}) },
   };
 }
 
@@ -86,6 +88,7 @@ function App() {
   });
   const [assetEditorOpen, setAssetEditorOpen] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
+  const [eisComparisonResult, setEisComparisonResult] = useState<SimulationResult | null>(null);
   const [optimiserResult, setOptimiserResult] = useState<OptimiserResult | null>(null);
   const [optimiserRunning, setOptimiserRunning] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,9 +97,18 @@ function App() {
     try {
       const res = runSimulation(inp, reg ?? assets, taxParams);
       setResult(res);
+      if (inp.eis_strategy?.enabled && (inp.eis_strategy.annual_eis_amount > 0 || inp.eis_strategy.annual_seis_amount > 0)) {
+        const altScenario: 'base_case' | 'worst_case' = inp.eis_strategy.scenario === 'base_case' ? 'worst_case' : 'base_case';
+        const altInputs: SimulationInputs = { ...inp, eis_strategy: { ...inp.eis_strategy, scenario: altScenario } };
+        const altRes = runSimulation(altInputs, reg ?? assets, taxParams);
+        setEisComparisonResult(altRes);
+      } else {
+        setEisComparisonResult(null);
+      }
     } catch (e) {
       console.error('Simulation error:', e);
       setResult(null);
+      setEisComparisonResult(null);
     }
   }, [assets]);
 
@@ -155,6 +167,7 @@ function App() {
       priority_weights: { ...DEFAULT_INPUTS.priority_weights, ...(sessionInputs.priority_weights ?? {}) },
       strategy_mechanisms: { ...DEFAULT_INPUTS.strategy_mechanisms, ...(sessionInputs.strategy_mechanisms ?? {}) },
       glory_years: { ...DEFAULT_INPUTS.glory_years, ...(sessionInputs.glory_years ?? {}) },
+      eis_strategy: { ...DEFAULT_EIS_STRATEGY, ...(sessionInputs.eis_strategy ?? {}) },
     };
     setInputs(mergedInputs);
     setAssets(sessionAssets.map(a => ({ ...a })));
@@ -321,6 +334,8 @@ function App() {
                 perYear={result.perYear}
                 planYears={inputs.plan_years}
                 firstShortfallYear={result.summary.first_shortfall_year}
+                eisComparison={eisComparisonResult?.perYear ?? null}
+                eisScenario={inputs.eis_strategy?.scenario ?? 'base_case'}
               />
 
               <IHTChart

@@ -81,6 +81,48 @@ export const DEFAULT_MECHANISMS: StrategyMechanisms = {
   protect_property: true,
 };
 
+export interface EISStrategyConfig {
+  enabled: boolean;
+  annual_eis_amount: number;
+  annual_seis_amount: number;
+  scenario: 'base_case' | 'worst_case';
+}
+
+export const DEFAULT_EIS_STRATEGY: EISStrategyConfig = {
+  enabled: false,
+  annual_eis_amount: 0,
+  annual_seis_amount: 0,
+  scenario: 'base_case',
+};
+
+export interface EISCohort {
+  yearInvested: number;
+  eisAmount: number;
+  seisAmount: number;
+  totalInvested: number;
+  reliefClaimed: number;
+  bprQualifyingYear: number;
+}
+
+export interface EISYearSummary {
+  cohorts: EISCohort[];
+  totalInvested: number;
+  portfolioValueBaseCase: number;
+  portfolioValueWorstCase: number;
+  annualRelief: number;
+  cumulativeRelief: number;
+  ihtExemptAmount: number;
+  lossReliefWorstCase: number;
+}
+
+const EIS_BASE_CASE_GROWTH = 0.143;
+const EIS_RELIEF_RATE = 0.30;
+const SEIS_RELIEF_RATE = 0.50;
+const EIS_NET_COST_PER_POUND = 0.385;
+const SEIS_NET_COST_PER_POUND = 0.275;
+const EIS_LOSS_RELIEF_PER_POUND = 1 - EIS_NET_COST_PER_POUND - EIS_RELIEF_RATE;
+const SEIS_LOSS_RELIEF_PER_POUND = 1 - SEIS_NET_COST_PER_POUND - SEIS_RELIEF_RATE;
+
 export interface SimulationInputs {
   annual_income_target: number;
   income_is_net: boolean;
@@ -99,6 +141,7 @@ export interface SimulationInputs {
   cash_reserve: number;
   legacy_target: number;
   glory_years: GloryYearsConfig;
+  eis_strategy: EISStrategyConfig;
 }
 
 export interface YearResult {
@@ -121,6 +164,7 @@ export interface YearResult {
   valuesByAssetClass: Record<string, number>;
   flags: Warning[];
   isShadow: boolean;
+  eisProgramme: EISYearSummary | null;
 }
 
 export interface SimulationSummary {
@@ -141,6 +185,12 @@ export interface SimulationSummary {
   legacy_shortfall: number;
   net_estate_after_iht: number;
   grossed_up_income: number;
+  eis_total_invested: number;
+  eis_total_relief: number;
+  eis_portfolio_base_case: number;
+  eis_portfolio_worst_case: number;
+  eis_iht_exempt: number;
+  eis_worst_case_net_cost: number;
 }
 
 export interface SimulationResult {
@@ -363,7 +413,13 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         legacy_target: inputs.legacy_target,
         legacy_shortfall: inputs.legacy_target,
         net_estate_after_iht: 0,
-        grossed_up_income: inputs.annual_income_target
+        grossed_up_income: inputs.annual_income_target,
+        eis_total_invested: 0,
+        eis_total_relief: 0,
+        eis_portfolio_base_case: 0,
+        eis_portfolio_worst_case: 0,
+        eis_iht_exempt: 0,
+        eis_worst_case_net_cost: 0,
       },
       registerWarnings
     };
@@ -419,6 +475,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
   let totalGifted = 0;
   let fundedYears = 0;
   let firstShortfallYear: number | null = null;
+
+  const eisEnabled = inputs.eis_strategy?.enabled && (inputs.eis_strategy.annual_eis_amount > 0 || inputs.eis_strategy.annual_seis_amount > 0);
+  const eisCohorts: EISCohort[] = [];
+  let eisCumulativeRelief = 0;
 
   for (let planYear = 1; planYear <= shadowHorizon; planYear++) {
     const isShadow = planYear > inputs.plan_years;
@@ -508,6 +568,78 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
       giftedThisYear = inputs.annual_gift_amount;
       remaining += inputs.annual_gift_amount;
+    }
+
+    // Step 4b: EIS programme — allocate from cash/liquid assets first
+    let eisAnnualRelief = 0;
+    let eisYearSummary: EISYearSummary | null = null;
+    if (eisEnabled && !isShadow) {
+      const eisAmt = inputs.eis_strategy.annual_eis_amount;
+      const seisAmt = inputs.eis_strategy.annual_seis_amount;
+      const totalEISAllocation = eisAmt + seisAmt;
+
+      if (totalEISAllocation > 0) {
+        const relief = (eisAmt * EIS_RELIEF_RATE) + (seisAmt * SEIS_RELIEF_RATE);
+        eisAnnualRelief = relief;
+        eisCumulativeRelief += relief;
+
+        const cohort: EISCohort = {
+          yearInvested: planYear,
+          eisAmount: eisAmt,
+          seisAmount: seisAmt,
+          totalInvested: totalEISAllocation,
+          reliefClaimed: relief,
+          bprQualifyingYear: planYear + 2,
+        };
+        eisCohorts.push(cohort);
+
+        let eisRemaining = totalEISAllocation;
+        const eisDrawOrder = [...assets]
+          .filter(a => a.value > 0 && !a.transferred)
+          .sort((a, b) => {
+            const liq: Record<string, number> = { cash: 0, isa: 1, pension: 5, vct: 3, eis: 4, aim_shares: 2, property_investment: 6, property_residential: 7 };
+            return (liq[a.assetClass] ?? 99) - (liq[b.assetClass] ?? 99);
+          });
+        for (const asset of eisDrawOrder) {
+          if (eisRemaining <= 0) break;
+          const draw = Math.min(eisRemaining, asset.value);
+          asset.value -= draw;
+          eisRemaining -= draw;
+        }
+        if (eisRemaining > 0) {
+          remaining += eisRemaining;
+        }
+      }
+    }
+
+    if (eisEnabled) {
+      const totalInvested = eisCohorts.reduce((s, c) => s + c.totalInvested, 0);
+      let baseCaseValue = 0;
+      for (const c of eisCohorts) {
+        const yearsHeld = planYear - c.yearInvested;
+        baseCaseValue += c.totalInvested * Math.pow(1 + EIS_BASE_CASE_GROWTH, yearsHeld);
+      }
+      let ihtExempt = 0;
+      for (const c of eisCohorts) {
+        if (planYear >= c.bprQualifyingYear) {
+          const yearsHeld = planYear - c.yearInvested;
+          ihtExempt += c.totalInvested * Math.pow(1 + EIS_BASE_CASE_GROWTH, yearsHeld);
+        }
+      }
+      const totalLossRelief = eisCohorts.reduce((s, c) => {
+        return s + (c.eisAmount * EIS_LOSS_RELIEF_PER_POUND) + (c.seisAmount * SEIS_LOSS_RELIEF_PER_POUND);
+      }, 0);
+
+      eisYearSummary = {
+        cohorts: [...eisCohorts],
+        totalInvested,
+        portfolioValueBaseCase: baseCaseValue,
+        portfolioValueWorstCase: 0,
+        annualRelief: eisAnnualRelief,
+        cumulativeRelief: eisCumulativeRelief,
+        ihtExemptAmount: ihtExempt,
+        lossReliefWorstCase: totalLossRelief,
+      };
     }
 
     // Step 5: Draw from assets in priority order
@@ -635,8 +767,15 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     // Step 6: Calculate taxes
+    const isWorstCase = inputs.eis_strategy?.scenario === 'worst_case';
     const nonSavingsIncome = totalPensionIncome + rentalIncome + pensionDrawTaxable;
-    const incomeTax = calculateIncomeTax(nonSavingsIncome, savingsIncome, dividendIncome, params);
+    const rawIncomeTax = calculateIncomeTax(nonSavingsIncome, savingsIncome, dividendIncome, params);
+    let eisTotalRelief = eisAnnualRelief;
+    if (isWorstCase && eisYearSummary && planYear >= 3) {
+      const lossReliefThisYear = eisYearSummary.lossReliefWorstCase / Math.max(1, planYear);
+      eisTotalRelief += lossReliefThisYear;
+    }
+    const incomeTax = Math.max(0, rawIncomeTax - eisTotalRelief);
     const taxableIncomeAfterPA = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - params.personal_allowance);
     const totalCGTGainWithDeferred = totalCGTGain + totalDeferredGainRealized;
     const cgt = calculateCGT(totalCGTGainWithDeferred, taxableIncomeAfterPA, params);
@@ -672,7 +811,14 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       const cls = asset.assetClass;
       valuesByAssetClass[cls] = (valuesByAssetClass[cls] || 0) + Math.max(0, asset.value);
     }
-    const totalPortfolioValue = assets.reduce((sum, a) => sum + Math.max(0, a.value), 0);
+    let corePortfolioValue = assets.reduce((sum, a) => sum + Math.max(0, a.value), 0);
+    const eisPortfolioValue = eisYearSummary
+      ? (isWorstCase ? 0 : eisYearSummary.portfolioValueBaseCase)
+      : 0;
+    if (eisPortfolioValue > 0) {
+      valuesByAssetClass['eis_programme'] = eisPortfolioValue;
+    }
+    const totalPortfolioValue = corePortfolioValue + eisPortfolioValue;
     const pensionValue = valuesByAssetClass['pension'] || 0;
 
     // Step 8: Calculate IHT — VCTs never qualify for BPR (IHTA 1984 s.105(3))
@@ -693,6 +839,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
           bprTotal += asset.value;
         }
       }
+    }
+
+    if (eisYearSummary && !isWorstCase) {
+      bprTotal += eisYearSummary.ihtExemptAmount;
     }
 
     const cltCumulative = getCLTCumulative(giftHistory, planYear);
@@ -758,7 +908,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       drawsByAsset,
       valuesByAssetClass,
       flags: yearWarnings,
-      isShadow
+      isShadow,
+      eisProgramme: eisYearSummary,
     });
   }
 
@@ -799,7 +950,15 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       legacy_target: inputs.legacy_target,
       legacy_shortfall: legacyShortfall,
       net_estate_after_iht: netEstateAfterIHT,
-      grossed_up_income: grossIncomeTarget
+      grossed_up_income: grossIncomeTarget,
+      eis_total_invested: eisCohorts.reduce((s, c) => s + c.totalInvested, 0),
+      eis_total_relief: eisCumulativeRelief,
+      eis_portfolio_base_case: planEndYear?.eisProgramme?.portfolioValueBaseCase ?? 0,
+      eis_portfolio_worst_case: 0,
+      eis_iht_exempt: planEndYear?.eisProgramme?.ihtExemptAmount ?? 0,
+      eis_worst_case_net_cost: eisCohorts.reduce((s, c) => {
+        return s + (c.eisAmount * EIS_NET_COST_PER_POUND) + (c.seisAmount * SEIS_NET_COST_PER_POUND);
+      }, 0),
     },
     registerWarnings
   };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms } from '../engine/decumulation';
+import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms, EISStrategyConfig } from '../engine/decumulation';
+import { DEFAULT_EIS_STRATEGY } from '../engine/decumulation';
 
 function InfoTip({ text }: { text: string }) {
   return (
@@ -348,6 +349,122 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
             </div>
           </div>
         </>
+        );
+      })()}
+
+      <div className="divider" />
+
+      <div className="section-title">EIS Strategy</div>
+
+      <div className="toggle-row">
+        <label>Model EIS programme <InfoTip text="Annual allocation into EIS/SEIS qualifying companies. Models income tax relief, BPR (IHT exemption after 2 years), and portfolio growth at the 3.8× base case or total loss worst case." /></label>
+        <button
+          className={`toggle-switch ${(inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY).enabled ? 'active' : 'inactive'}`}
+          onClick={() => onChange({
+            ...inputs,
+            eis_strategy: { ...(inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY), enabled: !(inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY).enabled }
+          })}
+        >
+          <div className="toggle-knob" />
+        </button>
+      </div>
+
+      {(inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY).enabled && (() => {
+        const eis = inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY;
+        const totalAllocation = eis.annual_eis_amount + eis.annual_seis_amount;
+        const annualRelief = (eis.annual_eis_amount * 0.30) + (eis.annual_seis_amount * 0.50);
+        const effectiveCost = totalAllocation - annualRelief;
+        return (
+          <>
+            <div className="input-group">
+              <label>Annual EIS Investment (30% relief)</label>
+              <NumInput
+                value={eis.annual_eis_amount}
+                onChange={v => onChange({
+                  ...inputs,
+                  eis_strategy: { ...eis, annual_eis_amount: v }
+                })}
+                min={0}
+                step={5000}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Annual SEIS Investment (50% relief)</label>
+              <NumInput
+                value={eis.annual_seis_amount}
+                onChange={v => onChange({
+                  ...inputs,
+                  eis_strategy: { ...eis, annual_seis_amount: v }
+                })}
+                min={0}
+                max={200000}
+                step={5000}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Scenario</label>
+              <div className="gross-net-row">
+                <button
+                  className={`gross-net-btn ${eis.scenario === 'base_case' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    eis_strategy: { ...eis, scenario: 'base_case' }
+                  })}
+                >Base Case (3.8×)</button>
+                <button
+                  className={`gross-net-btn ${eis.scenario === 'worst_case' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    eis_strategy: { ...eis, scenario: 'worst_case' }
+                  })}
+                >All Fail</button>
+              </div>
+            </div>
+
+            {totalAllocation > 0 && (
+              <div className="eis-summary">
+                <div className="eis-row">
+                  <span>Annual allocation</span>
+                  <span>{'\u00A3'}{totalAllocation.toLocaleString('en-GB')}</span>
+                </div>
+                <div className="eis-row" style={{ color: 'var(--unlock-accent)' }}>
+                  <span>Income tax relief</span>
+                  <span>{'\u2212\u00A3'}{Math.round(annualRelief).toLocaleString('en-GB')}</span>
+                </div>
+                <div className="eis-row">
+                  <span>Effective annual cost</span>
+                  <span>{'\u00A3'}{Math.round(effectiveCost).toLocaleString('en-GB')}</span>
+                </div>
+                {summary && summary.eis_total_invested > 0 && (
+                  <>
+                    <div className="eis-divider" />
+                    <div className="eis-row">
+                      <span>Total invested ({inputs.plan_years}yr)</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_total_invested).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-row" style={{ color: 'var(--unlock-accent)' }}>
+                      <span>Total relief</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_total_relief).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-row" style={{ color: '#EC4899' }}>
+                      <span>EIS portfolio (base)</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_portfolio_base_case).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-row" style={{ color: '#EF4444' }}>
+                      <span>Net cost if all fail</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_worst_case_net_cost).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-row">
+                      <span>IHT-exempt (BPR)</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_iht_exempt).toLocaleString('en-GB')}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </>
         );
       })()}
 

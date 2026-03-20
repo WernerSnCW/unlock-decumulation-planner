@@ -59,6 +59,7 @@ The monorepo leverages TypeScript's composite project features. Each package ext
     - **IHT Savings Calculation**: Compares planned IHT to a no-plan baseline.
     - **Optimiser Panel**: Collapsible panel with `Max Income`, `Max Estate`, and `Balanced` modes to find optimal income/buffer combinations.
     - **Glory Years**: Two-phase spending profile with configurable duration and multiplier.
+    - **EIS Strategy**: Models annual EIS/SEIS allocation programme. Toggle on/off, set annual EIS (30% income tax relief) and SEIS (50% relief) amounts. Scenario toggle between Base Case (3.8× gross return, ~14.3% pa compound) and Worst Case (all investments fail, total loss). Engine deducts allocation from cash/liquid assets first, applies income tax relief to reduce tax bill, tracks cohorts for BPR (IHT-exempt after 2 years). Loss relief modelled in worst case (~38.5p/£1 net cost for EIS, ~27.5p for SEIS). Summary panel shows annual allocation, relief, effective cost, total invested, EIS portfolio value, net cost if all fail, IHT-exempt amount. Portfolio chart shows EIS Programme as separate area + dashed comparison line for alternate scenario. Dual simulation runs both scenarios for comparison.
 - **Critical Rules & Logic:**
     - Gross/net income: when `income_is_net=true`, engine grosses up via binary search over `calculateIncomeTax`. Optimiser always works in gross terms.
     - VCT reinvested dividends: `reinvested_pct` field splits income into cash (drawable) and reinvested (stays in asset value). Only cash portion counted as baseline income.
