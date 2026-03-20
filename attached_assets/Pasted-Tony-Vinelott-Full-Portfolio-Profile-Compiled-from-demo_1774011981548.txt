@@ -1,0 +1,95 @@
+Tony Vinelott — Full Portfolio Profile
+Compiled from demo session, March 2026. Figures confirmed by Tony unless marked [ESTIMATE].
+
+Plan Parameters
+FieldValueAge78Plan horizon18 yearsIncome target — glory years£350,000/yr net (years 1–10)Income target — calm phase£250,000/yr net (years 11–18)PrioritiesTax, IHT, income, buffer — broadly equal weightingCare-home reserve£250,000 (index-linked)Optimiser presetBalanced
+
+Assets
+Main Residence
+
+Value: ~£3,500,000
+Description: Non-standard 6-bed
+IHT: In estate. RNRB (£175k) likely applicable if passing to direct descendants
+Disposal intent: Charitable bequest (house to charity daughter will establish)
+BPR: No
+
+Investment Property Portfolio
+
+Value: ~£6,000,000 combined (4 properties)
+Mortgage: None
+Nominal income: £25,000/yr — redirected to daughter, not drawable
+IHT: In estate currently. PET strategy active — transferring to grandchildren
+Disposal type: Transfer (not sale). 7-year PET clock to start per property
+BPR: No
+
+Boat
+
+Value: Unknown
+Disposal intent: Transferring to grandchildren (PET)
+BPR: No
+
+Stocks & Shares (non-pension)
+
+Value: £2,000,000
+Income: ~£180,000/yr
+Wrapper: General investment account [CONFIRM wrapper type]
+IHT: In estate
+BPR: No
+
+Main SIPP
+
+Value: £2,250,000
+Draw pattern: Not regularly drawn — lump sums only when needed
+IHT: Currently outside estate; in scope from April 2027
+Notes: Ad-hoc draws only, not part of baseline income
+
+VCT Portfolio
+
+Value: £1,000,000
+Income: ~£50,000/yr total — £25,000 reinvested dividends, £25,000 cash dividends
+Drawable income: £25,000/yr (cash dividends only)
+Tax: Dividends tax-free. CGT-exempt on disposal
+IHT: In estate — VCT does NOT qualify for BPR
+BPR: No
+Notes: Some AIM held via VCT wrappers [CONFIRM which lots]
+
+Cash & Savings
+
+Value: £130,000
+Interest rate: ~3.2%
+IHT: In estate
+
+Whiskey / Collectables
+
+Value: ~£50,000
+IHT: In estate — no BPR
+Asset type: Collectables / alternatives (not AIM)
+
+EIS / AIM (direct)
+
+Holdings: Interested in preserving existing EIS for BPR [CONFIRM specific lots, acquisition dates, values]
+BPR: Qualifying after 2 years — up to £2.5M cap from April 2026
+
+
+Income (Baseline — excluding SIPP draws)
+SourceAmountTax treatmentPrivate pension income£105,000/yrTaxable (own pension + 2 inherited from late wife Kate)Stocks & shares income~£180,000/yrTaxable (dividends/interest — confirm split)VCT cash dividends£25,000/yrTax-freeProperty income£25,000/yr nominalRedirected to daughter — exclude from drawable incomeState pensionSeparate — not included in above[CONFIRM amount]Total drawable baseline~£310,000/yr
+
+Estate / IHT Planning
+ItemDetailTrust transfers£325k/7yr CLT strategy — currently paused post-villa purchaseCharitable legacyHouse + ~£1M to charity (daughter to establish). IHT exempt.Property transfers4 properties + boat → grandchildren via PET. 7-year clock per transfer.RNRBLikely applicable on main residence (£175k relief)WillMix of own funds and inherited funds from late wife Kate
+
+Data Gaps — Confirm Before Running
+These fields are unknown or unconfirmed and will affect output confidence:
+
+ State pension amount
+ EIS/AIM direct holdings — specific lots, acquisition dates, acquisition costs
+ Stocks & shares wrapper type (ISA vs GIA vs both)
+ Stocks & shares income split (dividends vs interest)
+ Individual property values (currently one combined figure)
+ VCT lot-level detail — acquisition dates, which lots have AIM inside
+ Boat value
+ Villa value (recently purchased — currently unaccounted for in estate total)
+ TFLS previously taken from SIPP (affects remaining LSA)
+ Whether any EIS deferred gains exist
+
+
+The villa is worth flagging — it was mentioned but never valued. It will affect the estate total and potentially the trust-transfer strategy given that's the reason the CLT programme was paused.
