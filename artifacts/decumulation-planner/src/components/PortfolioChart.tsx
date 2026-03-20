@@ -19,6 +19,7 @@ const ASSET_CLASSES = [
   { key: 'eis', label: 'EIS', color: '#22D3EE' },
   { key: 'aim_shares', label: 'AIM', color: '#F97316' },
   { key: 'eis_programme', label: 'EIS Programme', color: '#EC4899' },
+  { key: 'vct_programme', label: 'VCT Programme', color: '#8B5CF6' },
 ];
 
 function formatAxis(value: number): string {
@@ -55,7 +56,7 @@ export default function PortfolioChart({ perYear, planYears, firstShortfallYear,
     return point;
   });
 
-  const altLabel = eisScenario === 'base_case' ? 'Worst Case (all EIS fail)' : 'Base Case (3.8× return)';
+  const altLabel = eisScenario === 'base_case' ? 'Worst Case scenario' : 'Base Case scenario';
 
   if (hasEISComparison) {
     return (

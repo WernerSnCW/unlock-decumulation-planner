@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms, EISStrategyConfig } from '../engine/decumulation';
-import { DEFAULT_EIS_STRATEGY } from '../engine/decumulation';
+import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms, EISStrategyConfig, VCTStrategyConfig } from '../engine/decumulation';
+import { DEFAULT_EIS_STRATEGY, DEFAULT_VCT_STRATEGY } from '../engine/decumulation';
 
 function InfoTip({ text }: { text: string }) {
   return (
@@ -462,6 +462,150 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
                     </div>
                   </>
                 )}
+              </div>
+            )}
+          </>
+        );
+      })()}
+
+      <div className="divider" />
+
+      <div className="section-title">VCT Strategy</div>
+
+      <div className="toggle-row">
+        <label>Model VCT programme <InfoTip text="Annual allocation into Venture Capital Trusts. 20% income tax relief (was 30% pre-2026), tax-free dividends (~5% pa), CGT-free on disposal. 5-year hold cycle: invest → hold → liquidate → reinvest. VCTs do NOT qualify for IHT relief." /></label>
+        <button
+          className={`toggle-switch ${(inputs.vct_strategy ?? DEFAULT_VCT_STRATEGY).enabled ? 'active' : 'inactive'}`}
+          onClick={() => onChange({
+            ...inputs,
+            vct_strategy: { ...(inputs.vct_strategy ?? DEFAULT_VCT_STRATEGY), enabled: !(inputs.vct_strategy ?? DEFAULT_VCT_STRATEGY).enabled }
+          })}
+        >
+          <div className="toggle-knob" />
+        </button>
+      </div>
+
+      {(inputs.vct_strategy ?? DEFAULT_VCT_STRATEGY).enabled && (() => {
+        const vct = inputs.vct_strategy ?? DEFAULT_VCT_STRATEGY;
+        const reliefRate = 0.20;
+        const annualRelief = vct.annual_vct_amount * reliefRate;
+        const effectiveCost = vct.annual_vct_amount - annualRelief;
+        const annualDividends = vct.annual_vct_amount * 0.05;
+        return (
+          <>
+            <div className="input-group">
+              <label>Annual VCT Investment (20% relief)</label>
+              <NumInput
+                value={vct.annual_vct_amount}
+                onChange={v => onChange({
+                  ...inputs,
+                  vct_strategy: { ...vct, annual_vct_amount: v }
+                })}
+                min={0}
+                step={5000}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>At 5-year liquidation</label>
+              <div className="gross-net-row">
+                <button
+                  className={`gross-net-btn ${vct.proceeds_action === 'recycle' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    vct_strategy: { ...vct, proceeds_action: 'recycle' }
+                  })}
+                >Reinvest</button>
+                <button
+                  className={`gross-net-btn ${vct.proceeds_action === 'cash_out' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    vct_strategy: { ...vct, proceeds_action: 'cash_out' }
+                  })}
+                >Cash Out</button>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label>Scenario</label>
+              <div className="gross-net-row">
+                <button
+                  className={`gross-net-btn ${vct.scenario === 'base_case' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    vct_strategy: { ...vct, scenario: 'base_case' }
+                  })}
+                >Base Case</button>
+                <button
+                  className={`gross-net-btn ${vct.scenario === 'worst_case' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    vct_strategy: { ...vct, scenario: 'worst_case' }
+                  })}
+                >-50% Loss</button>
+              </div>
+            </div>
+
+            {vct.annual_vct_amount > 0 && (
+              <div className="eis-summary">
+                <div className="eis-row">
+                  <span>Annual allocation</span>
+                  <span>{'\u00A3'}{vct.annual_vct_amount.toLocaleString('en-GB')}</span>
+                </div>
+                <div className="eis-row" style={{ color: 'var(--unlock-accent)' }}>
+                  <span>Income tax relief (20%)</span>
+                  <span>{'\u2212\u00A3'}{Math.round(annualRelief).toLocaleString('en-GB')}</span>
+                </div>
+                <div className="eis-row">
+                  <span>Effective annual cost</span>
+                  <span>{'\u00A3'}{Math.round(effectiveCost).toLocaleString('en-GB')}</span>
+                </div>
+                <div className="eis-row" style={{ color: '#22D3EE' }}>
+                  <span>Est. tax-free dividends</span>
+                  <span>~{'\u00A3'}{Math.round(annualDividends).toLocaleString('en-GB')}/yr</span>
+                </div>
+                {summary && summary.vct_total_invested > 0 && (() => {
+                  const freshCapital = vct.annual_vct_amount * inputs.plan_years;
+                  const totalSubscribed = summary.vct_total_invested;
+                  const hasRecycled = totalSubscribed > freshCapital * 1.01;
+                  return (
+                    <>
+                      <div className="eis-divider" />
+                      <div className="eis-row">
+                        <span>Fresh capital ({inputs.plan_years}yr)</span>
+                        <span>{'\u00A3'}{Math.round(freshCapital).toLocaleString('en-GB')}</span>
+                      </div>
+                      {hasRecycled && (
+                        <div className="eis-row">
+                          <span>Total subscribed (inc. recycled)</span>
+                          <span>{'\u00A3'}{Math.round(totalSubscribed).toLocaleString('en-GB')}</span>
+                        </div>
+                      )}
+                      <div className="eis-row" style={{ color: 'var(--unlock-accent)' }}>
+                        <span>Total relief</span>
+                        <span>{'\u00A3'}{Math.round(summary.vct_total_relief).toLocaleString('en-GB')}</span>
+                      </div>
+                      <div className="eis-row" style={{ color: '#22D3EE' }}>
+                        <span>Total dividends</span>
+                        <span>{'\u00A3'}{Math.round(summary.vct_total_dividends).toLocaleString('en-GB')}</span>
+                      </div>
+                      <div className="eis-row" style={{ color: '#8B5CF6' }}>
+                        <span>VCT portfolio (base)</span>
+                        <span>{'\u00A3'}{Math.round(summary.vct_portfolio_base_case).toLocaleString('en-GB')}</span>
+                      </div>
+                      {summary.vct_total_proceeds_returned > 0 && (
+                        <div className="eis-row">
+                          <span>Proceeds returned</span>
+                          <span>{'\u00A3'}{Math.round(summary.vct_total_proceeds_returned).toLocaleString('en-GB')}</span>
+                        </div>
+                      )}
+                      <div className="eis-row" style={{ fontSize: 10, color: 'var(--unlock-muted)' }}>
+                        <span>No IHT relief (VCTs excluded)</span>
+                        <span></span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </>

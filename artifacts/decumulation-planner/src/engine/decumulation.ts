@@ -115,6 +115,47 @@ export interface EISYearSummary {
   lossReliefWorstCase: number;
 }
 
+export interface VCTStrategyConfig {
+  enabled: boolean;
+  annual_vct_amount: number;
+  proceeds_action: 'recycle' | 'cash_out';
+  scenario: 'base_case' | 'worst_case';
+}
+
+export const DEFAULT_VCT_STRATEGY: VCTStrategyConfig = {
+  enabled: false,
+  annual_vct_amount: 0,
+  proceeds_action: 'recycle',
+  scenario: 'base_case',
+};
+
+export interface VCTCohort {
+  yearInvested: number;
+  amount: number;
+  reliefClaimed: number;
+  reliefRate: number;
+  liquidationYear: number;
+  liquidated: boolean;
+}
+
+export interface VCTYearSummary {
+  cohorts: VCTCohort[];
+  totalInvested: number;
+  portfolioValueBaseCase: number;
+  portfolioValueWorstCase: number;
+  annualRelief: number;
+  cumulativeRelief: number;
+  annualDividends: number;
+  cumulativeDividends: number;
+  proceedsReturned: number;
+}
+
+const VCT_BASE_CASE_GROWTH = 0.005;
+const VCT_DIVIDEND_YIELD = 0.05;
+const VCT_WORST_CASE_LOSS = 0.50;
+const VCT_PRE_2026_RELIEF = 0.30;
+const VCT_POST_2026_RELIEF = 0.20;
+
 const EIS_BASE_CASE_GROWTH = 0.143;
 const EIS_RELIEF_RATE = 0.30;
 const SEIS_RELIEF_RATE = 0.50;
@@ -142,6 +183,7 @@ export interface SimulationInputs {
   legacy_target: number;
   glory_years: GloryYearsConfig;
   eis_strategy: EISStrategyConfig;
+  vct_strategy: VCTStrategyConfig;
 }
 
 export interface YearResult {
@@ -165,6 +207,7 @@ export interface YearResult {
   flags: Warning[];
   isShadow: boolean;
   eisProgramme: EISYearSummary | null;
+  vctProgramme: VCTYearSummary | null;
 }
 
 export interface SimulationSummary {
@@ -191,6 +234,12 @@ export interface SimulationSummary {
   eis_portfolio_worst_case: number;
   eis_iht_exempt: number;
   eis_worst_case_net_cost: number;
+  vct_total_invested: number;
+  vct_total_relief: number;
+  vct_total_dividends: number;
+  vct_portfolio_base_case: number;
+  vct_portfolio_worst_case: number;
+  vct_total_proceeds_returned: number;
 }
 
 export interface SimulationResult {
@@ -420,6 +469,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         eis_portfolio_worst_case: 0,
         eis_iht_exempt: 0,
         eis_worst_case_net_cost: 0,
+        vct_total_invested: 0,
+        vct_total_relief: 0,
+        vct_total_dividends: 0,
+        vct_portfolio_base_case: 0,
+        vct_portfolio_worst_case: 0,
+        vct_total_proceeds_returned: 0,
       },
       registerWarnings
     };
@@ -479,6 +534,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
   const eisEnabled = inputs.eis_strategy?.enabled && (inputs.eis_strategy.annual_eis_amount > 0 || inputs.eis_strategy.annual_seis_amount > 0);
   const eisCohorts: EISCohort[] = [];
   let eisCumulativeRelief = 0;
+
+  const vctEnabled = inputs.vct_strategy?.enabled && inputs.vct_strategy.annual_vct_amount > 0;
+  const vctCohorts: VCTCohort[] = [];
+  let vctCumulativeRelief = 0;
+  let vctCumulativeDividends = 0;
+  let vctCumulativeProceedsReturned = 0;
 
   for (let planYear = 1; planYear <= shadowHorizon; planYear++) {
     const isShadow = planYear > inputs.plan_years;
@@ -642,6 +703,112 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       };
     }
 
+    // Step 4c: VCT programme — 5-year cycle with income tax relief + tax-free dividends
+    let vctAnnualRelief = 0;
+    let vctYearSummary: VCTYearSummary | null = null;
+    const isVctWorstCaseEngine = inputs.vct_strategy?.scenario === 'worst_case';
+    if (vctEnabled && !isShadow) {
+      const vctAmt = inputs.vct_strategy.annual_vct_amount;
+      const isRecycle = inputs.vct_strategy.proceeds_action === 'recycle';
+
+      let proceedsFromLiquidations = 0;
+      for (const c of vctCohorts) {
+        if (!c.liquidated && planYear >= c.liquidationYear) {
+          c.liquidated = true;
+          const yearsHeld = c.liquidationYear - c.yearInvested;
+          const valueAtLiq = isVctWorstCaseEngine
+            ? c.amount * (1 - VCT_WORST_CASE_LOSS)
+            : c.amount * Math.pow(1 + VCT_BASE_CASE_GROWTH, yearsHeld);
+          proceedsFromLiquidations += valueAtLiq;
+        }
+      }
+
+      let newAllocation = vctAmt;
+      if (isRecycle && proceedsFromLiquidations > 0) {
+        newAllocation += proceedsFromLiquidations;
+      } else if (!isRecycle && proceedsFromLiquidations > 0) {
+        vctCumulativeProceedsReturned += proceedsFromLiquidations;
+        const cashAsset = assets.find(a => a.assetClass === 'cash' && !a.transferred);
+        if (cashAsset) {
+          cashAsset.value += proceedsFromLiquidations;
+        }
+      }
+
+      if (newAllocation > 0) {
+        const reliefRate = calendarYear >= 2026 ? VCT_POST_2026_RELIEF : VCT_PRE_2026_RELIEF;
+        const relief = newAllocation * reliefRate;
+        vctAnnualRelief = relief;
+        vctCumulativeRelief += relief;
+
+        const cohort: VCTCohort = {
+          yearInvested: planYear,
+          amount: newAllocation,
+          reliefClaimed: relief,
+          reliefRate,
+          liquidationYear: planYear + 5,
+          liquidated: false,
+        };
+        vctCohorts.push(cohort);
+
+        const freshMoneyNeeded = vctAmt;
+        let vctDrawRemaining = freshMoneyNeeded;
+        const vctDrawOrder = [...assets]
+          .filter(a => a.value > 0 && !a.transferred)
+          .sort((a, b) => {
+            const liq: Record<string, number> = { cash: 0, isa: 1, pension: 5, vct: 3, eis: 4, aim_shares: 2, property_investment: 6, property_residential: 7 };
+            return (liq[a.assetClass] ?? 99) - (liq[b.assetClass] ?? 99);
+          });
+        for (const asset of vctDrawOrder) {
+          if (vctDrawRemaining <= 0) break;
+          const draw = Math.min(vctDrawRemaining, asset.value);
+          asset.value -= draw;
+          vctDrawRemaining -= draw;
+        }
+        if (vctDrawRemaining > 0) {
+          remaining += vctDrawRemaining;
+        }
+      }
+    }
+
+    if (vctEnabled) {
+      const totalInvested = vctCohorts.reduce((s, c) => s + c.amount, 0);
+      let baseCaseValue = 0;
+      let worstCaseValue = 0;
+      let annualDividends = 0;
+      for (const c of vctCohorts) {
+        if (c.liquidated) continue;
+        const yearsHeld = planYear - c.yearInvested;
+        const bcVal = c.amount * Math.pow(1 + VCT_BASE_CASE_GROWTH, yearsHeld);
+        baseCaseValue += bcVal;
+        worstCaseValue += c.amount * Math.max(0, 1 - VCT_WORST_CASE_LOSS * (yearsHeld / 5));
+        const dividendBase = isVctWorstCaseEngine
+          ? c.amount * Math.max(0, 1 - VCT_WORST_CASE_LOSS * (yearsHeld / 5))
+          : bcVal;
+        annualDividends += dividendBase * VCT_DIVIDEND_YIELD;
+      }
+      worstCaseValue = Math.max(0, worstCaseValue);
+      vctCumulativeDividends += annualDividends;
+
+      vctYearSummary = {
+        cohorts: [...vctCohorts],
+        totalInvested,
+        portfolioValueBaseCase: baseCaseValue,
+        portfolioValueWorstCase: worstCaseValue,
+        annualRelief: vctAnnualRelief,
+        cumulativeRelief: vctCumulativeRelief,
+        annualDividends,
+        cumulativeDividends: vctCumulativeDividends,
+        proceedsReturned: vctCumulativeProceedsReturned,
+      };
+    }
+
+    // Step 4d: Add VCT dividends to baseline income (tax-free) BEFORE drawdowns
+    const vctDividendsThisYear = vctYearSummary?.annualDividends ?? 0;
+    if (vctDividendsThisYear > 0) {
+      baselineCashIncome += vctDividendsThisYear;
+      remaining = Math.max(0, remaining - vctDividendsThisYear);
+    }
+
     // Step 5: Draw from assets in priority order
     const drawsByAsset: Record<string, number> = {};
     let effectiveWeights = inputs.priority_weights;
@@ -770,12 +937,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const isWorstCase = inputs.eis_strategy?.scenario === 'worst_case';
     const nonSavingsIncome = totalPensionIncome + rentalIncome + pensionDrawTaxable;
     const rawIncomeTax = calculateIncomeTax(nonSavingsIncome, savingsIncome, dividendIncome, params);
-    let eisTotalRelief = eisAnnualRelief;
+    let totalVentureRelief = eisAnnualRelief + vctAnnualRelief;
     if (isWorstCase && eisYearSummary && planYear >= 3) {
       const lossReliefThisYear = eisYearSummary.lossReliefWorstCase / Math.max(1, planYear);
-      eisTotalRelief += lossReliefThisYear;
+      totalVentureRelief += lossReliefThisYear;
     }
-    const incomeTax = Math.max(0, rawIncomeTax - eisTotalRelief);
+    const incomeTax = Math.max(0, rawIncomeTax - totalVentureRelief);
     const taxableIncomeAfterPA = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - params.personal_allowance);
     const totalCGTGainWithDeferred = totalCGTGain + totalDeferredGainRealized;
     const cgt = calculateCGT(totalCGTGainWithDeferred, taxableIncomeAfterPA, params);
@@ -818,7 +985,13 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     if (eisPortfolioValue > 0) {
       valuesByAssetClass['eis_programme'] = eisPortfolioValue;
     }
-    const totalPortfolioValue = corePortfolioValue + eisPortfolioValue;
+    const vctPortfolioValue = vctYearSummary
+      ? (isVctWorstCaseEngine ? vctYearSummary.portfolioValueWorstCase : vctYearSummary.portfolioValueBaseCase)
+      : 0;
+    if (vctPortfolioValue > 0) {
+      valuesByAssetClass['vct_programme'] = vctPortfolioValue;
+    }
+    const totalPortfolioValue = corePortfolioValue + eisPortfolioValue + vctPortfolioValue;
     const pensionValue = valuesByAssetClass['pension'] || 0;
 
     // Step 8: Calculate IHT — VCTs never qualify for BPR (IHTA 1984 s.105(3))
@@ -910,6 +1083,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       flags: yearWarnings,
       isShadow,
       eisProgramme: eisYearSummary,
+      vctProgramme: vctYearSummary,
     });
   }
 
@@ -959,6 +1133,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       eis_worst_case_net_cost: eisCohorts.reduce((s, c) => {
         return s + (c.eisAmount * EIS_NET_COST_PER_POUND) + (c.seisAmount * SEIS_NET_COST_PER_POUND);
       }, 0),
+      vct_total_invested: vctCohorts.reduce((s, c) => s + c.amount, 0),
+      vct_total_relief: vctCumulativeRelief,
+      vct_total_dividends: vctCumulativeDividends,
+      vct_portfolio_base_case: planEndYear?.vctProgramme?.portfolioValueBaseCase ?? 0,
+      vct_portfolio_worst_case: planEndYear?.vctProgramme?.portfolioValueWorstCase ?? 0,
+      vct_total_proceeds_returned: vctCumulativeProceedsReturned,
     },
     registerWarnings
   };

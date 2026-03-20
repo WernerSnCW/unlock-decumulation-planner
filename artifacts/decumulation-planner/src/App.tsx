@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 import type { SimulationInputs, SimulationResult, OptimiserResult } from './engine/decumulation';
-import { runSimulation, runOptimiser, STRATEGY_PRESETS, DEFAULT_MECHANISMS, DEFAULT_EIS_STRATEGY } from './engine/decumulation';
+import { runSimulation, runOptimiser, STRATEGY_PRESETS, DEFAULT_MECHANISMS, DEFAULT_EIS_STRATEGY, DEFAULT_VCT_STRATEGY } from './engine/decumulation';
 import type { Asset } from './engine/decumulation';
 import type { TaxParametersFile } from './engine/taxLogic';
 import type { Warning } from './engine/warningEvaluator';
@@ -47,6 +47,7 @@ const DEFAULT_INPUTS: SimulationInputs = {
   legacy_target: 0,
   glory_years: { enabled: false, duration: 5, multiplier: 1.5, target_is_glory: false },
   eis_strategy: { ...DEFAULT_EIS_STRATEGY },
+  vct_strategy: { ...DEFAULT_VCT_STRATEGY },
 };
 
 const STORAGE_KEY_INPUTS = 'unlock-planner-inputs';
@@ -77,6 +78,7 @@ function restoreInputs(): SimulationInputs {
     strategy_mechanisms: { ...DEFAULT_INPUTS.strategy_mechanisms, ...(saved.strategy_mechanisms ?? {}) },
     glory_years: { ...DEFAULT_INPUTS.glory_years, ...(saved.glory_years ?? {}) },
     eis_strategy: { ...DEFAULT_EIS_STRATEGY, ...(saved.eis_strategy ?? {}) },
+    vct_strategy: { ...DEFAULT_VCT_STRATEGY, ...(saved.vct_strategy ?? {}) },
   };
 }
 
@@ -97,9 +99,16 @@ function App() {
     try {
       const res = runSimulation(inp, reg ?? assets, taxParams);
       setResult(res);
-      if (inp.eis_strategy?.enabled && (inp.eis_strategy.annual_eis_amount > 0 || inp.eis_strategy.annual_seis_amount > 0)) {
-        const altScenario: 'base_case' | 'worst_case' = inp.eis_strategy.scenario === 'base_case' ? 'worst_case' : 'base_case';
-        const altInputs: SimulationInputs = { ...inp, eis_strategy: { ...inp.eis_strategy, scenario: altScenario } };
+      const hasEis = inp.eis_strategy?.enabled && (inp.eis_strategy.annual_eis_amount > 0 || inp.eis_strategy.annual_seis_amount > 0);
+      const hasVct = inp.vct_strategy?.enabled && inp.vct_strategy.annual_vct_amount > 0;
+      if (hasEis || hasVct) {
+        const altEis = hasEis
+          ? { ...inp.eis_strategy, scenario: (inp.eis_strategy.scenario === 'base_case' ? 'worst_case' : 'base_case') as 'base_case' | 'worst_case' }
+          : inp.eis_strategy;
+        const altVct = hasVct
+          ? { ...inp.vct_strategy, scenario: (inp.vct_strategy.scenario === 'base_case' ? 'worst_case' : 'base_case') as 'base_case' | 'worst_case' }
+          : inp.vct_strategy;
+        const altInputs: SimulationInputs = { ...inp, eis_strategy: altEis, vct_strategy: altVct };
         const altRes = runSimulation(altInputs, reg ?? assets, taxParams);
         setEisComparisonResult(altRes);
       } else {
@@ -168,6 +177,7 @@ function App() {
       strategy_mechanisms: { ...DEFAULT_INPUTS.strategy_mechanisms, ...(sessionInputs.strategy_mechanisms ?? {}) },
       glory_years: { ...DEFAULT_INPUTS.glory_years, ...(sessionInputs.glory_years ?? {}) },
       eis_strategy: { ...DEFAULT_EIS_STRATEGY, ...(sessionInputs.eis_strategy ?? {}) },
+      vct_strategy: { ...DEFAULT_VCT_STRATEGY, ...(sessionInputs.vct_strategy ?? {}) },
     };
     setInputs(mergedInputs);
     setAssets(sessionAssets.map(a => ({ ...a })));
