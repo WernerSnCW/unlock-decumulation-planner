@@ -6,7 +6,7 @@ interface Props {
   planYears: number;
   firstShortfallYear: number | null;
   eisComparison?: YearResult[] | null;
-  eisScenario?: 'base_case' | 'worst_case';
+  eisScenario?: string;
 }
 
 const ASSET_CLASSES = [
@@ -56,7 +56,8 @@ export default function PortfolioChart({ perYear, planYears, firstShortfallYear,
     return point;
   });
 
-  const altLabel = eisScenario === 'base_case' ? 'Worst Case scenario' : 'Base Case scenario';
+  const scenarioLabels: Record<string, string> = { bear: 'Bear', base_case: 'Base Case', bull: 'Bull', worst_case: 'All Fail' };
+  const altLabel = eisScenario === 'worst_case' ? 'Base Case scenario' : 'Worst Case scenario';
 
   if (hasEISComparison) {
     return (

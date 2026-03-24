@@ -87,24 +87,35 @@ export interface EISCGTEvent {
   rate: 'auto' | '18' | '24';
 }
 
+export type EISQualityTier = 'cautious' | 'base' | 'strong';
+export type EISScenario = 'bear' | 'base_case' | 'bull' | 'worst_case';
+export type EISSchemeType = 'eis' | 'seis' | 'blend';
+export type EISGrowthMode = 'flat' | 'increasing';
+
 export interface EISStrategyConfig {
   enabled: boolean;
   allocation_mode: 'fixed' | 'tax_allowance';
+  scheme_type: EISSchemeType;
   annual_eis_amount: number;
   annual_seis_amount: number;
   allowance_pct: number;
   investment_years: number;
+  quality_tier: EISQualityTier;
+  growth_mode: EISGrowthMode;
   cgt_events: EISCGTEvent[];
-  scenario: 'base_case' | 'worst_case';
+  scenario: EISScenario;
 }
 
 export const DEFAULT_EIS_STRATEGY: EISStrategyConfig = {
   enabled: false,
   allocation_mode: 'fixed',
+  scheme_type: 'eis',
   annual_eis_amount: 0,
   annual_seis_amount: 0,
   allowance_pct: 100,
   investment_years: 0,
+  quality_tier: 'base',
+  growth_mode: 'flat',
   cgt_events: [],
   scenario: 'base_case',
 };
@@ -133,6 +144,9 @@ export interface EISYearSummary {
   cgtDeferralThisYear: number;
   cumulativeCgtDeferral: number;
   isInvestmentPhase: boolean;
+  eisMultiple: number;
+  qualityTier: EISQualityTier;
+  scenarioLabel: EISScenario;
 }
 
 export interface VCTStrategyConfig {
@@ -176,9 +190,20 @@ const VCT_WORST_CASE_LOSS = 0.50;
 const VCT_PRE_2026_RELIEF = 0.30;
 const VCT_POST_2026_RELIEF = 0.20;
 
-const EIS_BASE_CASE_MULTIPLE = 3.8;
 const EIS_RELIEF_RATE = 0.30;
 const SEIS_RELIEF_RATE = 0.50;
+const EIS_BLEND_SEIS_PCT = 0.13;
+
+const EIS_SCENARIO_MULTIPLES: Record<EISQualityTier, Record<Exclude<EISScenario, 'worst_case'>, number>> = {
+  cautious: { bear: 2.15, base_case: 2.9, bull: 4.1 },
+  base:     { bear: 4.2,  base_case: 5.65, bull: 7.9 },
+  strong:   { bear: 7.7,  base_case: 10.25, bull: 14.3 },
+};
+
+function getEISMultiple(quality: EISQualityTier, scenario: EISScenario): number {
+  if (scenario === 'worst_case') return 0;
+  return EIS_SCENARIO_MULTIPLES[quality]?.[scenario] ?? EIS_SCENARIO_MULTIPLES.base.base_case;
+}
 
 const EIS_EXIT_RAMP: Record<number, number> = {
   0: 0.00,
@@ -193,9 +218,12 @@ function eisExitRampFactor(yearsHeld: number): number {
   if (yearsHeld >= 7) return 1.0;
   return EIS_EXIT_RAMP[yearsHeld] ?? 0;
 }
-function eisCohortValue(invested: number, yearsHeld: number): number {
-  return invested * (1 + (EIS_BASE_CASE_MULTIPLE - 1) * eisExitRampFactor(yearsHeld));
+function eisCohortValue(invested: number, yearsHeld: number, multiple: number): number {
+  if (multiple <= 0) return 0;
+  return invested * (1 + (multiple - 1) * eisExitRampFactor(yearsHeld));
 }
+
+const EIS_GROWTH_RATE = 0.05;
 
 export interface SimulationInputs {
   annual_income_target: number;
@@ -696,6 +724,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     if (eisEnabled && !isShadow && eisInInvestmentPhase) {
       let eisAmt: number;
       let seisAmt: number;
+      const eisSchemeType = inputs.eis_strategy.scheme_type ?? 'eis';
+      const eisGrowthMode = inputs.eis_strategy.growth_mode ?? 'flat';
+      const growthFactor = eisGrowthMode === 'increasing' ? Math.pow(1 + EIS_GROWTH_RATE, planYear - 1) : 1;
 
       if (inputs.eis_strategy.allocation_mode === 'tax_allowance') {
         const estNonSavings = totalPensionIncome + rentalIncome;
@@ -715,8 +746,18 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         seisAmt = Math.round(seisMax * pct);
         eisAmt = Math.round(eisMax * pct);
       } else {
-        eisAmt = inputs.eis_strategy.annual_eis_amount;
-        seisAmt = inputs.eis_strategy.annual_seis_amount;
+        if (eisSchemeType === 'blend') {
+          const totalFixed = inputs.eis_strategy.annual_eis_amount + inputs.eis_strategy.annual_seis_amount;
+          const scaledTotal = totalFixed * growthFactor;
+          seisAmt = Math.round(Math.min(scaledTotal * EIS_BLEND_SEIS_PCT, 200000));
+          eisAmt = Math.round(scaledTotal - seisAmt);
+        } else if (eisSchemeType === 'seis') {
+          seisAmt = Math.round((inputs.eis_strategy.annual_seis_amount || inputs.eis_strategy.annual_eis_amount) * growthFactor);
+          eisAmt = 0;
+        } else {
+          eisAmt = Math.round(inputs.eis_strategy.annual_eis_amount * growthFactor);
+          seisAmt = Math.round(inputs.eis_strategy.annual_seis_amount * growthFactor);
+        }
       }
 
       const totalEISAllocation = eisAmt + seisAmt;
@@ -783,17 +824,20 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     if (eisEnabled) {
+      const eisQuality = inputs.eis_strategy?.quality_tier ?? 'base';
+      const eisScenario = inputs.eis_strategy?.scenario ?? 'base_case';
+      const eisMultiple = getEISMultiple(eisQuality, eisScenario);
       const totalInvested = eisCohorts.reduce((s, c) => s + c.totalInvested, 0);
       let baseCaseValue = 0;
       for (const c of eisCohorts) {
         const yearsHeld = planYear - c.yearInvested;
-        baseCaseValue += eisCohortValue(c.totalInvested, yearsHeld);
+        baseCaseValue += eisCohortValue(c.totalInvested, yearsHeld, eisMultiple);
       }
       let ihtExempt = 0;
       for (const c of eisCohorts) {
         if (planYear >= c.bprQualifyingYear) {
           const yearsHeld = planYear - c.yearInvested;
-          ihtExempt += eisCohortValue(c.totalInvested, yearsHeld);
+          ihtExempt += eisCohortValue(c.totalInvested, yearsHeld, eisMultiple);
         }
       }
 
@@ -822,6 +866,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         cgtDeferralThisYear: eisCgtDeferralThisYear,
         cumulativeCgtDeferral: eisCumulativeCgtDeferral,
         isInvestmentPhase: eisInInvestmentPhase,
+        eisMultiple: eisMultiple,
+        qualityTier: eisQuality,
+        scenarioLabel: eisScenario,
       };
     }
 

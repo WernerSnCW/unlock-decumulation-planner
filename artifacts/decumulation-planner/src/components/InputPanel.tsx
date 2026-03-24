@@ -477,25 +477,81 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
               </>
             )}
 
+            {!isTaxMode && (
+            <div className="input-group">
+              <label>Scheme Type <InfoTip text="EIS: standard EIS only. SEIS: seed EIS only (50% relief, £200k cap). Blend: auto-split 13% SEIS / 87% EIS — typical fund allocation." /></label>
+              <select
+                value={eis.scheme_type ?? 'eis'}
+                onChange={e => onChange({
+                  ...inputs,
+                  eis_strategy: { ...eis, scheme_type: e.target.value as 'eis' | 'seis' | 'blend' }
+                })}
+              >
+                <option value="eis">EIS only</option>
+                <option value="seis">SEIS only</option>
+                <option value="blend">Blend (13% SEIS / 87% EIS)</option>
+              </select>
+            </div>
+            )}
+
+            <div className="input-group">
+              <label>Quality Tier <InfoTip text="Affects expected exit multiples. Cautious: lower-risk, lower-return managers (2.9× base). Base: typical established EIS funds (5.65× base). Strong: top-tier managers with strong track records (10.25× base)." /></label>
+              <select
+                value={eis.quality_tier ?? 'base'}
+                onChange={e => onChange({
+                  ...inputs,
+                  eis_strategy: { ...eis, quality_tier: e.target.value as 'cautious' | 'base' | 'strong' }
+                })}
+              >
+                <option value="cautious">Cautious (2.9× base)</option>
+                <option value="base">Base (5.65× base)</option>
+                <option value="strong">Strong (10.25× base)</option>
+              </select>
+            </div>
+
             <div className="input-group">
               <label>Scenario</label>
-              <div className="gross-net-row">
-                <button
-                  className={`gross-net-btn ${eis.scenario === 'base_case' ? 'active' : ''}`}
-                  onClick={() => onChange({
-                    ...inputs,
-                    eis_strategy: { ...eis, scenario: 'base_case' }
-                  })}
-                >Base Case (3.8×)</button>
-                <button
-                  className={`gross-net-btn ${eis.scenario === 'worst_case' ? 'active' : ''}`}
-                  onClick={() => onChange({
-                    ...inputs,
-                    eis_strategy: { ...eis, scenario: 'worst_case' }
-                  })}
-                >All Fail</button>
+              <div className="gross-net-row" style={{ flexWrap: 'wrap', gap: '4px' }}>
+                {([
+                  ['bear', 'Bear'],
+                  ['base_case', 'Base Case'],
+                  ['bull', 'Bull'],
+                  ['worst_case', 'All Fail'],
+                ] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    className={`gross-net-btn ${eis.scenario === val ? 'active' : ''}`}
+                    style={{ flex: '1 1 auto', minWidth: '70px', fontSize: '0.75rem' }}
+                    onClick={() => onChange({
+                      ...inputs,
+                      eis_strategy: { ...eis, scenario: val }
+                    })}
+                  >{label}</button>
+                ))}
               </div>
             </div>
+
+            {!isTaxMode && (
+            <div className="input-group">
+              <label>Growth Mode <InfoTip text="Flat: same annual investment each year. Increasing: investment grows 5% per year to keep pace with inflation and rising wealth." /></label>
+              <div className="gross-net-row">
+                <button
+                  className={`gross-net-btn ${(eis.growth_mode ?? 'flat') === 'flat' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    eis_strategy: { ...eis, growth_mode: 'flat' }
+                  })}
+                >Flat</button>
+                <button
+                  className={`gross-net-btn ${eis.growth_mode === 'increasing' ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    eis_strategy: { ...eis, growth_mode: 'increasing' }
+                  })}
+                >+5% pa</button>
+              </div>
+            </div>
+            )}
 
             <div className="input-group">
               <label>Investment Phase (years) <InfoTip text="How many years to deploy new EIS/SEIS capital. After this, existing positions continue to mature along the exit ramp but no new money goes in. Set to 0 for continuous investment throughout the plan." /></label>
@@ -608,7 +664,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
                       <span>{'\u00A3'}{Math.round(summary.eis_total_relief).toLocaleString('en-GB')}</span>
                     </div>
                     <div className="eis-row" style={{ color: '#EC4899' }}>
-                      <span>EIS portfolio (base)</span>
+                      <span>EIS portfolio ({(eis.quality_tier ?? 'base')} {eis.scenario === 'worst_case' ? 'fail' : eis.scenario === 'bear' ? 'bear' : eis.scenario === 'bull' ? 'bull' : 'base'})</span>
                       <span>{'\u00A3'}{Math.round(summary.eis_portfolio_base_case).toLocaleString('en-GB')}</span>
                     </div>
                     <div className="eis-row" style={{ color: '#EF4444' }}>

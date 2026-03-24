@@ -102,11 +102,13 @@ function App() {
       const hasEis = inp.eis_strategy?.enabled && (inp.eis_strategy.allocation_mode === 'tax_allowance' || inp.eis_strategy.annual_eis_amount > 0 || inp.eis_strategy.annual_seis_amount > 0);
       const hasVct = inp.vct_strategy?.enabled && inp.vct_strategy.annual_vct_amount > 0;
       if (hasEis || hasVct) {
+        const altEisScenario = inp.eis_strategy.scenario === 'worst_case' ? 'base_case' as const : 'worst_case' as const;
         const altEis = hasEis
-          ? { ...inp.eis_strategy, scenario: (inp.eis_strategy.scenario === 'base_case' ? 'worst_case' : 'base_case') as 'base_case' | 'worst_case' }
+          ? { ...inp.eis_strategy, scenario: altEisScenario }
           : inp.eis_strategy;
+        const altVctScenario = inp.vct_strategy.scenario === 'worst_case' ? 'base_case' as const : 'worst_case' as const;
         const altVct = hasVct
-          ? { ...inp.vct_strategy, scenario: (inp.vct_strategy.scenario === 'base_case' ? 'worst_case' : 'base_case') as 'base_case' | 'worst_case' }
+          ? { ...inp.vct_strategy, scenario: altVctScenario }
           : inp.vct_strategy;
         const altInputs: SimulationInputs = { ...inp, eis_strategy: altEis, vct_strategy: altVct };
         const altRes = runSimulation(altInputs, reg ?? assets, taxParams);
