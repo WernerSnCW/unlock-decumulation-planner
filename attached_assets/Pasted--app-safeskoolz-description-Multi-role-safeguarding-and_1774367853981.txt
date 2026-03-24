@@ -1,0 +1,364 @@
+{
+  "app": "safeskoolz",
+  "description": "Multi-role safeguarding and incident reporting platform for Morna International College (Ibiza), compliant with LOPIVI, Convivèxit, and Machista Violence protocols. Powered by Cloudworkz.",
+  "roles": ["pupil", "parent", "teacher", "head_of_year", "support_staff", "senco", "coordinator", "head_teacher", "pta"],
+
+  "education_section": {
+    "route": "/education",
+    "description": "Role-aware learning centre with three audience tabs. Content adapts based on user role.",
+    "tab_access": {
+      "pupil": ["pupils"],
+      "parent": ["pupils", "parents"],
+      "staff": ["pupils", "staff", "parents"]
+    },
+    "tabs": {
+      "pupils": {
+        "title": "For Pupils",
+        "language": "Child-friendly, age-appropriate",
+        "sections": [
+          {
+            "type": "header_card",
+            "title": "You deserve to feel safe",
+            "content": "Everyone has the right to feel safe, happy, and respected at school. If something doesn't feel right, it's always okay to tell someone."
+          },
+          {
+            "type": "rights_grid",
+            "title": "Your Rights",
+            "legal_basis": ["UN Convention on the Rights of the Child", "Spanish LOPIVI law", "Balearic Islands Convivèxit protocol"],
+            "items": [
+              { "emoji": "🛡️", "right": "Feel safe at school" },
+              { "emoji": "🗣️", "right": "Be listened to" },
+              { "emoji": "🔐", "right": "Privacy" },
+              { "emoji": "⚖️", "right": "Be treated fairly" },
+              { "emoji": "💬", "right": "Say how you feel" },
+              { "emoji": "🤝", "right": "Get help" },
+              { "emoji": "📚", "right": "Understand what's happening" },
+              { "emoji": "❤️", "right": "Support" }
+            ]
+          },
+          {
+            "type": "accordion",
+            "title": "What happens when you tell someone?",
+            "content_summary": "5-step process: Someone listens → Seriousness assessed (Green/Amber/Red) → Plan made (Convivèxit, LOPIVI, or Machista protocol) → Kept safe → Follow-up"
+          },
+          {
+            "type": "accordion",
+            "title": "What is bullying?",
+            "content_summary": "Deliberate, repeated behaviour. Types: Physical, Verbal, Exclusion, Online, Pressure"
+          },
+          {
+            "type": "accordion",
+            "title": "What is NOT bullying?",
+            "content_summary": "One-off arguments, accidents, disagreements, someone being rude once"
+          },
+          {
+            "type": "interactive_quiz",
+            "title": "Bullying Quiz",
+            "scenarios": [
+              { "scenario": "Sam bumps into you in the corridor and says sorry", "answer": "Accident" },
+              { "scenario": "Someone laughs at your drawing once", "answer": "Unkind moment" },
+              { "scenario": "Same person takes your seat every day and blocks you", "answer": "Bullying" },
+              { "scenario": "You and a friend disagree about a game", "answer": "Normal disagreement" },
+              { "scenario": "Someone screenshots your message and shares it to mock you", "answer": "Cyberbullying" },
+              { "scenario": "Someone is rude but then apologises", "answer": "Unkind moment" },
+              { "scenario": "An older pupil pushes you and steals your lunch repeatedly", "answer": "Serious bullying" }
+            ]
+          },
+          {
+            "type": "accordion",
+            "title": "What should I do if I'm being bullied?",
+            "content_summary": "5 steps: Tell a trusted adult, Stay with friends, Walk away, Protect yourself, Save evidence of online bullying"
+          },
+          {
+            "type": "accordion",
+            "title": "What if I see someone else being bullied?",
+            "content_summary": "Don't join in, Tell an adult, Be kind afterwards, Use the platform to report"
+          },
+          {
+            "type": "accordion",
+            "title": "Your body, your rules",
+            "content_summary": "Physical boundaries, uncomfortable touch, your body belongs to you"
+          },
+          {
+            "type": "accordion",
+            "title": "Feelings are okay",
+            "content_summary": "Validating emotions: scared, sad, angry, confused. All feelings are normal."
+          },
+          {
+            "type": "accordion",
+            "title": "Have you been unkind to someone?",
+            "content_summary": "Restorative framing. 'Doing something bad doesn't make you bad.' Root causes (ACEs research), peer pressure, steps to make it right. LOPIVI support rights."
+          },
+          {
+            "type": "accordion",
+            "title": "When things are hard at home",
+            "content_summary": "Support for external stressors, safe adults to talk to"
+          }
+        ]
+      },
+      "staff": {
+        "title": "For Staff",
+        "language": "Professional, protocol-focused",
+        "sections": [
+          { "type": "header_card", "title": "Your role in safeguarding" },
+          { "type": "accordion", "title": "Recognising signs of bullying", "content_summary": "Physical, behavioural, and academic indicators" },
+          { "type": "accordion", "title": "How to respond when a child discloses", "content_summary": "Detailed Do and Don't lists" },
+          {
+            "type": "accordion",
+            "title": "Convivèxit protocol (anti-bullying)",
+            "colour": "blue",
+            "content_summary": "7-step formal anti-bullying procedure per Balearic Islands legislation"
+          },
+          {
+            "type": "accordion",
+            "title": "LOPIVI protocol (safeguarding)",
+            "colour": "purple",
+            "content_summary": "Legal obligations under Spanish child protection law"
+          },
+          {
+            "type": "accordion",
+            "title": "Machista Violence protocol (gender-based)",
+            "colour": "rose",
+            "content_summary": "Specialised pathways for gender-based harm"
+          },
+          { "type": "accordion", "title": "Supporting children who bully", "content_summary": "Evidence-based restorative framework, ACEs research, DfE/KiVa statistics" },
+          { "type": "accordion", "title": "Using safeskoolz effectively", "content_summary": "Technical guide: prompt reporting, structured fields, risk assessment within the app" }
+        ]
+      },
+      "parents": {
+        "title": "For Parents",
+        "language": "Supportive, rights-aware",
+        "sections": [
+          { "type": "header_card", "title": "Supporting your child" },
+          {
+            "type": "accordion",
+            "title": "Your Rights as a Parent",
+            "content_summary": "Right to information, right to be heard, data protection (GDPR), consent, external support"
+          },
+          { "type": "accordion", "title": "How concerns and bullying are handled — the protocols", "content_summary": "Convivèxit, LOPIVI, Machista Violence explained from a parent's perspective" },
+          { "type": "accordion", "title": "Signs your child might be experiencing bullying", "content_summary": "Checklist of home observation indicators" },
+          { "type": "accordion", "title": "How to talk to your child about bullying", "content_summary": "Safe space, open questions, listening without blame" },
+          { "type": "accordion", "title": "What to do if your child is being bullied", "content_summary": "Action plan for engaging with the school" },
+          { "type": "accordion", "title": "Supporting your child's wellbeing", "content_summary": "Building confidence and online safety" },
+          { "type": "accordion", "title": "If your child is accused of bullying", "content_summary": "Handling the news, root causes, moving forward with the school" },
+          { "type": "accordion", "title": "How safeskoolz keeps you informed", "content_summary": "Notifications, consent requests, dashboard overview" }
+        ]
+      }
+    }
+  },
+
+  "routing": {
+    "public_routes": [
+      { "path": "/login", "page": "Login", "description": "Authentication gateway with role tabs (Pupil, Staff, Parent, PTA)" },
+      { "path": "/how-it-works", "page": "HowItWorksPage", "description": "Public overview of the platform" },
+      { "path": "/newsletter", "page": "NewsletterSignUp", "description": "Newsletter subscription" }
+    ],
+    "protected_routes": [
+      { "path": "/", "page": "Dashboard", "description": "Role-specific dashboard (see dashboards section)" },
+      { "path": "/report", "page": "ReportIncident", "description": "Multi-step incident reporting form" },
+      { "path": "/incidents", "page": "IncidentsList", "description": "List of incidents (filtered by role)" },
+      { "path": "/incidents/:id", "page": "IncidentDetail", "description": "Detailed incident view with timeline" },
+      { "path": "/protocols", "page": "ProtocolsList", "description": "Active safeguarding protocols" },
+      { "path": "/protocols/new", "page": "NewProtocol", "description": "Create new protocol" },
+      { "path": "/protocols/:id", "page": "ProtocolDetail", "description": "Detailed protocol view" },
+      { "path": "/class", "page": "MyClass", "description": "Class or year group management" },
+      { "path": "/alerts", "page": "AlertsList", "description": "Pattern detection alerts" },
+      { "path": "/notifications", "page": "NotificationsList", "description": "User notifications" },
+      { "path": "/education", "page": "Education", "description": "Learning/education centre (see education_section)" },
+      { "path": "/messages", "page": "MessagesPage", "description": "Direct messaging between users" },
+      { "path": "/caseload", "page": "CaseloadPage", "description": "SENCO caseload management" },
+      { "path": "/behaviour", "page": "BehaviourPage", "description": "Behaviour points and escalation ladder" },
+      { "path": "/training", "page": "TrainingPage", "description": "Staff and parent training courses" },
+      { "path": "/pta", "page": "PtaPortal", "description": "PTA governance dashboard" },
+      { "path": "/diagnostics", "page": "Diagnostics", "description": "Wellbeing diagnostic surveys" },
+      { "path": "/diagnostics/:id/results", "page": "DiagnosticsResults", "description": "Survey results" },
+      { "path": "/diary", "page": "DiaryPage", "description": "Pupil's private wellbeing diary" },
+      { "path": "/learnings", "page": "LearningsPage", "description": "School-wide updates and news" },
+      { "path": "/case-studies", "page": "CaseStudiesPage", "description": "Real-world scenario learning" },
+      { "path": "/settings", "page": "Settings", "description": "User profile and configuration" }
+    ]
+  },
+
+  "navigation_by_role": {
+    "pupil": {
+      "sidebar": ["Dashboard", "Report Incident", "My Diary", "School Updates", "My Behaviour", "Training", "Learn", "Case Studies", "Diagnostics", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Report", "Diary", "Education"]
+    },
+    "parent": {
+      "sidebar": ["Dashboard", "Report Incident", "Incidents", "Behaviour", "School Updates", "Messages", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Report", "Messages", "Notifications"]
+    },
+    "teacher": {
+      "sidebar": ["Dashboard", "Log Incident", "School Updates", "Behaviour", "My Class", "Messages", "Incidents", "Alerts", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Report", "Class", "Messages"]
+    },
+    "head_of_year": {
+      "sidebar": ["Dashboard", "Log Incident", "School Updates", "Behaviour", "My Year Group", "Messages", "Incidents", "Alerts", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Report", "Class", "Messages"]
+    },
+    "support_staff": {
+      "sidebar": ["Dashboard", "Log Incident", "School Updates", "Behaviour", "My Pupils", "Messages", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Report", "Class", "Messages"]
+    },
+    "senco": {
+      "sidebar": ["Dashboard", "My Caseload", "School Updates", "Behaviour", "Log Incident", "Incidents", "All Pupils", "Messages", "Protocols", "Alerts", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Caseload", "Incidents", "Messages"]
+    },
+    "coordinator": {
+      "sidebar": ["Dashboard", "School Updates", "Behaviour", "Log Incident", "Incidents", "All Pupils", "Messages", "Protocols", "Alerts", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Incidents", "Protocols", "Alerts"]
+    },
+    "head_teacher": {
+      "sidebar": ["Dashboard", "School Updates", "Behaviour", "Log Incident", "Incidents", "All Pupils", "Messages", "Protocols", "Alerts", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["Dashboard", "Incidents", "Protocols", "Alerts"]
+    },
+    "pta": {
+      "sidebar": ["PTA Dashboard", "School Updates", "Training", "Learn", "Case Studies", "Diagnostics", "Notifications", "Settings"],
+      "mobile_quick_nav": ["PTA Dashboard", "Education", "Notifications", "Learnings"]
+    }
+  },
+
+  "dashboards": {
+    "pupil": {
+      "component": "PupilDashboard",
+      "focus": "Wellbeing and immediate support",
+      "features": [
+        "Speak Up / Report a Concern button",
+        "My Safe Contacts (form tutor, coordinator)",
+        "My Messages (simplified inbox)",
+        "I Need Help NOW panic button (red, sends location alert to staff)"
+      ]
+    },
+    "teacher": {
+      "component": "TeacherDashboard",
+      "used_by": ["teacher", "head_of_year", "support_staff"],
+      "focus": "Class oversight and incident logging",
+      "features": [
+        "KPI cards (Total Pupils, Recent Incidents)",
+        "Incident analytics (Top Locations, Types)",
+        "Recent reports for class/year group",
+        "Quick log incident button"
+      ]
+    },
+    "coordinator": {
+      "component": "CoordinatorDashboard",
+      "used_by": ["coordinator", "head_teacher", "senco"],
+      "focus": "School-wide safeguarding management",
+      "features": [
+        "High-level safeguarding stats (Open Protocols, Safeguarding Count)",
+        "School-wide incident trends",
+        "PTA Annual Report management",
+        "Pattern detection alerts"
+      ]
+    },
+    "parent": {
+      "component": "ParentDashboard",
+      "focus": "Child's wellbeing and communication",
+      "features": [
+        "Report a Concern shortcut",
+        "Child's incident overview with status tracking",
+        "Contact Your PTA",
+        "Messages from school"
+      ]
+    },
+    "pta": {
+      "component": "PtaPortal",
+      "route": "/pta",
+      "focus": "Governance and anonymised data",
+      "features": [
+        "Anonymised school-wide trends (mood, incident categories)",
+        "Coordinator Channel for formal communication",
+        "Policy acknowledgement tools",
+        "Co-Design participation"
+      ]
+    }
+  },
+
+  "major_features": {
+    "incident_reporting": {
+      "route": "/report",
+      "description": "Multi-step incident reporting form",
+      "steps": ["Emotion check-in", "Category selection", "Description", "Location tagging", "People involved", "Review and submit"],
+      "pupil_adaptations": ["Child-friendly category names (Mind games, Leaving out, Pressure/control)", "Quick phrases", "Unknown person builder (describe by gender, age, year group)"],
+      "staff_enhancements": ["Group selection (Select All, By Year Group, By Class)", "Search by name", "Detailed assessment fields"],
+      "post_submission": "Reference number, 'What happens next' screen, 'You are not in trouble' reassurance"
+    },
+    "case_management": {
+      "route": "/incidents",
+      "description": "Track incidents from Submitted → Investigation → Resolved",
+      "escalation_tiers": {
+        "tier_1_green": "Low concern — teacher monitors",
+        "tier_2_amber": "Medium — Safeguarding Coordinator involved",
+        "tier_3_red": "Serious — formal plan, external referral possible"
+      }
+    },
+    "safeguarding_protocols": {
+      "route": "/protocols",
+      "types": {
+        "convivexit": { "colour": "blue", "focus": "Anti-bullying", "legal_basis": "Balearic Islands Convivèxit 2024" },
+        "lopivi": { "colour": "purple", "focus": "Child protection", "legal_basis": "Spanish LOPIVI law" },
+        "machista_violence": { "colour": "rose", "focus": "Gender-based harm", "legal_basis": "IB Dona protocol" }
+      }
+    },
+    "wellbeing_diary": {
+      "route": "/diary",
+      "description": "Pupils log daily mood and notes. Private to the pupil. AI scanner may flag concerns to staff but diary content is never shared.",
+      "mood_scale": "1-5 (1 = very low, 5 = great)"
+    },
+    "behaviour_tracker": {
+      "route": "/behaviour",
+      "description": "Points system with escalation ladder. Visible to pupils (their own), parents (their child's), and staff."
+    },
+    "emergency_help": {
+      "description": "Red 'I Need Help NOW' button on pupil dashboard. Sends instant alert with school location to form tutor and safeguarding coordinator."
+    },
+    "pattern_detection": {
+      "route": "/alerts",
+      "description": "Automated background scan that identifies bullying patterns across incidents (repeated victims, perpetrators, locations). Runs hourly."
+    },
+    "messaging": {
+      "route": "/messages",
+      "description": "Direct communication between pupils and staff, parents and school."
+    },
+    "pta_governance": {
+      "route": "/pta",
+      "features": ["Anonymised incident reports", "Co-Design for safety policies", "Policy acknowledgement", "Coordinator channel"]
+    },
+    "diagnostics": {
+      "route": "/diagnostics",
+      "description": "Wellbeing surveys and tracking tools"
+    },
+    "training": {
+      "route": "/training",
+      "description": "Staff and parent training courses on safeguarding topics"
+    },
+    "case_studies": {
+      "route": "/case-studies",
+      "description": "Real-world scenario-based learning for training purposes"
+    }
+  },
+
+  "ux_design": {
+    "layout": {
+      "desktop": "Persistent left sidebar with role-specific links and user profile",
+      "mobile_header": "Sticky top bar with hamburger menu",
+      "mobile_bottom_nav": "Priority quick-access items (4 buttons, role-specific)"
+    },
+    "colour_coding": {
+      "convivexit": "blue",
+      "lopivi": "purple",
+      "machista_violence": "rose",
+      "primary_brand": "teal/emerald"
+    },
+    "accessibility": {
+      "mobile_select": "fontSize 16px to prevent iOS auto-zoom, h-14 for touch targets",
+      "text_sizing": "Minimum text-sm (14px) for body content, text-xs only for metadata",
+      "contrast": "Explicit text-foreground/90 for content, text-foreground/70 for secondary"
+    },
+    "demo_mode": {
+      "always_active": true,
+      "guided_tour": "DemoProvider + DemoOverlay walkthrough",
+      "demo_pupil": "Bob Demo (Y4, 4A)"
+    }
+  }
+}

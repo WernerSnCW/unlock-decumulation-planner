@@ -60,6 +60,33 @@ function NumInput({ value, onChange, className, min, max, step }: {
 import { STRATEGY_PRESETS } from '../engine/decumulation';
 import { getPETTaperRate } from '../engine/trustLogic';
 
+function CollapsibleSection({ title, children, defaultOpen = true }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = title.toLowerCase().replace(/\s+/g, '-');
+  return (
+    <div className={`collapsible-section ${open ? '' : 'collapsed'}`}>
+      <button
+        type="button"
+        className="collapsible-header"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls={`section-${id}`}
+      >
+        <div className="section-title">{title}</div>
+        <span className="collapsible-chevron">{'\u25BC'}</span>
+      </button>
+      <div
+        id={`section-${id}`}
+        className="collapsible-body"
+        style={{ maxHeight: open ? '9999px' : '0' }}
+        {...(!open ? { inert: true as any } : {})}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 interface InputPanelProps {
   inputs: SimulationInputs;
   summary: SimulationSummary | null;
@@ -250,7 +277,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
 
       <div className="divider" />
 
-      <div className="section-title">Glory Years</div>
+      <CollapsibleSection title="Glory Years" defaultOpen={false}>
 
       <div className="toggle-row">
         <label>Spend more in early years</label>
@@ -352,9 +379,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         );
       })()}
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">EIS Strategy</div>
+      <CollapsibleSection title="EIS Strategy" defaultOpen={false}>
 
       <div className="toggle-row">
         <label>Model EIS programme <InfoTip text="Annual allocation into EIS/SEIS qualifying companies. Models income tax relief, BPR (IHT exemption after 2 years), and portfolio growth based on quality tier and scenario. Choose from Cautious/Base/Strong quality tiers and Bear/Base/Bull/All Fail scenarios." /></label>
@@ -695,9 +724,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         );
       })()}
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">VCT Strategy</div>
+      <CollapsibleSection title="VCT Strategy" defaultOpen={false}>
 
       <div className="toggle-row">
         <label>Model VCT programme <InfoTip text="Annual allocation into Venture Capital Trusts. 20% income tax relief (was 30% pre-2026), tax-free dividends (~5% pa), CGT-free on disposal. 5-year hold cycle: invest → hold → liquidate → reinvest. VCTs do NOT qualify for IHT relief." /></label>
@@ -839,9 +870,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         );
       })()}
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">Drawdown Priorities</div>
+      <CollapsibleSection title="Drawdown Priorities">
 
       <div className="preset-row">
         {PRESETS.map(p => (
@@ -883,9 +916,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         <div className="blend-indicator">Custom blend</div>
       )}
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">Strategy Mechanisms</div>
+      <CollapsibleSection title="Strategy Mechanisms" defaultOpen={false}>
       <span style={{ fontSize: 11, color: 'var(--unlock-muted)', display: 'block', marginBottom: 8 }}>
         Control which asset types to protect or draw from first
       </span>
@@ -970,9 +1005,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         </div>
       </div>
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">Scenario Toggles</div>
+      <CollapsibleSection title="Scenario Toggles" defaultOpen={false}>
 
       <div className="toggle-row">
         <label>Apply 2026 BPR Cap<InfoTip text="From April 2026, BPR relief is capped at £1M for AIM/unlisted shares. Above this, only 50% relief applies. This is a proposed rule change." /></label>
@@ -994,9 +1031,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         </button>
       </div>
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">Gifting</div>
+      <CollapsibleSection title="Gifting" defaultOpen={false}>
 
       <div className="input-group gifting-section">
         <label>Annual Gift Amount</label>
@@ -1037,9 +1076,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         </div>
       )}
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">Cash Buffer</div>
+      <CollapsibleSection title="Cash Buffer" defaultOpen={false}>
 
       <div className="input-group">
         <label>Minimum Cash Reserve</label>
@@ -1055,9 +1096,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         </span>
       </div>
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">Legacy Target</div>
+      <CollapsibleSection title="Legacy Target" defaultOpen={false}>
 
       <div className="input-group">
         <label>Amount to Leave in Will</label>
@@ -1073,9 +1116,11 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         </span>
       </div>
 
+      </CollapsibleSection>
+
       <div className="divider" />
 
-      <div className="section-title">Optional</div>
+      <CollapsibleSection title="Optional" defaultOpen={false}>
 
       <div className="input-group">
         <label>Inflation Rate</label>
@@ -1115,6 +1160,8 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         </div>
         {errors.state_pension_annual && <span className="error-text">{errors.state_pension_annual}</span>}
       </div>
+
+      </CollapsibleSection>
     </div>
   );
 }

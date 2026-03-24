@@ -21,6 +21,7 @@ import SessionManager from './components/SessionManager';
 
 import AssetEditor from './components/AssetEditor';
 import ExportPDF from './components/ExportPDF';
+import LearningCentre from './components/LearningCentre';
 
 import mockRegister from './data/mockRegister.json';
 import taxParameters from './data/taxParameters.json';
@@ -89,6 +90,7 @@ function App() {
     return saved ?? defaultRegister.map(a => ({ ...a }));
   });
   const [assetEditorOpen, setAssetEditorOpen] = useState(false);
+  const [learningOpen, setLearningOpen] = useState(false);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [eisComparisonResult, setEisComparisonResult] = useState<SimulationResult | null>(null);
   const [optimiserResult, setOptimiserResult] = useState<OptimiserResult | null>(null);
@@ -268,6 +270,12 @@ function App() {
           onLoad={handleLoadSession}
         />
         <button
+          className="edit-assets-btn learn-btn"
+          onClick={() => setLearningOpen(true)}
+        >
+          Learn
+        </button>
+        <button
           className={`edit-assets-btn ${hasOverrides ? 'has-overrides' : ''}`}
           onClick={() => setAssetEditorOpen(true)}
         >
@@ -292,6 +300,8 @@ function App() {
           onClose={() => setAssetEditorOpen(false)}
         />
       )}
+
+      {learningOpen && <LearningCentre onClose={() => setLearningOpen(false)} />}
 
       <div className="app-body">
         <InputPanel inputs={inputs} summary={result?.summary ?? null} onChange={handleInputChange} />

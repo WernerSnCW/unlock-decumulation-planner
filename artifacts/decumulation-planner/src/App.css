@@ -2098,3 +2098,225 @@ body {
   border: 5px solid transparent;
   border-top-color: #1E2530;
 }
+
+.learn-btn {
+  background: transparent !important;
+  border: 1px solid var(--unlock-accent) !important;
+  color: var(--unlock-accent) !important;
+}
+.learn-btn:hover {
+  background: rgba(0, 187, 119, 0.1) !important;
+}
+
+.collapsible-section {
+  margin-bottom: 4px;
+}
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 8px 0;
+  user-select: none;
+  background: none;
+  border: none;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.collapsible-header:focus-visible {
+  outline: 2px solid var(--unlock-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.collapsible-header .section-title {
+  margin: 0;
+  padding: 0;
+}
+.collapsible-chevron {
+  font-size: 0.65rem;
+  color: var(--unlock-muted);
+  transition: transform 0.2s;
+}
+.collapsible-section.collapsed .collapsible-chevron {
+  transform: rotate(-90deg);
+}
+.collapsible-body {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.collapsible-section.collapsed .collapsible-body {
+  max-height: 0 !important;
+  overflow: hidden;
+}
+
+.learning-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+.learning-panel {
+  background: var(--unlock-surface);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 720px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.learning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--unlock-border);
+}
+.learning-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.learning-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--unlock-text);
+  font-weight: 600;
+}
+.learning-back {
+  background: none;
+  border: 1px solid var(--unlock-border);
+  color: var(--unlock-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+.learning-back:hover {
+  color: var(--unlock-text);
+  border-color: var(--unlock-accent);
+}
+.learning-close {
+  background: none;
+  border: none;
+  color: var(--unlock-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+}
+.learning-close:hover {
+  color: var(--unlock-text);
+}
+.learning-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+.learning-intro {
+  color: var(--unlock-muted);
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.learning-topics-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.learning-topic-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--unlock-bg);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+  color: var(--unlock-text);
+}
+.learning-topic-card:hover {
+  border-color: var(--unlock-accent);
+  background: rgba(0, 187, 119, 0.05);
+}
+.learning-topic-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+.learning-topic-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.learning-topic-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.learning-topic-subtitle {
+  font-size: 0.8rem;
+  color: var(--unlock-muted);
+}
+.learning-topic-arrow {
+  font-size: 1.4rem;
+  color: var(--unlock-muted);
+  flex-shrink: 0;
+}
+.learning-topic-desc {
+  color: var(--unlock-muted);
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+}
+.learning-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.learning-section {
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.learning-section.expanded {
+  border-color: rgba(0, 187, 119, 0.3);
+}
+.learning-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--unlock-bg);
+  border: none;
+  color: var(--unlock-text);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.learning-section-header:hover {
+  background: rgba(0, 187, 119, 0.05);
+}
+.learning-chevron {
+  font-size: 0.6rem;
+  color: var(--unlock-muted);
+}
+.learning-section-content {
+  padding: 0 16px 16px;
+  color: var(--unlock-muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  background: var(--unlock-bg);
+}
