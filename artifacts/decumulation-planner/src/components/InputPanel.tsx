@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms, EISStrategyConfig, VCTStrategyConfig } from '../engine/decumulation';
+import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms, EISStrategyConfig, VCTStrategyConfig, EISCGTEvent } from '../engine/decumulation';
 import { DEFAULT_EIS_STRATEGY, DEFAULT_VCT_STRATEGY } from '../engine/decumulation';
 
 function InfoTip({ text }: { text: string }) {
@@ -497,6 +497,91 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
               </div>
             </div>
 
+            <div className="input-group">
+              <label>Investment Phase (years) <InfoTip text="How many years to deploy new EIS/SEIS capital. After this, existing positions continue to mature along the exit ramp but no new money goes in. Set to 0 for continuous investment throughout the plan." /></label>
+              <NumInput
+                value={eis.investment_years ?? 0}
+                onChange={v => onChange({
+                  ...inputs,
+                  eis_strategy: { ...eis, investment_years: v }
+                })}
+                min={0}
+                max={inputs.plan_years}
+                step={1}
+              />
+              {(eis.investment_years ?? 0) > 0 && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--unlock-muted)', marginTop: '4px' }}>
+                  Invest years 1–{eis.investment_years}, harvest years {(eis.investment_years ?? 0) + 1}–{inputs.plan_years}
+                </span>
+              )}
+            </div>
+
+            <div className="input-group">
+              <label>CGT Deferral Events <InfoTip text="Capital gains from other assets (e.g. property, business sale) that can be deferred by investing the proceeds into EIS within 1 year before or 3 years after the gain. The deferred CGT is tracked as a benefit of the EIS programme." /></label>
+              {(eis.cgt_events ?? []).map((evt: EISCGTEvent, idx: number) => (
+                <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
+                  <div style={{ flex: '0 0 55px' }}>
+                    <label style={{ fontSize: '0.65rem', color: 'var(--unlock-muted)' }}>Year</label>
+                    <NumInput
+                      value={evt.year}
+                      onChange={v => {
+                        const events = [...(eis.cgt_events ?? [])];
+                        events[idx] = { ...events[idx], year: v };
+                        onChange({ ...inputs, eis_strategy: { ...eis, cgt_events: events } });
+                      }}
+                      min={1}
+                      max={inputs.plan_years}
+                      step={1}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '0.65rem', color: 'var(--unlock-muted)' }}>Gain</label>
+                    <NumInput
+                      value={evt.gain}
+                      onChange={v => {
+                        const events = [...(eis.cgt_events ?? [])];
+                        events[idx] = { ...events[idx], gain: v };
+                        onChange({ ...inputs, eis_strategy: { ...eis, cgt_events: events } });
+                      }}
+                      min={0}
+                      step={10000}
+                    />
+                  </div>
+                  <div style={{ flex: '0 0 65px' }}>
+                    <label style={{ fontSize: '0.65rem', color: 'var(--unlock-muted)' }}>Rate</label>
+                    <select
+                      value={evt.rate}
+                      onChange={e => {
+                        const events = [...(eis.cgt_events ?? [])];
+                        events[idx] = { ...events[idx], rate: e.target.value as 'auto' | '18' | '24' };
+                        onChange({ ...inputs, eis_strategy: { ...eis, cgt_events: events } });
+                      }}
+                      style={{ width: '100%', padding: '6px 4px', background: 'var(--unlock-surface)', color: 'var(--unlock-text)', border: '1px solid var(--unlock-border)', borderRadius: '6px', fontSize: '0.8rem' }}
+                    >
+                      <option value="auto">Auto</option>
+                      <option value="18">18%</option>
+                      <option value="24">24%</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const events = (eis.cgt_events ?? []).filter((_: EISCGTEvent, i: number) => i !== idx);
+                      onChange({ ...inputs, eis_strategy: { ...eis, cgt_events: events } });
+                    }}
+                    style={{ marginTop: '14px', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}
+                    title="Remove event"
+                  >{'\u00D7'}</button>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const events = [...(eis.cgt_events ?? []), { year: 1, gain: 0, rate: 'auto' as const }];
+                  onChange({ ...inputs, eis_strategy: { ...eis, cgt_events: events } });
+                }}
+                style={{ background: 'var(--unlock-surface)', color: 'var(--unlock-accent)', border: '1px dashed var(--unlock-border)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', width: '100%' }}
+              >+ Add CGT Event</button>
+            </div>
+
             {totalAllocation > 0 && (
               <div className="eis-summary">
                 <div className="eis-row">
@@ -534,6 +619,18 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
                       <span>IHT-exempt (BPR)</span>
                       <span>{'\u00A3'}{Math.round(summary.eis_iht_exempt).toLocaleString('en-GB')}</span>
                     </div>
+                    {summary.eis_cgt_deferral > 0 && (
+                      <div className="eis-row" style={{ color: '#F59E0B' }}>
+                        <span>CGT deferred</span>
+                        <span>{'\u00A3'}{Math.round(summary.eis_cgt_deferral).toLocaleString('en-GB')}</span>
+                      </div>
+                    )}
+                    {(eis.investment_years ?? 0) > 0 && (
+                      <div className="eis-row" style={{ color: '#94A3B8' }}>
+                        <span>Phase</span>
+                        <span>Invest {summary.eis_investment_years}yr + Harvest {inputs.plan_years - summary.eis_investment_years}yr</span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

@@ -81,12 +81,20 @@ export const DEFAULT_MECHANISMS: StrategyMechanisms = {
   protect_property: true,
 };
 
+export interface EISCGTEvent {
+  year: number;
+  gain: number;
+  rate: 'auto' | '18' | '24';
+}
+
 export interface EISStrategyConfig {
   enabled: boolean;
   allocation_mode: 'fixed' | 'tax_allowance';
   annual_eis_amount: number;
   annual_seis_amount: number;
   allowance_pct: number;
+  investment_years: number;
+  cgt_events: EISCGTEvent[];
   scenario: 'base_case' | 'worst_case';
 }
 
@@ -96,6 +104,8 @@ export const DEFAULT_EIS_STRATEGY: EISStrategyConfig = {
   annual_eis_amount: 0,
   annual_seis_amount: 0,
   allowance_pct: 100,
+  investment_years: 0,
+  cgt_events: [],
   scenario: 'base_case',
 };
 
@@ -120,6 +130,9 @@ export interface EISYearSummary {
   taxAllowanceMaxEIS: number;
   taxAllowanceMaxSEIS: number;
   taxAllowanceIncomeTax: number;
+  cgtDeferralThisYear: number;
+  cumulativeCgtDeferral: number;
+  isInvestmentPhase: boolean;
 }
 
 export interface VCTStrategyConfig {
@@ -259,6 +272,8 @@ export interface SimulationSummary {
   eis_tax_allowance_max_seis: number;
   eis_annual_eis_used: number;
   eis_annual_seis_used: number;
+  eis_cgt_deferral: number;
+  eis_investment_years: number;
   vct_total_invested: number;
   vct_total_relief: number;
   vct_total_dividends: number;
@@ -499,6 +514,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         eis_tax_allowance_max_seis: 0,
         eis_annual_eis_used: 0,
         eis_annual_seis_used: 0,
+        eis_cgt_deferral: 0,
+        eis_investment_years: 0,
         vct_total_invested: 0,
         vct_total_relief: 0,
         vct_total_dividends: 0,
@@ -568,6 +585,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
   );
   const eisCohorts: EISCohort[] = [];
   let eisCumulativeRelief = 0;
+  let eisCumulativeCgtDeferral = 0;
+  const eisInvestmentYears = inputs.eis_strategy?.investment_years ?? 0;
+  const eisCgtEvents = inputs.eis_strategy?.cgt_events ?? [];
 
   const vctEnabled = inputs.vct_strategy?.enabled && inputs.vct_strategy.annual_vct_amount > 0;
   const vctCohorts: VCTCohort[] = [];
@@ -671,7 +691,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     let eisTaxAllowanceMaxEIS = 0;
     let eisTaxAllowanceMaxSEIS = 0;
     let eisTaxAllowanceIncomeTax = 0;
-    if (eisEnabled && !isShadow) {
+    let eisCgtDeferralThisYear = 0;
+    const eisInInvestmentPhase = eisInvestmentYears <= 0 || planYear <= eisInvestmentYears;
+    if (eisEnabled && !isShadow && eisInInvestmentPhase) {
       let eisAmt: number;
       let seisAmt: number;
 
@@ -737,6 +759,29 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       }
     }
 
+    if (eisEnabled && !isShadow) {
+      const yearEvents = eisCgtEvents.filter(e => e.year === planYear);
+      if (yearEvents.length > 0) {
+        let annualExemptionRemaining = params.cgt_exempt_amount;
+        for (const evt of yearEvents) {
+          let cgtRate: number;
+          if (evt.rate === 'auto') {
+            const estNonSavingsForCgt = totalPensionIncome + rentalIncome;
+            const marginal = calculateMarginalRate(estNonSavingsForCgt, savingsIncome, dividendIncome, params);
+            cgtRate = marginal >= 0.40 ? 0.24 : 0.18;
+          } else {
+            cgtRate = parseFloat(evt.rate) / 100;
+          }
+          const exemptionUsed = Math.min(evt.gain, annualExemptionRemaining);
+          annualExemptionRemaining -= exemptionUsed;
+          const taxableGain = Math.max(0, evt.gain - exemptionUsed);
+          const deferred = taxableGain * cgtRate;
+          eisCgtDeferralThisYear += deferred;
+          eisCumulativeCgtDeferral += deferred;
+        }
+      }
+    }
+
     if (eisEnabled) {
       const totalInvested = eisCohorts.reduce((s, c) => s + c.totalInvested, 0);
       let baseCaseValue = 0;
@@ -774,6 +819,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         taxAllowanceMaxEIS: eisTaxAllowanceMaxEIS,
         taxAllowanceMaxSEIS: eisTaxAllowanceMaxSEIS,
         taxAllowanceIncomeTax: eisTaxAllowanceIncomeTax,
+        cgtDeferralThisYear: eisCgtDeferralThisYear,
+        cumulativeCgtDeferral: eisCumulativeCgtDeferral,
+        isInvestmentPhase: eisInInvestmentPhase,
       };
     }
 
@@ -1215,6 +1263,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       eis_tax_allowance_max_seis: perYear[0]?.eisProgramme?.taxAllowanceMaxSEIS ?? 0,
       eis_annual_eis_used: eisCohorts.length > 0 ? eisCohorts[0].eisAmount : 0,
       eis_annual_seis_used: eisCohorts.length > 0 ? eisCohorts[0].seisAmount : 0,
+      eis_cgt_deferral: eisCumulativeCgtDeferral,
+      eis_investment_years: eisInvestmentYears > 0 ? Math.min(eisInvestmentYears, inputs.plan_years) : inputs.plan_years,
       vct_total_invested: vctCohorts.reduce((s, c) => s + c.amount, 0),
       vct_total_relief: vctCumulativeRelief,
       vct_total_dividends: vctCumulativeDividends,
