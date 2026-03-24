@@ -218,6 +218,258 @@ const TOPICS: Topic[] = [
       },
     ],
   },
+  {
+    id: 'state-pension',
+    icon: '\u{1F4B7}',
+    title: 'State Pension & Pension Income',
+    subtitle: 'How pensions interact with your tax position',
+    sections: [
+      {
+        title: 'State Pension basics',
+        content: 'The full new State Pension is approximately \u00A311,500 per year (2025/26). It is taxable income and counts towards your income tax bands, but it is paid gross (no tax deducted at source). For many retirees, the State Pension alone almost uses up the Personal Allowance (\u00A312,570), meaning almost all other income will be taxed at the basic rate or above.',
+      },
+      {
+        title: 'Deferring State Pension',
+        content: 'You can defer taking your State Pension and receive a higher amount later \u2014 currently 1% extra for every 9 weeks deferred (about 5.8% per year). This can be valuable if you have other income sources and would otherwise push into a higher tax band. The break-even point is typically around 17\u201319 years.',
+      },
+      {
+        title: 'Private pension income',
+        content: 'Defined benefit (final salary) pensions provide guaranteed income for life, usually with some inflation protection. This income is taxable and must be factored into your overall tax planning. The planner treats this as fixed income that cannot be varied, so your drawdown strategy optimises around it.',
+      },
+      {
+        title: 'SIPP drawdown vs annuity',
+        content: 'With a SIPP (Self-Invested Personal Pension), you control when and how much to draw. Each withdrawal is 75% taxable, 25% tax-free (via the tax-free lump sum entitlement). An annuity converts your pension pot into guaranteed income, removing investment risk but sacrificing flexibility and estate planning potential. This planner focuses on flexible drawdown scenarios.',
+      },
+    ],
+  },
+  {
+    id: 'cgt-planning',
+    icon: '\u{1F4C9}',
+    title: 'Capital Gains Tax Planning',
+    subtitle: 'Strategies for managing and reducing CGT',
+    sections: [
+      {
+        title: 'Annual CGT exemption',
+        content: 'Each tax year, you have a CGT Annual Exempt Amount (\u00A33,000 from 2024/25). Gains up to this amount are tax-free. A couple can use \u00A36,000 between them. Using this allowance each year (by crystallising small gains) prevents a large gain building up to be taxed later \u2014 a process sometimes called \u201Cgain harvesting.\u201D',
+      },
+      {
+        title: 'Bed & ISA',
+        content: 'A \u201CBed & ISA\u201D involves selling investments in a taxable account (GIA) and immediately rebuying them inside an ISA. This crystallises the gain (hopefully within your annual exemption) and moves the asset into a tax-free wrapper. Over time, this transfers your portfolio from taxable to tax-free, eliminating future CGT and income tax on dividends.',
+      },
+      {
+        title: 'Loss harvesting',
+        content: 'Capital losses can be offset against gains in the same tax year, or carried forward indefinitely. If you hold investments at a loss, selling them to crystallise the loss can shelter gains elsewhere in your portfolio. Losses must be used against gains in the current year first before carrying forward.',
+      },
+      {
+        title: 'CGT and income tax interaction',
+        content: 'Your CGT rate depends on your income tax band. Basic rate taxpayers pay 18% CGT (10% for business assets), while higher rate taxpayers pay 24% (20% for business assets). A large capital gain can push you into a higher band, so timing disposals across tax years and managing the interaction with pension withdrawals is important.',
+      },
+    ],
+  },
+  {
+    id: 'dividends',
+    icon: '\u{1F4B5}',
+    title: 'Dividend Tax',
+    subtitle: 'Understanding dividend allowance and tax rates',
+    sections: [
+      {
+        title: 'Dividend allowance',
+        content: 'The dividend allowance is \u00A3500 per year (2024/25). Dividends within this allowance are tax-free. Above it, rates are 8.75% (basic), 33.75% (higher), and 39.35% (additional). This has reduced significantly from \u00A35,000 when first introduced, making ISA wrappers increasingly important for dividend-producing investments.',
+      },
+      {
+        title: 'Dividends inside wrappers',
+        content: 'Dividends received inside ISAs and pensions are completely tax-free. VCT dividends are also tax-free regardless of wrapper. This is a key reason to hold dividend-heavy investments (equity income funds, REITs) inside tax-efficient wrappers, and to prioritise drawing income from unwrapped accounts where dividends are taxable.',
+      },
+      {
+        title: 'Dividend vs interest income',
+        content: 'Dividends and savings interest are taxed differently. Savings interest benefits from the Personal Savings Allowance (\u00A31,000 for basic rate, \u00A3500 for higher rate). When planning income, understanding which type of return each asset produces helps optimise your overall tax position.',
+      },
+    ],
+  },
+  {
+    id: 'cash-buffer',
+    icon: '\u{1F6E1}\uFE0F',
+    title: 'Cash Buffer Strategy',
+    subtitle: 'Why holding a cash reserve matters in drawdown',
+    sections: [
+      {
+        title: 'Sequence of returns risk',
+        content: 'In accumulation, the order of returns doesn\u2019t matter \u2014 only the average. In drawdown, it matters enormously. A market crash early in retirement, combined with ongoing withdrawals, can permanently damage your portfolio because you\u2019re selling at depressed prices. This is called \u201Csequence of returns risk\u201D and is one of the biggest threats to a retirement plan.',
+      },
+      {
+        title: 'How a cash buffer helps',
+        content: 'A cash buffer (typically 1\u20133 years of spending) lets you draw income from cash during market downturns instead of selling investments at a loss. Once markets recover, you replenish the buffer from your portfolio. This avoids the worst effects of selling low and can significantly improve long-term outcomes.',
+      },
+      {
+        title: 'How much is enough?',
+        content: 'The optimal buffer size depends on your risk tolerance and portfolio volatility. One year of spending is a minimum. Two to three years is common for equity-heavy portfolios. More than three years starts to create significant cash drag (cash earning below inflation). The planner\u2019s Optimiser can help find the right balance.',
+      },
+      {
+        title: 'Cash drag trade-off',
+        content: 'Cash earns less than long-term investment returns, so holding too much in cash reduces your overall portfolio growth. The key is balancing the insurance benefit of a cash buffer against the opportunity cost of not being invested. This trade-off is why the planner models the cash buffer explicitly and the Optimiser can search for the optimal amount.',
+      },
+    ],
+  },
+  {
+    id: 'glory-years',
+    icon: '\u2600\uFE0F',
+    title: 'Glory Years Spending',
+    subtitle: 'Front-loading spending in early retirement',
+    sections: [
+      {
+        title: 'Why spend more early?',
+        content: 'Research consistently shows that retirees spend more in their 60s and early 70s \u2014 travelling, dining out, pursuing hobbies, and helping family. Spending naturally declines in later years as activity levels reduce. Modelling a flat income throughout retirement often understates early needs and overstates later ones.',
+      },
+      {
+        title: 'Two-phase spending model',
+        content: 'The Glory Years feature divides your retirement into two phases: a higher-spending early phase (typically 5\u201315 years) and a lower-spending later phase. The multiplier lets you set the boost (e.g., 1.3\u00D7 means 30% more in early years). The planner automatically adjusts the post-Glory-Years income to keep the plan sustainable.',
+      },
+      {
+        title: 'Impact on plan sustainability',
+        content: 'Front-loading spending uses up assets faster in early years but is often sustainable because: (1) total years of high spending are limited, (2) later spending is lower, and (3) assets continue to grow during the entire period. The Optimiser can find the maximum Glory Years multiplier that keeps your plan fully funded.',
+      },
+    ],
+  },
+  {
+    id: 'gifting-pets',
+    icon: '\u{1F381}',
+    title: 'Gifting & PET Taper Relief',
+    subtitle: 'Reducing your estate through lifetime giving',
+    sections: [
+      {
+        title: 'Potentially Exempt Transfers (PETs)',
+        content: 'A gift to an individual is a PET. If you survive 7 years, the gift is completely outside your estate for IHT. If you die within 7 years, the gift is added back to your estate. However, taper relief reduces the IHT on the gift: 3\u20134 years = 32%, 4\u20135 years = 24%, 5\u20136 years = 16%, 6\u20137 years = 8% (instead of the full 40% rate).',
+      },
+      {
+        title: 'Annual exemptions',
+        content: 'Several gifts are immediately exempt from IHT regardless of survival: the Annual Exemption (\u00A33,000 per year, can carry forward one year), Small Gifts (\u00A3250 per person per year), Wedding Gifts (\u00A35,000 to a child, \u00A32,500 to grandchild, \u00A31,000 to anyone else), and Normal Expenditure out of Income (unlimited, if from surplus income and regular).',
+      },
+      {
+        title: 'Chargeable Lifetime Transfers (CLTs)',
+        content: 'Gifts into most trusts are CLTs. They immediately use your nil-rate band (\u00A3325,000). If the CLT exceeds the nil-rate band, IHT is charged at 20% immediately (with the remainder at 40% if you die within 7 years). CLTs and PETs share the same nil-rate band and are cumulated over a rolling 7-year window.',
+      },
+      {
+        title: 'Strategic gifting in drawdown',
+        content: 'Regular gifting during retirement can significantly reduce your IHT bill. The planner models annual gifting as an additional \u201Cdrawdown\u201D from your portfolio, reducing your estate over time. The key consideration is ensuring gifts don\u2019t compromise your own income security \u2014 only gift from surplus you genuinely don\u2019t need.',
+      },
+    ],
+  },
+  {
+    id: 'pension-death',
+    icon: '\u{1F3E5}',
+    title: 'Pension Death Benefits',
+    subtitle: 'Why pensions are often best left last',
+    sections: [
+      {
+        title: 'Death before 75',
+        content: 'If you die before age 75, your remaining pension fund can be passed to any nominated beneficiary completely tax-free (no income tax, no IHT under current rules). This makes undrawn pension funds one of the most tax-efficient assets to leave to the next generation, and is a key reason why many advisers recommend spending other assets first.',
+      },
+      {
+        title: 'Death after 75',
+        content: 'If you die after 75, beneficiaries can still inherit your pension fund, but any withdrawals they make will be taxed as income at their marginal rate. The fund itself remains outside the estate for IHT purposes (under current rules). Even with income tax on withdrawals, this is often more efficient than leaving taxable assets that attract both IHT and income/CGT.',
+      },
+      {
+        title: 'Proposed changes from April 2027',
+        content: 'The government has announced plans to bring pension death benefits into the IHT net from April 2027. If enacted, this would fundamentally change retirement planning \u2014 the incentive to preserve pension funds for inheritance would be significantly reduced. The planner\u2019s scenario toggles let you model the impact of this proposed change.',
+      },
+    ],
+  },
+  {
+    id: 'inflation',
+    icon: '\u{1F4C8}',
+    title: 'Inflation & Real Returns',
+    subtitle: 'How inflation erodes your purchasing power',
+    sections: [
+      {
+        title: 'The impact over 25 years',
+        content: 'At 2% inflation, \u00A380,000 of spending today requires \u00A3131,000 in 25 years to maintain the same lifestyle. At 3%, that rises to \u00A3167,000. At 4%, it\u2019s \u00A3213,000. Over a long retirement, inflation is one of the biggest risks to your plan. The planner inflates your income target each year to show the true cost in nominal terms.',
+      },
+      {
+        title: 'Real vs nominal returns',
+        content: 'An investment returning 7% per year sounds good, but if inflation is 3%, the real return is only about 4%. When evaluating whether your portfolio can sustain your income, it\u2019s the real (after-inflation) return that matters. The planner shows both nominal portfolio values and inflation-adjusted income needs.',
+      },
+      {
+        title: 'Inflation protection strategies',
+        content: 'Assets that tend to keep pace with inflation include: equities (company earnings grow with inflation over time), property (rental income and values tend to track inflation), and index-linked gilts (directly inflation-protected). Cash and fixed-rate bonds lose value in real terms during high inflation periods.',
+      },
+    ],
+  },
+  {
+    id: 'rnrb',
+    icon: '\u{1F3E0}',
+    title: 'Residence Nil-Rate Band',
+    subtitle: 'Extra IHT threshold for the family home',
+    sections: [
+      {
+        title: 'How RNRB works',
+        content: 'The Residence Nil-Rate Band (RNRB) provides an extra \u00A3175,000 IHT threshold when you leave your main residence to direct descendants (children, grandchildren). Combined with the standard \u00A3325,000 nil-rate band, this gives an individual threshold of \u00A3500,000 and a couple\u2019s threshold of \u00A31,000,000.',
+      },
+      {
+        title: 'Tapering for large estates',
+        content: 'The RNRB tapers away for estates over \u00A32 million \u2014 you lose \u00A31 of RNRB for every \u00A32 of estate above \u00A32 million. This means the RNRB is fully lost at an estate value of \u00A32.35 million. For larger estates, IHT planning strategies (gifting, EIS, trust planning) become even more important because you\u2019ve lost this additional relief.',
+      },
+      {
+        title: 'Downsizing provisions',
+        content: 'If you sell or downsize your home after 8 July 2015, you may still qualify for the RNRB on the downsizing amount, provided assets of at least equivalent value are left to direct descendants. This protects retirees who release equity from their property to fund retirement.',
+      },
+      {
+        title: 'Transferable between spouses',
+        content: 'Like the main nil-rate band, any unused RNRB is transferable to a surviving spouse. If the first spouse to die doesn\u2019t use their RNRB, the surviving spouse can claim up to 100% of the unused amount, effectively doubling their available RNRB to \u00A3350,000.',
+      },
+    ],
+  },
+  {
+    id: 'trusts',
+    icon: '\u{1F4DC}',
+    title: 'Trust Planning Basics',
+    subtitle: 'When trusts can help with IHT and control',
+    sections: [
+      {
+        title: 'Why use a trust?',
+        content: 'Trusts allow you to give away assets while retaining some control over how they are used. They can protect assets from divorce, bankruptcy, or irresponsible spending by beneficiaries. For IHT purposes, assets placed in trust are removed from your estate (subject to the CLT rules and potential entry charges).',
+      },
+      {
+        title: 'Discretionary trusts',
+        content: 'The trustees have discretion over who benefits and when. Useful for protecting assets for future generations. The transfer into a discretionary trust is a CLT: it uses your nil-rate band, and any excess is charged at 20% immediately. The trust also faces periodic charges every 10 years (up to 6% of value above the nil-rate band).',
+      },
+      {
+        title: 'Bare trusts',
+        content: 'The beneficiary has an absolute right to both the capital and income. Simpler and with fewer tax complications. The transfer into a bare trust is a PET (potentially exempt transfer), so it falls out of your estate after 7 years with no entry charge. However, you lose all control \u2014 the beneficiary can demand the assets at age 18.',
+      },
+      {
+        title: 'Loan trusts and discounted gift trusts',
+        content: 'These specialist structures let you retain access to some capital or income while removing future growth from your estate. A Loan Trust lends capital to a trust (the loan is in your estate but growth isn\u2019t). A Discounted Gift Trust gives you a fixed income stream while gifting the remainder. Both have specific conditions and often involve insurance company bonds.',
+      },
+    ],
+  },
+  {
+    id: 'concentration-risk',
+    icon: '\u26A0\uFE0F',
+    title: 'Concentration Risk',
+    subtitle: 'The danger of putting too much in one basket',
+    sections: [
+      {
+        title: 'What is concentration risk?',
+        content: 'Concentration risk is the danger of having too much of your wealth in a single asset, asset class, sector, or strategy. In retirement, this risk is magnified because you have less time to recover from a significant loss. A diversified portfolio spreads risk across multiple assets, so the failure of any single investment doesn\u2019t jeopardise your retirement plan.',
+      },
+      {
+        title: 'Common concentration traps',
+        content: 'Many retirees unknowingly take on concentration risk through: (1) a large pension in a single fund, (2) heavy allocation to a single property (often their home), (3) over-reliance on EIS or VCT for tax planning, (4) holding shares in a former employer, (5) too much in one asset class (e.g., all equities or all cash). The planner\u2019s asset register helps you see your total allocation across all wrappers.',
+      },
+      {
+        title: 'EIS/VCT concentration',
+        content: 'EIS and VCT investments are attractive for tax relief and IHT planning, but they carry inherent concentration risk in small, unquoted companies. A prudent approach limits EIS/VCT to 10\u201320% of your total portfolio. The planner shows your EIS and VCT allocations as a proportion of total assets so you can monitor this.',
+      },
+      {
+        title: 'Property concentration',
+        content: 'Many UK retirees have a large proportion of their wealth tied up in their home. While property provides security and potential growth, it\u2019s illiquid and concentrated in a single asset. Downsizing or equity release can diversify your portfolio, but both have tax and lifestyle implications. The planner models property as a separate asset class so you can see its impact.',
+      },
+      {
+        title: 'Diversification in practice',
+        content: 'Effective diversification means spreading risk across: (1) asset classes (equities, bonds, property, cash), (2) geographies (UK, international), (3) wrappers (ISA, pension, GIA, EIS), (4) income sources (drawdown, annuity, state pension, rental income), and (5) time horizons (cash buffer for short-term, equities for long-term). No single investment should be so large that its failure threatens your retirement.',
+      },
+    ],
+  },
 ];
 
 export default function LearningCentre({ onClose }: { onClose: () => void }) {
