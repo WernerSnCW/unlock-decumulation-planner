@@ -1203,12 +1203,14 @@ export interface OptimiserResult {
   iterations: number;
 }
 
-export function runOptimiser(
+const yieldToUI = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
+export async function runOptimiser(
   baseInputs: SimulationInputs,
   register: Asset[],
   taxParams: TaxParametersFile,
   mode: 'max_income' | 'max_estate' | 'balanced'
-): OptimiserResult {
+): Promise<OptimiserResult> {
   const totalPortfolio = register.reduce((s, a) => s + a.current_value, 0);
   const incomeFloor = 5000;
   const incomeCeiling = Math.max(incomeFloor + 1000, Math.min(totalPortfolio / Math.max(1, baseInputs.plan_years) * 2, 500000));
@@ -1239,6 +1241,7 @@ export function runOptimiser(
       } else {
         hi = mid;
       }
+      if (iterations % 5 === 0) await yieldToUI();
     }
   } else if (mode === 'max_estate') {
     const bufferCandidates = [0, 10000, 25000, 50000, 75000, 100000, 150000, 200000, 300000];
@@ -1259,6 +1262,7 @@ export function runOptimiser(
           bestIncome = income;
           bestResult = result;
         }
+        if (iterations % 10 === 0) await yieldToUI();
       }
       if (iterations > 200) break;
     }
@@ -1285,6 +1289,7 @@ export function runOptimiser(
           incHi = mid;
         }
       }
+      await yieldToUI();
       if (bufBestResult) {
         const incomeScore = bufBestIncome / 100000;
         const estateScore = bufBestResult.summary.net_estate_after_iht / totalPortfolio;

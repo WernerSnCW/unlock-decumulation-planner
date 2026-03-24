@@ -143,17 +143,17 @@ function App() {
     runSim(inputs, newAssets);
   }, [inputs, runSim]);
 
-  const handleRunOptimiser = useCallback((mode: 'max_income' | 'max_estate' | 'balanced') => {
+  const handleRunOptimiser = useCallback(async (mode: 'max_income' | 'max_estate' | 'balanced') => {
     setOptimiserRunning(true);
-    setTimeout(() => {
-      try {
-        const res = runOptimiser(inputs, assets, taxParams, mode);
-        setOptimiserResult(res);
-      } catch (e) {
-        console.error('Optimiser error:', e);
-      }
-      setOptimiserRunning(false);
-    }, 50);
+    setOptimiserResult(null);
+    await new Promise(r => setTimeout(r, 50));
+    try {
+      const res = await runOptimiser(inputs, assets, taxParams, mode);
+      setOptimiserResult(res);
+    } catch (e) {
+      console.error('Optimiser error:', e);
+    }
+    setOptimiserRunning(false);
   }, [inputs, assets]);
 
   const handleApplyOptimiser = useCallback(() => {
