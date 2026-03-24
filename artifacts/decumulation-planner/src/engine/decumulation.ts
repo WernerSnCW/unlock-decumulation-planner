@@ -1,5 +1,5 @@
 import type { TaxParametersFile, Toggles, TaxParams } from './taxLogic';
-import { getParamsForYear, calculateIncomeTax, calculatePCLS, calculateCGT, calculateIHTBill } from './taxLogic';
+import { getParamsForYear, calculateIncomeTax, calculateMarginalRate, calculatePCLS, calculateCGT, calculateIHTBill } from './taxLogic';
 import type { GiftHistoryEntry } from './trustLogic';
 import { getCLTCumulative, checkNEFI } from './trustLogic';
 import { evaluateYearWarnings, evaluateRegisterWarnings } from './warningEvaluator';
@@ -163,13 +163,26 @@ const VCT_WORST_CASE_LOSS = 0.50;
 const VCT_PRE_2026_RELIEF = 0.30;
 const VCT_POST_2026_RELIEF = 0.20;
 
-const EIS_BASE_CASE_GROWTH = 0.143;
+const EIS_BASE_CASE_MULTIPLE = 3.8;
 const EIS_RELIEF_RATE = 0.30;
 const SEIS_RELIEF_RATE = 0.50;
-const EIS_NET_COST_PER_POUND = 0.385;
-const SEIS_NET_COST_PER_POUND = 0.275;
-const EIS_LOSS_RELIEF_PER_POUND = 1 - EIS_NET_COST_PER_POUND - EIS_RELIEF_RATE;
-const SEIS_LOSS_RELIEF_PER_POUND = 1 - SEIS_NET_COST_PER_POUND - SEIS_RELIEF_RATE;
+
+const EIS_EXIT_RAMP: Record<number, number> = {
+  0: 0.00,
+  1: 0.05,
+  2: 0.15,
+  3: 0.30,
+  4: 0.50,
+  5: 0.70,
+  6: 0.85,
+};
+function eisExitRampFactor(yearsHeld: number): number {
+  if (yearsHeld >= 7) return 1.0;
+  return EIS_EXIT_RAMP[yearsHeld] ?? 0;
+}
+function eisCohortValue(invested: number, yearsHeld: number): number {
+  return invested * (1 + (EIS_BASE_CASE_MULTIPLE - 1) * eisExitRampFactor(yearsHeld));
+}
 
 export interface SimulationInputs {
   annual_income_target: number;
@@ -687,7 +700,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       const totalEISAllocation = eisAmt + seisAmt;
 
       if (totalEISAllocation > 0) {
-        const relief = (eisAmt * EIS_RELIEF_RATE) + (seisAmt * SEIS_RELIEF_RATE);
+        const estNonSavingsForCap = totalPensionIncome + rentalIncome;
+        const estTaxForCap = calculateIncomeTax(estNonSavingsForCap, savingsIncome, dividendIncome, params);
+
+        const uncappedRelief = (eisAmt * EIS_RELIEF_RATE) + (seisAmt * SEIS_RELIEF_RATE);
+        const relief = Math.min(uncappedRelief, estTaxForCap);
         eisAnnualRelief = relief;
         eisCumulativeRelief += relief;
 
@@ -725,17 +742,24 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       let baseCaseValue = 0;
       for (const c of eisCohorts) {
         const yearsHeld = planYear - c.yearInvested;
-        baseCaseValue += c.totalInvested * Math.pow(1 + EIS_BASE_CASE_GROWTH, yearsHeld);
+        baseCaseValue += eisCohortValue(c.totalInvested, yearsHeld);
       }
       let ihtExempt = 0;
       for (const c of eisCohorts) {
         if (planYear >= c.bprQualifyingYear) {
           const yearsHeld = planYear - c.yearInvested;
-          ihtExempt += c.totalInvested * Math.pow(1 + EIS_BASE_CASE_GROWTH, yearsHeld);
+          ihtExempt += eisCohortValue(c.totalInvested, yearsHeld);
         }
       }
+
+      const estNonSavingsForMarginal = totalPensionIncome + rentalIncome;
+      const marginalRate = calculateMarginalRate(estNonSavingsForMarginal, savingsIncome, dividendIncome, params);
+      const lossReliefRate = marginalRate >= 0.60 ? 0.40 : Math.min(marginalRate, 0.45);
+
       const totalLossRelief = eisCohorts.reduce((s, c) => {
-        return s + (c.eisAmount * EIS_LOSS_RELIEF_PER_POUND) + (c.seisAmount * SEIS_LOSS_RELIEF_PER_POUND);
+        const eisNetAfterRelief = c.eisAmount * (1 - EIS_RELIEF_RATE);
+        const seisNetAfterRelief = c.seisAmount * (1 - SEIS_RELIEF_RATE);
+        return s + (eisNetAfterRelief * lossReliefRate) + (seisNetAfterRelief * lossReliefRate);
       }, 0);
 
       eisYearSummary = {
@@ -1180,9 +1204,12 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       eis_portfolio_base_case: planEndYear?.eisProgramme?.portfolioValueBaseCase ?? 0,
       eis_portfolio_worst_case: 0,
       eis_iht_exempt: planEndYear?.eisProgramme?.ihtExemptAmount ?? 0,
-      eis_worst_case_net_cost: eisCohorts.reduce((s, c) => {
-        return s + (c.eisAmount * EIS_NET_COST_PER_POUND) + (c.seisAmount * SEIS_NET_COST_PER_POUND);
-      }, 0),
+      eis_worst_case_net_cost: (() => {
+        const lastYear = perYear[perYear.length - 1];
+        const lrSummary = lastYear?.eisProgramme?.lossReliefWorstCase ?? 0;
+        const totalInv = eisCohorts.reduce((s, c) => s + c.totalInvested, 0);
+        return totalInv - eisCumulativeRelief - lrSummary;
+      })(),
       eis_tax_allowance_income_tax: perYear[0]?.eisProgramme?.taxAllowanceIncomeTax ?? 0,
       eis_tax_allowance_max_eis: perYear[0]?.eisProgramme?.taxAllowanceMaxEIS ?? 0,
       eis_tax_allowance_max_seis: perYear[0]?.eisProgramme?.taxAllowanceMaxSEIS ?? 0,

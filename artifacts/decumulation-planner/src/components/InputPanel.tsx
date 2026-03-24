@@ -528,7 +528,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
                     </div>
                     <div className="eis-row" style={{ color: '#EF4444' }}>
                       <span>Net cost if all fail</span>
-                      <span>{'\u00A3'}{Math.round(summary.eis_worst_case_net_cost).toLocaleString('en-GB')}</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_worst_case_net_cost).toLocaleString('en-GB')}{summary.eis_total_invested > 0 ? ` (${Math.round(summary.eis_worst_case_net_cost / summary.eis_total_invested * 100)}p/\u00A3)` : ''}</span>
                     </div>
                     <div className="eis-row">
                       <span>IHT-exempt (BPR)</span>

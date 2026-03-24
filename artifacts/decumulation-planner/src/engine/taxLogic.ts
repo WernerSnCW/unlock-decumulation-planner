@@ -154,6 +154,43 @@ export function calculateIncomeTax(
   return Math.round(tax * 100) / 100;
 }
 
+export function calculateMarginalRate(
+  nonSavingsIncome: number,
+  savingsIncome: number,
+  dividendIncome: number,
+  params: TaxParams
+): number {
+  const totalIncome = nonSavingsIncome + savingsIncome + dividendIncome;
+  if (totalIncome <= 0) return 0;
+
+  const inPATrap = totalIncome > params.pa_taper_start &&
+    totalIncome <= params.pa_taper_start + params.personal_allowance * 2;
+
+  let pa = params.personal_allowance;
+  if (totalIncome > params.pa_taper_start) {
+    const reduction = Math.floor((totalIncome - params.pa_taper_start) / 2);
+    pa = Math.max(0, pa - reduction);
+  }
+
+  const taxableIncome = Math.max(0, totalIncome - pa);
+  if (taxableIncome <= 0) return 0;
+
+  let nominalRate: number;
+  const basicBandSize = params.basic_rate_threshold - params.personal_allowance;
+  const higherBandEnd = params.higher_rate_threshold - params.personal_allowance;
+
+  if (taxableIncome <= basicBandSize) {
+    nominalRate = params.basic_rate;
+  } else if (taxableIncome <= higherBandEnd) {
+    nominalRate = params.higher_rate;
+  } else {
+    nominalRate = params.additional_rate;
+  }
+
+  if (inPATrap) return 0.60;
+  return nominalRate;
+}
+
 export function calculatePCLS(grossCrystallisation: number, remainingLSA: number): { pcls: number; taxableDraw: number; newRemainingLSA: number } {
   const maxPcls = 0.25 * grossCrystallisation;
   const pcls = Math.min(maxPcls, remainingLSA);
