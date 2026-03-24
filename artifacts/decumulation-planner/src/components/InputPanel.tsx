@@ -357,7 +357,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       <div className="section-title">EIS Strategy</div>
 
       <div className="toggle-row">
-        <label>Model EIS programme <InfoTip text="Annual allocation into EIS/SEIS qualifying companies. Models income tax relief, BPR (IHT exemption after 2 years), and portfolio growth at the 3.8× base case or total loss worst case." /></label>
+        <label>Model EIS programme <InfoTip text="Annual allocation into EIS/SEIS qualifying companies. Models income tax relief, BPR (IHT exemption after 2 years), and portfolio growth based on quality tier and scenario. Choose from Cautious/Base/Strong quality tiers and Bear/Base/Bull/All Fail scenarios." /></label>
         <button
           className={`toggle-switch ${(inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY).enabled ? 'active' : 'inactive'}`}
           onClick={() => onChange({

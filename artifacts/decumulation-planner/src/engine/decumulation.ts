@@ -127,6 +127,7 @@ export interface EISCohort {
   totalInvested: number;
   reliefClaimed: number;
   bprQualifyingYear: number;
+  deferredGain: number;
 }
 
 export interface EISYearSummary {
@@ -720,6 +721,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     let eisTaxAllowanceMaxSEIS = 0;
     let eisTaxAllowanceIncomeTax = 0;
     let eisCgtDeferralThisYear = 0;
+    let eisDeferredGainCrystallized = 0;
     const eisInInvestmentPhase = eisInvestmentYears <= 0 || planYear <= eisInvestmentYears;
     if (eisEnabled && !isShadow && eisInInvestmentPhase) {
       let eisAmt: number;
@@ -778,6 +780,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
           totalInvested: totalEISAllocation,
           reliefClaimed: relief,
           bprQualifyingYear: planYear + 2,
+          deferredGain: 0,
         };
         eisCohorts.push(cohort);
 
@@ -804,6 +807,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       const yearEvents = eisCgtEvents.filter(e => e.year === planYear);
       if (yearEvents.length > 0) {
         let annualExemptionRemaining = params.cgt_exempt_amount;
+        const thisYearCohort = eisCohorts.find(c => c.yearInvested === planYear);
+        let totalDeferredGainThisYear = 0;
         for (const evt of yearEvents) {
           let cgtRate: number;
           if (evt.rate === 'auto') {
@@ -819,6 +824,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
           const deferred = taxableGain * cgtRate;
           eisCgtDeferralThisYear += deferred;
           eisCumulativeCgtDeferral += deferred;
+          totalDeferredGainThisYear += taxableGain;
+        }
+        if (thisYearCohort && totalDeferredGainThisYear > 0) {
+          thisYearCohort.deferredGain += totalDeferredGainThisYear;
         }
       }
     }
@@ -838,6 +847,13 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         if (planYear >= c.bprQualifyingYear) {
           const yearsHeld = planYear - c.yearInvested;
           ihtExempt += eisCohortValue(c.totalInvested, yearsHeld, eisMultiple);
+        }
+      }
+
+      for (const c of eisCohorts) {
+        const yearsHeld = planYear - c.yearInvested;
+        if (yearsHeld === 7 && c.deferredGain > 0) {
+          eisDeferredGainCrystallized += c.deferredGain;
         }
       }
 
@@ -1108,12 +1124,13 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     const rawIncomeTax = calculateIncomeTax(nonSavingsIncome, savingsIncome, dividendIncome, params);
     let totalVentureRelief = eisAnnualRelief + vctAnnualRelief;
     if (isWorstCase && eisYearSummary && planYear >= 3) {
-      const lossReliefThisYear = eisYearSummary.lossReliefWorstCase / Math.max(1, planYear);
+      const investmentYears = eisInvestmentYears > 0 ? eisInvestmentYears : inputs.plan_years;
+      const lossReliefThisYear = eisYearSummary.lossReliefWorstCase / Math.max(1, investmentYears);
       totalVentureRelief += lossReliefThisYear;
     }
     const incomeTax = Math.max(0, rawIncomeTax - totalVentureRelief);
     const taxableIncomeAfterPA = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - params.personal_allowance);
-    const totalCGTGainWithDeferred = totalCGTGain + totalDeferredGainRealized;
+    const totalCGTGainWithDeferred = totalCGTGain + totalDeferredGainRealized + eisDeferredGainCrystallized;
     const cgt = calculateCGT(totalCGTGainWithDeferred, taxableIncomeAfterPA, params);
 
     // Step 6b: Deduct tax liabilities from portfolio (draw from most liquid first, respecting cash reserve)
@@ -1297,7 +1314,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       eis_total_invested: eisCohorts.reduce((s, c) => s + c.totalInvested, 0),
       eis_total_relief: eisCumulativeRelief,
       eis_portfolio_base_case: planEndYear?.eisProgramme?.portfolioValueBaseCase ?? 0,
-      eis_portfolio_worst_case: 0,
+      eis_portfolio_worst_case: planEndYear?.eisProgramme?.portfolioValueWorstCase ?? 0,
       eis_iht_exempt: planEndYear?.eisProgramme?.ihtExemptAmount ?? 0,
       eis_worst_case_net_cost: (() => {
         const lastYear = perYear[perYear.length - 1];
