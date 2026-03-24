@@ -1,0 +1,347 @@
+{
+  "project": {
+    "name": "Unlock EIS & SEIS",
+    "description": "EIS and SEIS investment intelligence tool for UK private investors. Models risk-adjusted returns across investment and harvest phases, with tax relief, CGT deferral, income timeline analysis, and IHT planning.",
+    "taxYear": "2024/25",
+    "theme": "Luxury financial intelligence publication — dark charcoal, antique gold, serif headings",
+    "stack": ["React", "TypeScript", "Express", "Vite", "Tailwind CSS"]
+  },
+
+  "design": {
+    "colors": {
+      "charcoal": "#0f0f0f",
+      "gold": "#c9a84c",
+      "cream": "#f5f0e8",
+      "green": "#5cb88a",
+      "red": "#e06060"
+    },
+    "fonts": {
+      "headings": "Playfair Display (serif)",
+      "body": "Jost (sans-serif)",
+      "data": "Fira Code (monospace)"
+    }
+  },
+
+  "pages": [
+    {
+      "name": "Calculator",
+      "route": ["/", "/calculator"],
+      "steps": [
+        {
+          "step": 1,
+          "label": "Income & Setup",
+          "features": [
+            "Income slider (£12,000–£500,000)",
+            "Income trajectory presets: Stable, Retirement, Business Sale, Rising",
+            "Income timeline bar chart showing per-year income",
+            "Investment sizing: ½ tax bill / Full tax bill / Full allowance / Custom",
+            "Scheme type: SEIS / EIS / Blend",
+            "Quality tier: Cautious / Base / Strong",
+            "Scenario: Cautious / Base / Strong",
+            "Growth mode: Same each year / 5% annual increase",
+            "Investment phase slider (1–15 years)",
+            "Harvest phase slider (extends total horizon beyond investment phase)",
+            "Cumulative return projection canvas chart",
+            "Stat panels: Total invested, Total relief, Portfolio value, vs Tax paid, All-fail net loss",
+            "Tax summary: Income tax, NI, Marginal rate, Relief rate"
+          ]
+        },
+        {
+          "step": 2,
+          "label": "Risk",
+          "features": [
+            "Risk analysis canvas chart (pay-tax line, all-fail line, base case line)",
+            "Stat panels: Tax paid (no EIS), All-fail net loss (Xp per £), Base case value",
+            "Portfolio distribution bar (write-offs / marginal / strong / fund returner)",
+            "Risk explainer with Beauhurst/NESTA sourced copy",
+            "Scenario comparison cards: Cautious / Base / Strong with multiples, portfolio values, net costs"
+          ]
+        },
+        {
+          "step": 3,
+          "label": "CGT & IHT",
+          "features": [
+            "Stat panels: Total relief, CGT deferral, Portfolio value, All-fail net loss",
+            "Capital gain events panel (up to 8 events for CGT deferral)",
+            "Per-event: year selector, gain amount, CGT rate (Auto/18%/24%)",
+            "Total CGT deferral calculation",
+            "IHT Business Property Relief callout (2+ year qualifying shares, BPR cap from April 2026)",
+            "Download PDF button — generates and saves Unlock-EIS-Report.pdf directly"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Research",
+      "route": ["/research", "/research/:page"],
+      "pages": [
+        { "id": "return-model", "title": "The Return Model", "summary": "3.8× gross return model with NESTA/ERC evidence" },
+        { "id": "time-to-exit", "title": "Time to Exit", "summary": "Exit timeline analysis by outcome type" },
+        { "id": "horizon-problem", "title": "The Horizon Problem", "summary": "Investment vs harvest phase framing" },
+        { "id": "the-market", "title": "The Market", "summary": "HMRC annual investment data, repeat investor dynamics" },
+        { "id": "unicorns", "title": "EIS and the Unicorns", "summary": "46.5% UK unicorn EIS correlation" }
+      ],
+      "structure": "Assumption → Rationale → Evidence → Caveats, with data tables and source citations"
+    },
+    {
+      "name": "About",
+      "route": ["/about"],
+      "sections": ["Project description", "Tax year (2024/25)", "Sources and acknowledgements"]
+    }
+  ],
+
+  "taxConfig": {
+    "year": "2024/25",
+    "personalAllowance": 12570,
+    "basicRateLimit": 50270,
+    "higherRateThreshold": 100000,
+    "additionalRateThreshold": 125140,
+    "basicRate": 0.20,
+    "higherRate": 0.40,
+    "additionalRate": 0.45,
+    "personalAllowanceTrap": {
+      "range": "£100,000–£125,140",
+      "effectiveMarginalRate": 0.60,
+      "explanation": "PA reduced by £1 for every £2 of income above £100,000"
+    },
+    "nationalInsurance": {
+      "primaryRate": 0.08,
+      "secondaryRate": 0.02,
+      "primaryThreshold": 12570,
+      "upperEarningsLimit": 50270
+    },
+    "capitalGainsTax": {
+      "basicRate": 0.18,
+      "higherRate": 0.24,
+      "annualExemption": 3000
+    },
+    "inheritanceTax": {
+      "rate": 0.40,
+      "bprCap": 2500000,
+      "bprCapFrom": "6 April 2026"
+    }
+  },
+
+  "eisSeisRules": {
+    "seis": {
+      "reliefRate": 0.50,
+      "annualLimit": 200000,
+      "description": "50% income tax relief on investments up to £200,000 per year"
+    },
+    "eis": {
+      "reliefRate": 0.30,
+      "annualLimit": 1000000,
+      "description": "30% income tax relief on investments up to £1,000,000 per year"
+    },
+    "blend": {
+      "seisProportion": 0.13,
+      "description": "13% of investment allocated to SEIS, remainder to EIS (up to statutory limits)"
+    },
+    "reliefCapping": "Income tax relief is capped at your income tax liability for the year — you cannot claim more relief than you owe in tax",
+    "carryBackYear": "2023/24",
+    "minimumHoldingPeriod": "3 years",
+    "cgtExemption": "Gains on EIS/SEIS shares held 3+ years are completely CGT-free",
+    "cgtDeferral": "Capital gains from other assets can be deferred by investing in EIS within 1 year before or 3 years after the gain",
+    "lossRelief": "If a company fails, loss relief can be claimed at marginal income tax rate on the net loss (investment minus income tax relief received)",
+    "ihtBusinessPropertyRelief": "EIS/SEIS shares held 2+ years qualify for BPR, removing them from estate for IHT"
+  },
+
+  "calculations": {
+    "taxCalculation": {
+      "function": "calcTax(income)",
+      "inputs": ["income"],
+      "outputs": ["tax", "ni", "total", "marginal", "effectiveMarginal", "pa", "taxable", "inTrap"],
+      "logic": [
+        "Personal allowance: £12,570, reduced by £1 for every £2 above £100,000, zero above £125,140",
+        "Basic band: first £37,700 of taxable income at 20%",
+        "Higher band: £37,700 to £125,140 taxable at 40%",
+        "Additional band: above £125,140 taxable at 45%",
+        "NI: 8% on earnings £12,570–£50,270, then 2% above £50,270",
+        "PA trap detection: income £100k–£125,140 has effective 60% marginal rate"
+      ]
+    },
+    "reliefCalculation": {
+      "function": "calcRelief(invest, type)",
+      "inputs": ["invest", "schemeType"],
+      "outputs": ["seis", "eis", "seisRelief", "eisRelief", "rate", "total"],
+      "logic": [
+        "SEIS: min(invest, £200,000) × 50%",
+        "EIS: min(invest, £1,000,000) × 30%",
+        "Blend: 13% to SEIS (capped at £200k), remainder to EIS (capped at £1m)",
+        "Blend effective rate = weighted average of SEIS 50% and EIS 30%"
+      ]
+    },
+    "investMax": {
+      "function": "investMax(income, type)",
+      "description": "Maximum investment where relief fully offsets tax bill",
+      "logic": [
+        "For EIS: ceil(tax / 0.30) rounded up to nearest £5,000, capped at £1,000,000",
+        "For SEIS: ceil(tax / 0.50) rounded up to nearest £5,000, capped at £200,000",
+        "For Blend: binary search to find investment where blended relief ≈ tax bill, capped at £1,200,000"
+      ]
+    },
+    "cashflowModel": {
+      "function": "buildCF(income, invest, type, quality, scenario, growth, horizon, ...)",
+      "inputs": ["income", "invest", "type", "quality", "scenario", "growth", "horizon", "liqEvents", "mOverride", "perf", "incomeByYear", "cgtEvents", "investPhase"],
+      "outputsPerYear": {
+        "yr": "Year number",
+        "inv": "Investment amount this year",
+        "upr": "Upfront relief this year (min of calculated relief and tax bill)",
+        "net": "Net cost this year (inv - upr)",
+        "cumEIS": "Cumulative portfolio value (exit-adjusted + relief + CGT deferral)",
+        "cumHMRC": "Cumulative HMRC relief",
+        "cumRelief": "Cumulative income tax relief",
+        "cumTaxNoEIS": "Cumulative tax that would have been paid without EIS",
+        "cumWorstCase": "Cumulative worst case (net cost minus delayed loss relief)",
+        "cumRealLoss": "Cumulative real loss if all companies fail (after EIS relief and loss relief)",
+        "cumAllFail": "Cumulative all-fail total = cumTaxNoEIS + cumRealLoss",
+        "cumGross": "Cumulative gross investment",
+        "cumNetCost": "Cumulative net cost (cumGross - cumRelief)",
+        "cumCgtDeferral": "Cumulative CGT deferral from modelled gain events",
+        "yrIncome": "Income used for this year (may differ via income trajectory)",
+        "yrTax": "Tax bill for this year"
+      }
+    },
+    "keyFormulas": {
+      "cumAllFail": {
+        "formula": "cumTaxNoEIS + cumRealLoss",
+        "explanation": "The total outlay in the worst case: tax you would have paid anyway, plus the net loss from the failed EIS programme after all reliefs"
+      },
+      "realLossThisYear": {
+        "formula": "(netRelieved + netUnrelieved) × (1 - lossReliefRate)",
+        "explanation": "The real cost after both EIS income tax relief and loss relief. lossReliefRate = higherRate (40%) if in PA trap, otherwise min(marginal, 45%)"
+      },
+      "lossReliefRate": {
+        "formula": "inTrap ? 0.40 : min(marginal, 0.45)",
+        "explanation": "Loss relief is claimed at your marginal income tax rate, capped at 45%. In the PA trap (£100k–£125,140), 40% is used."
+      },
+      "portfolioValue": {
+        "formula": "sum of (vintage.net × exitMultiple) for each vintage + cumRelief + cumCgtDeferral",
+        "explanation": "Each year's net investment is tracked as a vintage. Exit multiple is ramped based on holding period."
+      },
+      "exitRamp": {
+        "description": "Portfolio value builds gradually based on years held",
+        "ramp": {
+          "year0": "0% of target multiple",
+          "year1": "5% of target multiple",
+          "year2": "15% of target multiple",
+          "year3": "30% of target multiple",
+          "year4": "50% of target multiple",
+          "year5": "70% of target multiple",
+          "year6": "85% of target multiple",
+          "year7plus": "100% of target multiple"
+        }
+      },
+      "investmentPhaseVsHarvest": {
+        "description": "Capital is deployed during the investment phase (e.g. years 1–5). The harvest phase extends the horizon (e.g. years 6–15) while no new money goes in, but existing positions continue to mature along the exit ramp."
+      }
+    },
+    "scenarioMultiples": {
+      "description": "Gross return multiples by quality tier and scenario. Mid-point of range is used in calculations.",
+      "cautious": { "bear": [2.0, 2.3], "base": [2.6, 3.2], "bull": [3.8, 4.4] },
+      "base": { "bear": [3.9, 4.5], "base": [5.1, 6.2], "bull": [7.3, 8.5] },
+      "strong": { "bear": [7.2, 8.2], "base": [9.2, 11.3], "bull": [13.3, 15.3] }
+    },
+    "portfolioDistribution": {
+      "description": "Per 10 companies in a portfolio. Write-off rate is ~40-45% across all quality tiers — quality affects exit SIZE, not failure count.",
+      "allTiers": {
+        "writeOffs": 4,
+        "marginalExits": 3,
+        "strongExits": 2,
+        "fundReturner": 1
+      },
+      "exitMultiplesPerTier": {
+        "cautious": { "marginal": "1.2×", "strong": "3×", "fundReturner": "10×" },
+        "base": { "marginal": "2×", "strong": "6×", "fundReturner": "20×" },
+        "strong": { "marginal": "3×", "strong": "10×", "fundReturner": "40×" }
+      },
+      "source": "Beauhurst EIS Performance Tracking (10,000+ companies), NESTA 'Siding with the Angels' (1,080 investments, 2009), EISA Annual Manager Survey, HMRC EIS Statistics 2023/24"
+    },
+    "incomeTrajectory": {
+      "presets": {
+        "stable": "Same income every year",
+        "retirement": "Full income until retireYear, then retireIncome (default £30,000)",
+        "businessSale": "Normal income + saleAmount (default £500,000) in saleYear only",
+        "rising": "Income grows by riseRate (default 3%) compound annually"
+      },
+      "effect": "Per-year income changes affect: tax bill, EIS relief (capped at that year's tax), loss relief rate (depends on marginal rate), and all cumulative outputs"
+    },
+    "cgtDeferral": {
+      "description": "Capital gains from other assets can be deferred by investing in EIS",
+      "perEvent": {
+        "year": "Which year the gain occurs",
+        "gain": "Size of the gain",
+        "rate": "Auto (based on marginal rate), 18%, or 24%"
+      },
+      "calculation": "gain × CGT rate (auto = 24% if marginal ≥ 40%, else 18%)",
+      "maxEvents": 8
+    }
+  },
+
+  "selfTest": {
+    "totalChecks": 132,
+    "runsOn": "Every page load (module-level execution)",
+    "categories": [
+      { "id": 1, "name": "Tax calculations", "checks": "£12k, £30k, £60k, £110k, £150k, £200k income levels" },
+      { "id": 2, "name": "EIS relief", "checks": "30% rate, £1m annual limit, qualifying amounts" },
+      { "id": 3, "name": "SEIS relief", "checks": "50% rate, £200k annual limit" },
+      { "id": 4, "name": "Blend allocation", "checks": "13% SEIS split, combined relief rate" },
+      { "id": 5, "name": "Relief capping", "checks": "Relief cannot exceed tax bill" },
+      { "id": 6, "name": "investMax", "checks": "Statutory limits, relief ≈ tax bill" },
+      { "id": 7, "name": "Growth mode", "checks": "5% annual increase, year-on-year amounts" },
+      { "id": 8, "name": "Investment vs harvest phase", "checks": "No deployment after investment phase ends" },
+      { "id": 9, "name": "All-fail formula", "checks": "cumAllFail = cumTaxNoEIS + cumRealLoss" },
+      { "id": 10, "name": "Real loss per £", "checks": "Xp per £ reflects marginal rate, not £1" },
+      { "id": 11, "name": "CGT deferral", "checks": "Auto rate selection, cumulative deferral" },
+      { "id": 12, "name": "Income timeline", "checks": "Year-by-year overrides, relief capping at lower income, cumTaxNoEIS consistency" },
+      { "id": "12b", "name": "Retirement trajectory", "checks": "Tax drops at retirement, cumRelief and cumRealLoss differ from stable" },
+      { "id": "12c", "name": "Rising income", "checks": "Tax increases each year, cumulative values grow" },
+      { "id": 13, "name": "Quality tier", "checks": "Same tax/relief/cost across tiers, different portfolio values" },
+      { "id": 14, "name": "Scenario multiples", "checks": "bear < base < bull portfolio values" },
+      { "id": 15, "name": "PA trap", "checks": "£100k–£125,140 effective 60% marginal, reduced PA" },
+      { "id": 16, "name": "Cumulative consistency", "checks": "cumGross = sum(inv), cumRelief = sum(upr), cumAllFail = cumTaxNoEIS + cumRealLoss" }
+    ]
+  },
+
+  "pdfExport": {
+    "filename": "Unlock-EIS-Report.pdf",
+    "method": "html2canvas at 2× resolution → jsPDF multi-page A4",
+    "fallback": "window.print()",
+    "sections": [
+      "Branded header with date",
+      "All input parameters (income, investment, scheme, quality, phases, trajectory, growth)",
+      "Tax position (income tax, NI, marginal rate, relief rate)",
+      "Cumulative outcomes (total invested, relief, tax paid, portfolio value, all-fail net loss, CGT deferral)",
+      "Scenario comparison table (Cautious/Base/Strong with multiples, portfolio, net cost)",
+      "All-fail risk analysis (max loss breakdown: invested → less relief → less loss relief → net loss)",
+      "How EIS/SEIS tax relief works (income tax relief, loss relief, CGT exemption, CGT deferral, IHT BPR)",
+      "Portfolio distribution model (write-offs/marginal/strong/fund returner bar + research context)",
+      "Year-by-year data table (income, tax, relief, net cost, portfolio, all-fail loss per year)",
+      "CGT events table (if any)",
+      "Regulatory disclaimer"
+    ]
+  },
+
+  "researchSources": [
+    "NESTA / BBAA 'Siding with the Angels' (2009) — 1,080 angel investments",
+    "Enterprise Research Centre / UKBAA 'A Nation of Angels' (2015)",
+    "Beauhurst / EISA 30th Anniversary Report (2024) — 10,000+ EIS companies",
+    "HMRC EIS National Statistics (2023/24)",
+    "BBB / UKBAA Angel Survey Data (2018)",
+    "Cambridge Associates VC benchmark data",
+    "Kauffman Foundation — venture return distribution research",
+    "Published EIS fund manager performance targets"
+  ],
+
+  "layout": {
+    "navigation": ["Calculator", "Research", "About"],
+    "footer": "Regulatory disclaimer — not financial advice, capital at risk, 3-year minimum hold, tax treatment may change",
+    "responsive": true
+  },
+
+  "exampleOutputs": {
+    "description": "EIS specialist £150k income, £50k/yr investment, base quality, 15-year horizon",
+    "allFailNetLoss": "~39p per £ invested (reflects 40%+ marginal rate reducing downside via EIS relief + loss relief)",
+    "note": "Without EIS relief and loss relief, the entire investment would be lost (£1 per £). With reliefs, the real cost drops to roughly 39p per £ — the rest is recovered through tax offsets."
+  }
+}

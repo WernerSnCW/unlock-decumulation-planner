@@ -83,15 +83,19 @@ export const DEFAULT_MECHANISMS: StrategyMechanisms = {
 
 export interface EISStrategyConfig {
   enabled: boolean;
+  allocation_mode: 'fixed' | 'tax_allowance';
   annual_eis_amount: number;
   annual_seis_amount: number;
+  allowance_pct: number;
   scenario: 'base_case' | 'worst_case';
 }
 
 export const DEFAULT_EIS_STRATEGY: EISStrategyConfig = {
   enabled: false,
+  allocation_mode: 'fixed',
   annual_eis_amount: 0,
   annual_seis_amount: 0,
+  allowance_pct: 100,
   scenario: 'base_case',
 };
 
@@ -113,6 +117,9 @@ export interface EISYearSummary {
   cumulativeRelief: number;
   ihtExemptAmount: number;
   lossReliefWorstCase: number;
+  taxAllowanceMaxEIS: number;
+  taxAllowanceMaxSEIS: number;
+  taxAllowanceIncomeTax: number;
 }
 
 export interface VCTStrategyConfig {
@@ -234,6 +241,11 @@ export interface SimulationSummary {
   eis_portfolio_worst_case: number;
   eis_iht_exempt: number;
   eis_worst_case_net_cost: number;
+  eis_tax_allowance_income_tax: number;
+  eis_tax_allowance_max_eis: number;
+  eis_tax_allowance_max_seis: number;
+  eis_annual_eis_used: number;
+  eis_annual_seis_used: number;
   vct_total_invested: number;
   vct_total_relief: number;
   vct_total_dividends: number;
@@ -469,6 +481,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         eis_portfolio_worst_case: 0,
         eis_iht_exempt: 0,
         eis_worst_case_net_cost: 0,
+        eis_tax_allowance_income_tax: 0,
+        eis_tax_allowance_max_eis: 0,
+        eis_tax_allowance_max_seis: 0,
+        eis_annual_eis_used: 0,
+        eis_annual_seis_used: 0,
         vct_total_invested: 0,
         vct_total_relief: 0,
         vct_total_dividends: 0,
@@ -531,7 +548,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
   let fundedYears = 0;
   let firstShortfallYear: number | null = null;
 
-  const eisEnabled = inputs.eis_strategy?.enabled && (inputs.eis_strategy.annual_eis_amount > 0 || inputs.eis_strategy.annual_seis_amount > 0);
+  const eisEnabled = inputs.eis_strategy?.enabled && (
+    inputs.eis_strategy.allocation_mode === 'tax_allowance' ||
+    inputs.eis_strategy.annual_eis_amount > 0 ||
+    inputs.eis_strategy.annual_seis_amount > 0
+  );
   const eisCohorts: EISCohort[] = [];
   let eisCumulativeRelief = 0;
 
@@ -634,9 +655,35 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     // Step 4b: EIS programme — allocate from cash/liquid assets first
     let eisAnnualRelief = 0;
     let eisYearSummary: EISYearSummary | null = null;
+    let eisTaxAllowanceMaxEIS = 0;
+    let eisTaxAllowanceMaxSEIS = 0;
+    let eisTaxAllowanceIncomeTax = 0;
     if (eisEnabled && !isShadow) {
-      const eisAmt = inputs.eis_strategy.annual_eis_amount;
-      const seisAmt = inputs.eis_strategy.annual_seis_amount;
+      let eisAmt: number;
+      let seisAmt: number;
+
+      if (inputs.eis_strategy.allocation_mode === 'tax_allowance') {
+        const estNonSavings = totalPensionIncome + rentalIncome;
+        const estTax = calculateIncomeTax(estNonSavings, savingsIncome, dividendIncome, params);
+        eisTaxAllowanceIncomeTax = estTax;
+
+        const SEIS_CAP = 200000;
+        const seisMax = Math.min(SEIS_CAP, estTax / SEIS_RELIEF_RATE);
+        const seisRelief = seisMax * SEIS_RELIEF_RATE;
+        const remainingTax = Math.max(0, estTax - seisRelief);
+        const eisMax = remainingTax / EIS_RELIEF_RATE;
+
+        eisTaxAllowanceMaxSEIS = Math.round(seisMax);
+        eisTaxAllowanceMaxEIS = Math.round(eisMax);
+
+        const pct = (inputs.eis_strategy.allowance_pct ?? 100) / 100;
+        seisAmt = Math.round(seisMax * pct);
+        eisAmt = Math.round(eisMax * pct);
+      } else {
+        eisAmt = inputs.eis_strategy.annual_eis_amount;
+        seisAmt = inputs.eis_strategy.annual_seis_amount;
+      }
+
       const totalEISAllocation = eisAmt + seisAmt;
 
       if (totalEISAllocation > 0) {
@@ -700,6 +747,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         cumulativeRelief: eisCumulativeRelief,
         ihtExemptAmount: ihtExempt,
         lossReliefWorstCase: totalLossRelief,
+        taxAllowanceMaxEIS: eisTaxAllowanceMaxEIS,
+        taxAllowanceMaxSEIS: eisTaxAllowanceMaxSEIS,
+        taxAllowanceIncomeTax: eisTaxAllowanceIncomeTax,
       };
     }
 
@@ -1133,6 +1183,11 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       eis_worst_case_net_cost: eisCohorts.reduce((s, c) => {
         return s + (c.eisAmount * EIS_NET_COST_PER_POUND) + (c.seisAmount * SEIS_NET_COST_PER_POUND);
       }, 0),
+      eis_tax_allowance_income_tax: perYear[0]?.eisProgramme?.taxAllowanceIncomeTax ?? 0,
+      eis_tax_allowance_max_eis: perYear[0]?.eisProgramme?.taxAllowanceMaxEIS ?? 0,
+      eis_tax_allowance_max_seis: perYear[0]?.eisProgramme?.taxAllowanceMaxSEIS ?? 0,
+      eis_annual_eis_used: eisCohorts.length > 0 ? eisCohorts[0].eisAmount : 0,
+      eis_annual_seis_used: eisCohorts.length > 0 ? eisCohorts[0].seisAmount : 0,
       vct_total_invested: vctCohorts.reduce((s, c) => s + c.amount, 0),
       vct_total_relief: vctCumulativeRelief,
       vct_total_dividends: vctCumulativeDividends,

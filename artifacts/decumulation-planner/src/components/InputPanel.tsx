@@ -371,37 +371,111 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
 
       {(inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY).enabled && (() => {
         const eis = inputs.eis_strategy ?? DEFAULT_EIS_STRATEGY;
-        const totalAllocation = eis.annual_eis_amount + eis.annual_seis_amount;
-        const annualRelief = (eis.annual_eis_amount * 0.30) + (eis.annual_seis_amount * 0.50);
+        const isTaxMode = (eis.allocation_mode ?? 'fixed') === 'tax_allowance';
+        const eisAmt = isTaxMode ? (summary?.eis_annual_eis_used ?? 0) : eis.annual_eis_amount;
+        const seisAmt = isTaxMode ? (summary?.eis_annual_seis_used ?? 0) : eis.annual_seis_amount;
+        const totalAllocation = eisAmt + seisAmt;
+        const annualRelief = (eisAmt * 0.30) + (seisAmt * 0.50);
         const effectiveCost = totalAllocation - annualRelief;
         return (
           <>
             <div className="input-group">
-              <label>Annual EIS Investment (30% relief)</label>
-              <NumInput
-                value={eis.annual_eis_amount}
-                onChange={v => onChange({
-                  ...inputs,
-                  eis_strategy: { ...eis, annual_eis_amount: v }
-                })}
-                min={0}
-                step={5000}
-              />
+              <label>Allocation Mode <InfoTip text="Fixed: set exact EIS/SEIS amounts. Tax Allowance: auto-calculate the maximum EIS/SEIS investment needed to zero out your estimated income tax, then invest a percentage of that allowance. SEIS fills first (up to £200k cap, 50% relief) then EIS (30% relief)." /></label>
+              <div className="gross-net-row">
+                <button
+                  className={`gross-net-btn ${!isTaxMode ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    eis_strategy: { ...eis, allocation_mode: 'fixed' }
+                  })}
+                >Fixed</button>
+                <button
+                  className={`gross-net-btn ${isTaxMode ? 'active' : ''}`}
+                  onClick={() => onChange({
+                    ...inputs,
+                    eis_strategy: { ...eis, allocation_mode: 'tax_allowance' }
+                  })}
+                >Tax Allowance</button>
+              </div>
             </div>
 
-            <div className="input-group">
-              <label>Annual SEIS Investment (50% relief)</label>
-              <NumInput
-                value={eis.annual_seis_amount}
-                onChange={v => onChange({
-                  ...inputs,
-                  eis_strategy: { ...eis, annual_seis_amount: v }
-                })}
-                min={0}
-                max={200000}
-                step={5000}
-              />
-            </div>
+            {isTaxMode ? (
+              <>
+                <div className="input-group">
+                  <label>% of Tax Allowance to Invest <InfoTip text="100% invests enough EIS/SEIS to fully zero out your income tax. Lower percentages invest proportionally less." /></label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <input
+                      type="range"
+                      min={10}
+                      max={100}
+                      step={5}
+                      value={eis.allowance_pct ?? 100}
+                      onChange={e => onChange({
+                        ...inputs,
+                        eis_strategy: { ...eis, allowance_pct: Number(e.target.value) }
+                      })}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ minWidth: '42px', textAlign: 'right', color: 'var(--unlock-accent)', fontWeight: 600 }}>{eis.allowance_pct ?? 100}%</span>
+                  </div>
+                </div>
+
+                {summary && summary.eis_tax_allowance_income_tax > 0 && (
+                  <div className="eis-summary">
+                    <div className="eis-row" style={{ color: '#94A3B8' }}>
+                      <span>Estimated income tax</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_tax_allowance_income_tax).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-row" style={{ color: '#94A3B8' }}>
+                      <span>Max SEIS to zero tax</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_tax_allowance_max_seis).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-row" style={{ color: '#94A3B8' }}>
+                      <span>Max EIS to zero tax</span>
+                      <span>{'\u00A3'}{Math.round(summary.eis_tax_allowance_max_eis).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-divider" />
+                    <div className="eis-row">
+                      <span>SEIS @ {eis.allowance_pct ?? 100}%</span>
+                      <span>{'\u00A3'}{Math.round(seisAmt).toLocaleString('en-GB')}</span>
+                    </div>
+                    <div className="eis-row">
+                      <span>EIS @ {eis.allowance_pct ?? 100}%</span>
+                      <span>{'\u00A3'}{Math.round(eisAmt).toLocaleString('en-GB')}</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="input-group">
+                  <label>Annual EIS Investment (30% relief)</label>
+                  <NumInput
+                    value={eis.annual_eis_amount}
+                    onChange={v => onChange({
+                      ...inputs,
+                      eis_strategy: { ...eis, annual_eis_amount: v }
+                    })}
+                    min={0}
+                    step={5000}
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label>Annual SEIS Investment (50% relief)</label>
+                  <NumInput
+                    value={eis.annual_seis_amount}
+                    onChange={v => onChange({
+                      ...inputs,
+                      eis_strategy: { ...eis, annual_seis_amount: v }
+                    })}
+                    min={0}
+                    max={200000}
+                    step={5000}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="input-group">
               <label>Scenario</label>
@@ -427,7 +501,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
               <div className="eis-summary">
                 <div className="eis-row">
                   <span>Annual allocation</span>
-                  <span>{'\u00A3'}{totalAllocation.toLocaleString('en-GB')}</span>
+                  <span>{'\u00A3'}{Math.round(totalAllocation).toLocaleString('en-GB')}</span>
                 </div>
                 <div className="eis-row" style={{ color: 'var(--unlock-accent)' }}>
                   <span>Income tax relief</span>

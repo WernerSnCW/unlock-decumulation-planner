@@ -99,7 +99,7 @@ function App() {
     try {
       const res = runSimulation(inp, reg ?? assets, taxParams);
       setResult(res);
-      const hasEis = inp.eis_strategy?.enabled && (inp.eis_strategy.annual_eis_amount > 0 || inp.eis_strategy.annual_seis_amount > 0);
+      const hasEis = inp.eis_strategy?.enabled && (inp.eis_strategy.allocation_mode === 'tax_allowance' || inp.eis_strategy.annual_eis_amount > 0 || inp.eis_strategy.annual_seis_amount > 0);
       const hasVct = inp.vct_strategy?.enabled && inp.vct_strategy.annual_vct_amount > 0;
       if (hasEis || hasVct) {
         const altEis = hasEis
