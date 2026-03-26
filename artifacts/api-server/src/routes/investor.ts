@@ -1,16 +1,13 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { assetsTable, simulationSettingsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { investorAuth } from "../middlewares/investor-auth";
 
 const router: IRouter = Router();
 
-// All routes require a valid access code
-router.use(investorAuth);
-
 // GET /investor/profile
-router.get("/investor/profile", (req, res) => {
+router.get("/investor/profile", investorAuth, (req, res) => {
   const inv = req.investor!;
   res.json({
     id: inv.id,
@@ -21,7 +18,7 @@ router.get("/investor/profile", (req, res) => {
 });
 
 // GET /investor/assets
-router.get("/investor/assets", async (req, res) => {
+router.get("/investor/assets", investorAuth, async (req, res) => {
   const rows = await db
     .select()
     .from(assetsTable)
@@ -32,7 +29,7 @@ router.get("/investor/assets", async (req, res) => {
 });
 
 // PUT /investor/assets — replace all assets for this investor
-router.put("/investor/assets", async (req, res) => {
+router.put("/investor/assets", investorAuth, async (req, res) => {
   const assets: Array<{ asset_id: string; [key: string]: unknown }> = req.body;
   if (!Array.isArray(assets)) {
     res.status(400).json({ error: "Body must be an array of assets" });
@@ -63,7 +60,7 @@ router.put("/investor/assets", async (req, res) => {
 });
 
 // GET /investor/settings
-router.get("/investor/settings", async (req, res) => {
+router.get("/investor/settings", investorAuth, async (req, res) => {
   const [row] = await db
     .select()
     .from(simulationSettingsTable)
@@ -74,7 +71,7 @@ router.get("/investor/settings", async (req, res) => {
 });
 
 // PUT /investor/settings — upsert simulation settings
-router.put("/investor/settings", async (req, res) => {
+router.put("/investor/settings", investorAuth, async (req, res) => {
   const data = req.body;
   if (!data || typeof data !== "object") {
     res.status(400).json({ error: "Body must be a settings object" });

@@ -7,11 +7,8 @@ import { generateAccessCode } from "../lib/access-code";
 
 const router: IRouter = Router();
 
-// All admin routes require the admin password
-router.use(adminAuth);
-
 // GET /admin/investors — list all investors
-router.get("/admin/investors", async (_req, res) => {
+router.get("/admin/investors", adminAuth, async (_req, res) => {
   const investors = await db
     .select()
     .from(investorsTable)
@@ -21,7 +18,7 @@ router.get("/admin/investors", async (_req, res) => {
 });
 
 // GET /admin/investors/search?q=term — search by name or email (for code retrieval)
-router.get("/admin/investors/search", async (req, res) => {
+router.get("/admin/investors/search", adminAuth, async (req, res) => {
   const q = req.query.q as string;
   if (!q || q.length < 2) {
     res.status(400).json({ error: "Search term must be at least 2 characters" });
@@ -43,7 +40,7 @@ router.get("/admin/investors/search", async (req, res) => {
 });
 
 // POST /admin/investors — create a new investor
-router.post("/admin/investors", async (req, res) => {
+router.post("/admin/investors", adminAuth, async (req, res) => {
   const { name, email, assets } = req.body;
   if (!name || typeof name !== "string") {
     res.status(400).json({ error: "name is required" });
@@ -89,7 +86,7 @@ router.post("/admin/investors", async (req, res) => {
 });
 
 // DELETE /admin/investors/:id — delete an investor (cascades to assets & settings)
-router.delete("/admin/investors/:id", async (req, res) => {
+router.delete("/admin/investors/:id", adminAuth, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid investor id" });
