@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { usePlanner } from '../context/PlannerContext';
 import AssetEditor from '../components/AssetEditor';
+import CsvImportWizard from '../components/CsvImportWizard';
 import mockRegister from '../data/mockRegister.json';
 import type { Asset } from '../engine/decumulation';
 
@@ -9,6 +10,7 @@ const defaultRegister = mockRegister as Asset[];
 export default function PortfolioPage() {
   const { assets, updateAssets } = usePlanner();
   const [editorOpen, setEditorOpen] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
 
   const totalValue = assets.reduce((sum, a) => sum + (a.current_value ?? 0), 0);
   const totalIncome = assets.reduce((sum, a) => sum + (a.income_generated ?? 0), 0);
@@ -26,12 +28,22 @@ export default function PortfolioPage() {
             onClose={() => setEditorOpen(false)}
           />
         )}
+        {csvImportOpen && (
+          <CsvImportWizard
+            existingAssets={assets}
+            onImport={updateAssets}
+            onClose={() => setCsvImportOpen(false)}
+          />
+        )}
         <div className="portfolio-empty">
           <h2>No assets in your portfolio</h2>
           <p>Add your assets to get started with planning. You can add individual assets or load a sample portfolio.</p>
           <div className="portfolio-empty-actions">
             <button className="portfolio-action-btn primary" onClick={() => setEditorOpen(true)}>
               + Add Assets
+            </button>
+            <button className="portfolio-action-btn" onClick={() => setCsvImportOpen(true)}>
+              Import CSV
             </button>
             <button className="portfolio-action-btn" onClick={() => {
               updateAssets(defaultRegister.map(a => ({ ...a })));
@@ -54,6 +66,13 @@ export default function PortfolioPage() {
           onClose={() => setEditorOpen(false)}
         />
       )}
+      {csvImportOpen && (
+        <CsvImportWizard
+          existingAssets={assets}
+          onImport={updateAssets}
+          onClose={() => setCsvImportOpen(false)}
+        />
+      )}
 
       {/* Summary cards */}
       <div className="portfolio-summary">
@@ -72,6 +91,9 @@ export default function PortfolioPage() {
         <div className="summary-card summary-card-action">
           <button className="portfolio-action-btn primary" onClick={() => setEditorOpen(true)}>
             Edit Assets
+          </button>
+          <button className="portfolio-action-btn" onClick={() => setCsvImportOpen(true)}>
+            Import CSV
           </button>
         </div>
       </div>
