@@ -4,26 +4,9 @@ import { PlannerProvider, usePlanner } from '../context/PlannerContext';
 import LearningCentre from '../components/LearningCentre';
 import PortfolioPage from './PortfolioPage';
 import PlanningPage from './PlanningPage';
+import AnalysisPage from './AnalysisPage';
+import ReportPage from './ReportPage';
 import { useState } from 'react';
-
-// Placeholder pages — will be replaced in Phase 4b
-function AnalysisPlaceholder() {
-  return (
-    <div className="page-placeholder">
-      <h2>Analysis</h2>
-      <p>Charts, action plan, and detailed results coming in the next phase.</p>
-    </div>
-  );
-}
-
-function ReportPlaceholder() {
-  return (
-    <div className="page-placeholder">
-      <h2>Report</h2>
-      <p>Summary and PDF export coming in the next phase.</p>
-    </div>
-  );
-}
 
 const NAV_ITEMS = [
   { path: '/app/portfolio', label: 'Portfolio' },
@@ -100,8 +83,8 @@ function AppShellInner() {
         <Switch>
           <Route path="/app/portfolio" component={PortfolioPage} />
           <Route path="/app/planning" component={PlanningPage} />
-          <Route path="/app/analysis" component={AnalysisPlaceholder} />
-          <Route path="/app/report" component={ReportPlaceholder} />
+          <Route path="/app/analysis" component={AnalysisPage} />
+          <Route path="/app/report" component={ReportPage} />
           <Route>
             <Redirect to="/app/portfolio" />
           </Route>
