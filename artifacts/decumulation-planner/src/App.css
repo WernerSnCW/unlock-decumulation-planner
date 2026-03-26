@@ -2999,6 +2999,20 @@ body {
   cursor: default;
 }
 
+.admin-back-link {
+  display: inline-block;
+  margin-top: 16px;
+  color: var(--unlock-muted);
+  font-size: 13px;
+  text-decoration: none;
+  opacity: 0.7;
+}
+
+.admin-back-link:hover {
+  opacity: 1;
+  color: var(--unlock-text);
+}
+
 .admin-page {
   max-width: 960px;
   margin: 0 auto;

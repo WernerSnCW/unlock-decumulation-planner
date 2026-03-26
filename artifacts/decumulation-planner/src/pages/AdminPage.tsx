@@ -155,6 +155,7 @@ export default function AdminPage() {
             <button type="submit" disabled={!password}>Sign in</button>
           </form>
           {authError && <div className="admin-error">{authError}</div>}
+          <a href="/" className="admin-back-link">Back to main page</a>
         </div>
       </div>
     );
