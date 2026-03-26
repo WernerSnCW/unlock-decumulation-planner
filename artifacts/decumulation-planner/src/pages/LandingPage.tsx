@@ -85,6 +85,10 @@ export default function LandingPage() {
             Your access code was provided by your financial advisor.
           </p>
         </div>
+        {/* Subtle admin link */}
+        <div className="landing-footer">
+          <a href="/admin" className="admin-link">Admin</a>
+        </div>
       </div>
     </div>
   );
