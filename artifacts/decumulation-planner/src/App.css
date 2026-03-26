@@ -2513,3 +2513,117 @@ body {
   margin-top: 12px;
   opacity: 0.7;
 }
+
+/* ───────────────────────── App Shell Navigation ───────────────────────── */
+
+.app-nav {
+  display: flex;
+  gap: 4px;
+  margin-left: 24px;
+}
+
+.nav-link {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--unlock-muted);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.nav-link:hover {
+  color: var(--unlock-text);
+  background: rgba(234, 242, 247, 0.06);
+}
+
+.nav-link-active {
+  color: var(--unlock-accent);
+  background: rgba(0, 187, 119, 0.1);
+}
+
+.header-funded {
+  display: flex;
+  align-items: center;
+}
+
+.funded-badge {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.funded-ok {
+  background: rgba(0, 187, 119, 0.12);
+  color: var(--tone-success);
+}
+
+.funded-short {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--tone-error);
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-name {
+  font-size: 14px;
+  color: var(--unlock-muted);
+  font-weight: 500;
+}
+
+.logout-btn {
+  background: none;
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-sm);
+  color: var(--unlock-muted);
+  font-size: 13px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.logout-btn:hover {
+  color: var(--unlock-text);
+  border-color: rgba(234, 242, 247, 0.25);
+}
+
+.app-body-full {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--unlock-muted);
+  font-size: 16px;
+}
+
+.page-placeholder {
+  max-width: 600px;
+  margin: 80px auto;
+  text-align: center;
+}
+
+.page-placeholder h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--unlock-text);
+  margin-bottom: 12px;
+}
+
+.page-placeholder p {
+  color: var(--unlock-muted);
+  font-size: 15px;
+}

@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { Router, Route, Switch, Redirect } from "wouter";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LandingPage from "./pages/LandingPage";
-import App from "./App";
+import AppShell from "./pages/AppShell";
 import "./index.css";
 import "./App.css";
 
@@ -40,14 +40,14 @@ function Root() {
           <Route path="/">
             <LandingPage />
           </Route>
-          <Route path="/app" nest>
+          <Route path="/app/:rest*">
             <ProtectedRoute>
-              <App />
+              <AppShell />
             </ProtectedRoute>
           </Route>
           <Route path="/app">
             <ProtectedRoute>
-              <App />
+              <AppShell />
             </ProtectedRoute>
           </Route>
           <Route>
