@@ -2937,6 +2937,136 @@ body {
   gap: 24px;
 }
 
+/* ───────────────────────── Planning Page V2 ───────────────────────── */
+
+.planning-page-v2 {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Settings bar */
+.settings-bar {
+  background: var(--unlock-surface);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow 0.25s;
+}
+
+.settings-bar.open {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.settings-bar-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--unlock-text);
+  text-align: left;
+}
+
+.settings-bar-toggle:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settings-bar-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-bar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--unlock-text);
+  white-space: nowrap;
+}
+
+.settings-bar-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-chip {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--unlock-bg);
+  color: var(--unlock-muted);
+  white-space: nowrap;
+  border: 1px solid var(--unlock-border);
+}
+
+.settings-chip.accent {
+  background: rgba(0, 187, 119, 0.1);
+  color: var(--unlock-accent);
+  border-color: rgba(0, 187, 119, 0.2);
+}
+
+.settings-bar-chevron {
+  font-size: 10px;
+  color: var(--unlock-muted);
+  transition: transform 0.25s;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.settings-bar-chevron.open {
+  transform: rotate(180deg);
+}
+
+.settings-bar-body {
+  border-top: 1px solid var(--unlock-border);
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Override sidebar styles when inside settings bar */
+.settings-bar-body .sidebar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 24px;
+  max-width: none;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+.settings-bar-body .section-title {
+  grid-column: 1 / -1;
+}
+
+.settings-bar-body .divider {
+  grid-column: 1 / -1;
+}
+
+.settings-bar-body .collapsible-section {
+  grid-column: 1 / -1;
+}
+
+.planning-main-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 /* ───────────────────────── Analysis Page ───────────────────────── */
 
 .analysis-page {
