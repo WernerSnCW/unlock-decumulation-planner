@@ -2329,16 +2329,51 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--unlock-bg);
-  padding: 40px 24px;
+  padding: 60px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient background glow */
+.landing-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.landing-glow-1 {
+  width: 600px;
+  height: 600px;
+  background: var(--unlock-accent);
+  top: -200px;
+  right: -100px;
+}
+
+.landing-glow-2 {
+  width: 500px;
+  height: 500px;
+  background: #3B82F6;
+  bottom: -150px;
+  left: -100px;
 }
 
 .landing-content {
-  max-width: 640px;
+  max-width: 700px;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 48px;
+  gap: 56px;
+  position: relative;
+  z-index: 1;
+  animation: landing-fadein 0.6s ease-out;
+}
+
+@keyframes landing-fadein {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .landing-hero {
@@ -2346,40 +2381,49 @@ body {
 }
 
 .landing-logo {
-  width: 56px;
-  height: 56px;
-  background: var(--unlock-accent);
-  border-radius: 14px;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--unlock-accent) 0%, #00d68f 100%);
+  border-radius: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  color: var(--unlock-bg);
-  font-size: 28px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 187, 119, 0.2);
+}
+
+.landing-logo-letter {
+  font-weight: 800;
+  color: #fff;
+  font-size: 32px;
+  line-height: 1;
 }
 
 .landing-title {
-  font-size: 42px;
+  font-size: 52px;
   font-weight: 700;
   color: var(--unlock-text);
-  letter-spacing: -1px;
+  letter-spacing: -1.5px;
   line-height: 1;
 }
 
 .landing-subtitle {
   font-size: 18px;
   color: var(--unlock-muted);
-  margin-top: 8px;
+  margin-top: 10px;
   font-weight: 400;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 13px;
 }
 
 .landing-message {
   text-align: center;
+  max-width: 560px;
 }
 
 .landing-message h2 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--unlock-text);
   line-height: 1.4;
@@ -2389,14 +2433,14 @@ body {
 .landing-message p {
   color: var(--unlock-muted);
   font-size: 15px;
-  line-height: 1.7;
-  margin-bottom: 12px;
+  line-height: 1.8;
+  margin-bottom: 0;
 }
 
 .landing-benefits {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -2404,31 +2448,85 @@ body {
   background: var(--unlock-surface);
   border: 1px solid var(--unlock-border);
   border-radius: var(--radius-lg);
-  padding: 24px 16px;
+  padding: 28px 20px;
   text-align: center;
+  transition: border-color 0.25s, transform 0.25s;
+}
+
+.landing-benefit:hover {
+  border-color: rgba(0, 187, 119, 0.25);
+  transform: translateY(-2px);
 }
 
 .benefit-icon {
-  width: 40px;
-  height: 40px;
-  background: rgba(0, 187, 119, 0.12);
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 187, 119, 0.1);
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   color: var(--unlock-accent);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .landing-benefit h3 {
   font-size: 14px;
   font-weight: 600;
   color: var(--unlock-text);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .landing-benefit p {
+  font-size: 13px;
+  color: var(--unlock-muted);
+  line-height: 1.6;
+}
+
+/* How it works */
+.landing-how {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.landing-how-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--unlock-border);
+}
+
+.landing-how-step:last-child {
+  border-bottom: none;
+}
+
+.how-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--unlock-accent);
+  color: var(--unlock-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.landing-how-step h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--unlock-text);
+  margin-bottom: 4px;
+}
+
+.landing-how-step p {
   font-size: 13px;
   color: var(--unlock-muted);
   line-height: 1.5;
@@ -2438,7 +2536,7 @@ body {
   background: var(--unlock-surface);
   border: 1px solid var(--unlock-border);
   border-radius: var(--radius-lg);
-  padding: 32px;
+  padding: 36px;
   width: 100%;
   text-align: center;
 }
