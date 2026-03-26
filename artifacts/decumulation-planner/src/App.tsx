@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import './App.css';
 import type { SimulationInputs, SimulationResult, OptimiserResult } from './engine/decumulation';
 import { runSimulation, runOptimiser, STRATEGY_PRESETS, DEFAULT_MECHANISMS, DEFAULT_EIS_STRATEGY, DEFAULT_VCT_STRATEGY } from './engine/decumulation';
 import type { Asset } from './engine/decumulation';
