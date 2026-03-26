@@ -3,6 +3,7 @@ import { Router, Route, Switch, Redirect } from "wouter";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LandingPage from "./pages/LandingPage";
 import AppShell from "./pages/AppShell";
+import AdminPage from "./pages/AdminPage";
 import "./index.css";
 import "./App.css";
 
@@ -49,6 +50,9 @@ function Root() {
             <ProtectedRoute>
               <AppShell />
             </ProtectedRoute>
+          </Route>
+          <Route path="/admin">
+            <AdminPage />
           </Route>
           <Route>
             <Redirect to="/" />
