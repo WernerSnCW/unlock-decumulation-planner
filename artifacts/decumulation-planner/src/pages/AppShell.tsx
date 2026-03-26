@@ -1,30 +1,12 @@
 import { Route, Switch, useLocation, Link, Redirect } from 'wouter';
 import { useAuth } from '../context/AuthContext';
 import { PlannerProvider, usePlanner } from '../context/PlannerContext';
-import FundedYearsIndicator from '../components/FundedYearsIndicator';
 import LearningCentre from '../components/LearningCentre';
+import PortfolioPage from './PortfolioPage';
+import PlanningPage from './PlanningPage';
 import { useState } from 'react';
 
-// Placeholder pages — will be replaced in Phase 4a/4b
-function PortfolioPlaceholder() {
-  const { assets } = usePlanner();
-  return (
-    <div className="page-placeholder">
-      <h2>Portfolio</h2>
-      <p>{assets.length} assets loaded. Full editor coming in the next phase.</p>
-    </div>
-  );
-}
-
-function PlanningPlaceholder() {
-  return (
-    <div className="page-placeholder">
-      <h2>Planning</h2>
-      <p>Income targets, strategy, and optimiser coming in the next phase.</p>
-    </div>
-  );
-}
-
+// Placeholder pages — will be replaced in Phase 4b
 function AnalysisPlaceholder() {
   return (
     <div className="page-placeholder">
@@ -116,8 +98,8 @@ function AppShellInner() {
 
       <div className="app-body-full">
         <Switch>
-          <Route path="/app/portfolio" component={PortfolioPlaceholder} />
-          <Route path="/app/planning" component={PlanningPlaceholder} />
+          <Route path="/app/portfolio" component={PortfolioPage} />
+          <Route path="/app/planning" component={PlanningPage} />
           <Route path="/app/analysis" component={AnalysisPlaceholder} />
           <Route path="/app/report" component={ReportPlaceholder} />
           <Route>

@@ -2627,3 +2627,197 @@ body {
   color: var(--unlock-muted);
   font-size: 15px;
 }
+
+/* ───────────────────────── Portfolio Page ───────────────────────── */
+
+.portfolio-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.portfolio-empty {
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.portfolio-empty h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--unlock-text);
+  margin-bottom: 12px;
+}
+
+.portfolio-empty p {
+  color: var(--unlock-muted);
+  font-size: 15px;
+  max-width: 420px;
+  margin: 0 auto 24px;
+  line-height: 1.6;
+}
+
+.portfolio-empty-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.portfolio-action-btn {
+  background: var(--unlock-surface);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-md);
+  color: var(--unlock-text);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.portfolio-action-btn:hover {
+  background: rgba(234, 242, 247, 0.06);
+  border-color: rgba(234, 242, 247, 0.2);
+}
+
+.portfolio-action-btn.primary {
+  background: var(--unlock-accent);
+  color: var(--unlock-bg);
+  border-color: var(--unlock-accent);
+}
+
+.portfolio-action-btn.primary:hover {
+  opacity: 0.9;
+}
+
+.portfolio-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: var(--unlock-surface);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-card-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.summary-label {
+  font-size: 13px;
+  color: var(--unlock-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--unlock-text);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.portfolio-table-wrap {
+  background: var(--unlock-surface);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.portfolio-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.portfolio-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--unlock-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--unlock-border);
+}
+
+.portfolio-table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--unlock-text);
+  border-bottom: 1px solid var(--unlock-border);
+}
+
+.portfolio-table tr:last-child td {
+  border-bottom: none;
+}
+
+.portfolio-table tr:hover td {
+  background: rgba(234, 242, 247, 0.03);
+}
+
+.portfolio-table .num {
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.portfolio-table th.num {
+  text-align: right;
+}
+
+.asset-label {
+  font-weight: 500;
+}
+
+.asset-class-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-cash { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+.badge-isa { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+.badge-pension { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.badge-property_investment { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.badge-property_residential { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.badge-vct { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+.badge-eis { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+.badge-aim_shares { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
+
+/* ───────────────────────── Planning Page ───────────────────────── */
+
+.planning-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.planning-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.planning-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.planning-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
