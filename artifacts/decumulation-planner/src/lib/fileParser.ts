@@ -99,23 +99,50 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
 
 /* ─── PDF parsing ─── */
 
+/**
+ * Load pdf.js from CDN at runtime — avoids Vite bundler/worker issues entirely.
+ * The library is loaded once and cached on window.__pdfjsLib.
+ */
+async function loadPdfJs(): Promise<any> {
+  if ((window as any).__pdfjsLib) return (window as any).__pdfjsLib;
+
+  const PDFJS_VERSION = '4.4.168';
+  const cdnBase = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}`;
+
+  // Load the main library
+  await new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `${cdnBase}/pdf.min.mjs`;
+    script.type = 'module';
+    // Fallback to non-module version
+    script.onerror = () => {
+      const script2 = document.createElement('script');
+      script2.src = `${cdnBase}/pdf.min.js`;
+      script2.onload = () => resolve();
+      script2.onerror = () => reject(new Error('Failed to load pdf.js from CDN'));
+      document.head.appendChild(script2);
+    };
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+
+  // Wait for pdfjsLib to be available on window
+  const pdfjsLib = (window as any).pdfjsLib;
+  if (!pdfjsLib) {
+    throw new Error('pdf.js loaded but pdfjsLib not found on window');
+  }
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.js`;
+  (window as any).__pdfjsLib = pdfjsLib;
+  return pdfjsLib;
+}
+
 export async function parsePdfFile(file: File): Promise<ParseResult> {
   try {
-    const pdfjsLib = await import('pdfjs-dist');
-
-    // Disable worker — runs PDF parsing on the main thread.
-    // Avoids Vite/bundler issues with worker file resolution.
-    // Fine for portfolio statements (typically < 10 pages).
-    if (typeof window !== 'undefined') {
-      (pdfjsLib as any).GlobalWorkerOptions.workerSrc = '';
-    }
+    const pdfjsLib = await loadPdfJs();
 
     const buffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({
-      data: new Uint8Array(buffer),
-      useWorkerFetch: false,
-      isEvalSupported: false,
-    }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
     const pageCount = pdf.numPages;
 
     // Extract text from all pages
