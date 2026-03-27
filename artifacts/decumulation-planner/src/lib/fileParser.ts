@@ -91,7 +91,20 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
       ? `Merged ${allRows.length} rows from ${sheetsUsed.length} sheets: ${sheetsUsed.join(', ')}.`
       : undefined;
 
-    return { success: true, headers, rows, format: 'excel', warning };
+    // Generate plain text dump for AI extraction fallback
+    // Use only the latest sheet(s) to avoid sending huge historical data
+    const latestSheets = workbook.SheetNames.slice(-3); // last 3 sheets
+    const textParts: string[] = [];
+    for (const sn of latestSheets) {
+      const sheet = workbook.Sheets[sn];
+      const txt = XLSX.utils.sheet_to_csv(sheet, { FS: '\t', RS: '\n' });
+      if (txt.trim()) {
+        textParts.push(`--- Sheet: ${sn} ---\n${txt}`);
+      }
+    }
+    const rawText = textParts.join('\n\n');
+
+    return { success: true, headers, rows, format: 'excel', warning, rawText };
   } catch (err: any) {
     return { success: false, headers: [], rows: [], format: 'excel', error: `Excel parse error: ${err.message ?? 'Unknown error'}` };
   }

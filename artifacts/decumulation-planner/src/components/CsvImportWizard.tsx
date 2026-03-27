@@ -10,6 +10,7 @@ import {
   type ValidatedRow,
 } from '../lib/csvImportUtils';
 import { parseFile, type ParseResult } from '../lib/fileParser';
+import { useAuth } from '../context/AuthContext';
 
 interface Props {
   existingAssets: Asset[];
@@ -28,6 +29,15 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
 export default function CsvImportWizard({ existingAssets, onImport, onClose }: Props) {
   const [step, setStep] = useState<Step>('upload');
   const fileRef = useRef<HTMLInputElement>(null);
+  const { investor } = useAuth();
+
+  // AI extraction state
+  const [aiExtracting, setAiExtracting] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiNotes, setAiNotes] = useState('');
+  const [aiConfidence, setAiConfidence] = useState<string>('');
+  const [aiIssues, setAiIssues] = useState<string[]>([]);
+  const [fileName, setFileName] = useState('');
 
   // Upload state
   const [rawHeaders, setRawHeaders] = useState<string[]>([]);
@@ -52,7 +62,12 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
     setParseError('');
     setParseWarning('');
     setPdfRawText('');
+    setAiError('');
+    setAiNotes('');
+    setAiConfidence('');
+    setAiIssues([]);
     setIsParsing(true);
+    setFileName(file.name);
 
     const result = await parseFile(file);
     setIsParsing(false);
@@ -67,11 +82,97 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
     if (result.warning) setParseWarning(result.warning);
     if (result.rawText) setPdfRawText(result.rawText);
 
-    setRawHeaders(result.headers);
-    setRawRows(result.rows);
-    setMapping(autoDetectMapping(result.headers));
-    setStep('map');
+    // Try auto-mapping
+    const autoMapping = autoDetectMapping(result.headers);
+    const requiredMappedCount = TARGET_FIELDS.filter(f => f.required && autoMapping[f.key]).length;
+    const totalRequired = TARGET_FIELDS.filter(f => f.required).length;
+
+    // If auto-mapping found all required fields, go to map step
+    if (requiredMappedCount === totalRequired) {
+      setRawHeaders(result.headers);
+      setRawRows(result.rows);
+      setMapping(autoMapping);
+      setStep('map');
+      return;
+    }
+
+    // Auto-mapping is poor — offer AI extraction if we have raw text
+    const textForAi = result.rawText || result.rows.map(r => Object.values(r).join('\t')).join('\n');
+    if (textForAi.trim().length > 20) {
+      // Auto-trigger AI extraction
+      await runAiExtraction(textForAi, file.name);
+    } else {
+      // Fall through to manual mapping anyway
+      setRawHeaders(result.headers);
+      setRawRows(result.rows);
+      setMapping(autoMapping);
+      setStep('map');
+    }
   }, []);
+
+  const runAiExtraction = async (text: string, fname: string) => {
+    setAiExtracting(true);
+    setAiError('');
+    setStep('upload'); // Stay on upload step while extracting
+
+    try {
+      const accessCode = investor?.accessCode ?? '';
+      const res = await fetch('/api/investor/extract-assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Access-Code': accessCode,
+        },
+        body: JSON.stringify({ text: text.slice(0, 100000), filename: fname }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'AI extraction failed' }));
+        setAiError(err.error ?? 'AI extraction failed. Try CSV import instead.');
+        setAiExtracting(false);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!data.assets || data.assets.length === 0) {
+        setAiError('AI could not identify any assets in this file. Try reformatting as CSV.');
+        setAiExtracting(false);
+        return;
+      }
+
+      if (data.notes) setAiNotes(data.notes);
+      if (data.confidence) setAiConfidence(data.confidence);
+      if (data.issues) setAiIssues(data.issues);
+
+      // Convert AI assets to rows for the standard validation flow
+      const aiHeaders = Object.keys(data.assets[0]).filter(k => k !== 'owner' && k !== 'confidence');
+      const aiRows = data.assets.map((a: any) => {
+        const row: Record<string, string> = {};
+        for (const key of aiHeaders) {
+          const val = a[key];
+          row[key] = val != null ? String(val) : '';
+        }
+        // Add owner as a note if present
+        if (a.owner) row['owner'] = a.owner;
+        return row;
+      });
+
+      // Add owner to headers if any asset has it
+      if (data.assets.some((a: any) => a.owner)) {
+        aiHeaders.push('owner');
+      }
+
+      setRawHeaders(aiHeaders);
+      setRawRows(aiRows);
+      setMapping(autoDetectMapping(aiHeaders));
+      setAiExtracting(false);
+      setStep('map');
+    } catch (err: any) {
+      setAiError(`AI extraction error: ${err.message ?? 'Unknown error'}`);
+      setAiExtracting(false);
+    }
+  };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -254,11 +355,15 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
                   onChange={onFileChange}
                   style={{ display: 'none' }}
                 />
-                {isParsing ? (
+                {isParsing || aiExtracting ? (
                   <>
                     <div className="csv-dropzone-icon parsing-icon">...</div>
-                    <p className="csv-dropzone-title">Processing file...</p>
-                    <p className="csv-dropzone-sub">Extracting asset data</p>
+                    <p className="csv-dropzone-title">
+                      {aiExtracting ? 'AI is analysing your file...' : 'Processing file...'}
+                    </p>
+                    <p className="csv-dropzone-sub">
+                      {aiExtracting ? 'Identifying assets, values, and types' : 'Extracting data'}
+                    </p>
                   </>
                 ) : (
                   <>
@@ -272,9 +377,9 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
                     </p>
                   </>
                 )}
-                {parseError && (
+                {(parseError || aiError) && (
                   <div className="csv-error-block">
-                    <p className="csv-error">{parseError}</p>
+                    <p className="csv-error">{parseError || aiError}</p>
                     {pdfRawText && (
                       <details className="csv-raw-text-details">
                         <summary>Show extracted text</summary>
@@ -283,7 +388,7 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
                     )}
                   </div>
                 )}
-                {parseWarning && !parseError && (
+                {parseWarning && !parseError && !aiError && (
                   <p className="csv-warning">{parseWarning}</p>
                 )}
               </div>
@@ -344,6 +449,21 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
             <>
               {parseWarning && (
                 <div className="csv-warning-banner">{parseWarning}</div>
+              )}
+              {aiConfidence && (
+                <div className={`csv-ai-banner csv-ai-${aiConfidence}`}>
+                  <div className="csv-ai-header">
+                    <span className="csv-ai-badge">AI Extracted</span>
+                    <span className={`csv-ai-confidence`}>Confidence: {aiConfidence}</span>
+                  </div>
+                  {aiNotes && <p className="csv-ai-notes">{aiNotes}</p>}
+                  {aiIssues.length > 0 && (
+                    <ul className="csv-ai-issues">
+                      {aiIssues.map((issue, i) => <li key={i}>{issue}</li>)}
+                    </ul>
+                  )}
+                  <p className="csv-ai-disclaimer">Please review all values carefully before importing.</p>
+                </div>
               )}
               {/* Preview table */}
               <div className="csv-preview-wrap">
