@@ -3183,7 +3183,7 @@ body {
 .settings-bar-body .sidebar {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px 24px;
+  gap: 20px 32px;
   max-width: none;
   width: 100%;
   padding: 0;
@@ -3202,6 +3202,39 @@ body {
 
 .settings-bar-body .collapsible-section {
   grid-column: 1 / -1;
+}
+
+/* Sections with sliders or wide content need full width */
+.settings-bar-body .collapsible-section:has([id="section-drawdown-priorities"]) {
+  grid-column: 1 / -1;
+}
+
+.settings-bar-body .collapsible-section:has([id="section-eis-programme"]) {
+  grid-column: 1 / -1;
+}
+
+.settings-bar-body .collapsible-section:has([id="section-vct-programme"]) {
+  grid-column: 1 / -1;
+}
+
+/* Ensure sliders have breathing room inside the grid */
+.settings-bar-body .input-group {
+  min-width: 0;
+}
+
+.settings-bar-body .slider-row {
+  padding-right: 8px;
+}
+
+.settings-bar-body .strategy-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Give toggle rows more vertical space */
+.settings-bar-body .toggle-row {
+  padding: 6px 0;
 }
 
 .planning-main-v2 {
