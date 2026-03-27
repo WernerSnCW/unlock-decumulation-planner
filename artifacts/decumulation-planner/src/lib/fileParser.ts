@@ -55,23 +55,30 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
       return { success: false, headers: [], rows: [], format: 'excel', error: 'The workbook contains no sheets.' };
     }
 
-    // Use first sheet
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+    // Read all sheets and merge rows with a unified header set
+    const allHeaders = new Set<string>();
+    const allRows: Record<string, any>[] = [];
+    const sheetsUsed: string[] = [];
 
-    // Convert to JSON with header detection
-    const rawData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      const rawData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+      if (rawData.length === 0) continue;
 
-    if (rawData.length === 0) {
-      return { success: false, headers: [], rows: [], format: 'excel', error: 'The sheet appears to be empty.' };
+      const sheetHeaders = Object.keys(rawData[0]);
+      sheetHeaders.forEach(h => allHeaders.add(h));
+      allRows.push(...rawData);
+      sheetsUsed.push(sheetName);
     }
 
-    // Try to detect header row — sometimes first rows are metadata
-    // Look for a row that has multiple non-empty string values
-    const headers = Object.keys(rawData[0]);
+    if (allRows.length === 0) {
+      return { success: false, headers: [], rows: [], format: 'excel', error: 'All sheets appear to be empty.' };
+    }
+
+    const headers = [...allHeaders];
 
     // Convert all values to strings for consistency with CSV flow
-    const rows = rawData.map(row => {
+    const rows = allRows.map(row => {
       const stringRow: Record<string, string> = {};
       for (const key of headers) {
         const val = row[key];
@@ -80,8 +87,8 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
       return stringRow;
     });
 
-    const warning = workbook.SheetNames.length > 1
-      ? `Workbook has ${workbook.SheetNames.length} sheets — only "${sheetName}" was imported.`
+    const warning = sheetsUsed.length > 1
+      ? `Merged ${allRows.length} rows from ${sheetsUsed.length} sheets: ${sheetsUsed.join(', ')}.`
       : undefined;
 
     return { success: true, headers, rows, format: 'excel', warning };
