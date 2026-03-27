@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { usePlanner } from '../context/PlannerContext';
 import AssetEditor from '../components/AssetEditor';
 import CsvImportWizard from '../components/CsvImportWizard';
+import DataCompletenessPanel from '../components/DataCompletenessPanel';
 import mockRegister from '../data/mockRegister.json';
 import type { Asset } from '../engine/decumulation';
 
@@ -137,6 +138,8 @@ export default function PortfolioPage() {
           </tbody>
         </table>
       </div>
+
+      <DataCompletenessPanel assets={assets} />
 
       <div className="next-step">
         <Link href="/app/planning" className="next-step-btn">

@@ -3250,6 +3250,232 @@ body {
   gap: 24px;
 }
 
+/* ───────────────────────── Data Completeness Panel ───────────────────────── */
+
+.completeness-panel {
+  background: var(--unlock-surface);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.completeness-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--unlock-text);
+}
+
+.completeness-header:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.completeness-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.completeness-ring {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--ring-color) var(--ring-pct),
+    rgba(255, 255, 255, 0.08) var(--ring-pct)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.completeness-ring::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--unlock-surface);
+}
+
+.completeness-ring span {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--unlock-text);
+}
+
+.completeness-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--unlock-text);
+  display: block;
+}
+
+.completeness-subtitle {
+  font-size: 12px;
+  color: var(--unlock-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.completeness-body {
+  border-top: 1px solid var(--unlock-border);
+  padding: 16px 20px;
+}
+
+/* Observations */
+.completeness-observations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.completeness-obs {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.completeness-obs-info {
+  background: rgba(59, 130, 246, 0.08);
+  color: #93c5fd;
+}
+
+.completeness-obs-warning {
+  background: rgba(245, 158, 11, 0.08);
+  color: #fcd34d;
+}
+
+.completeness-obs-success {
+  background: rgba(0, 187, 119, 0.08);
+  color: var(--unlock-accent);
+}
+
+.obs-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+/* Per-asset rows */
+.completeness-assets {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.completeness-asset {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.completeness-asset-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--unlock-text);
+  font-size: 13px;
+  text-align: left;
+}
+
+.completeness-asset-row:disabled {
+  cursor: default;
+}
+
+.completeness-asset-row:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.completeness-asset-bar-wrap {
+  width: 60px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.completeness-asset-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.completeness-asset-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.completeness-asset-value {
+  color: var(--unlock-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.completeness-asset-score {
+  font-weight: 600;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+.completeness-expand {
+  font-size: 10px;
+  color: var(--unlock-muted);
+  transition: transform 0.2s;
+}
+
+.completeness-expand.open {
+  transform: rotate(90deg);
+}
+
+/* Missing field details */
+.completeness-missing {
+  padding: 4px 12px 12px 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.completeness-missing-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.missing-field {
+  font-weight: 500;
+  color: #F59E0B;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.missing-consequence {
+  color: var(--unlock-muted);
+  line-height: 1.4;
+}
+
 /* ───────────────────────── Analysis Page ───────────────────────── */
 
 .analysis-page {
