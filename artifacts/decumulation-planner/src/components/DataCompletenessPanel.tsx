@@ -1,135 +1,8 @@
 import { useState } from 'react';
 import type { Asset } from '../engine/decumulation';
+import { FIELD_CHECKS, assessAsset, type FieldCheck } from '../lib/completenessChecks';
 
-/* ─── Field checks: what matters and why ─── */
-
-interface FieldCheck {
-  key: string;
-  label: string;
-  weight: number; // 0–1, how much this field matters for accuracy
-  appliesTo: (a: Asset) => boolean;
-  isMissing: (a: Asset) => boolean;
-  consequence: string;
-}
-
-const FIELD_CHECKS: FieldCheck[] = [
-  {
-    key: 'assumed_growth_rate',
-    label: 'Growth Rate',
-    weight: 0.25,
-    appliesTo: () => true,
-    isMissing: (a) => !a.assumed_growth_rate || a.assumed_growth_rate === 0,
-    consequence: 'Projection will assume 0% growth — portfolio value will shrink each year as income is drawn.',
-  },
-  {
-    key: 'acquisition_cost',
-    label: 'Acquisition Cost',
-    weight: 0.20,
-    appliesTo: (a) => ['isa', 'property_investment', 'property_residential', 'aim_shares', 'vct', 'eis'].includes(a.asset_class) || a.wrapper_type === 'unwrapped',
-    isMissing: (a) => a.acquisition_cost == null || a.acquisition_cost === 0,
-    consequence: 'CGT will assume zero cost basis — maximum possible taxable gain on disposal.',
-  },
-  {
-    key: 'income_generated',
-    label: 'Annual Income',
-    weight: 0.15,
-    appliesTo: (a) => ['property_investment', 'vct', 'cash'].includes(a.asset_class),
-    isMissing: (a) => !a.income_generated || a.income_generated === 0,
-    consequence: 'No income will be modelled from this asset — more drawdown from other assets needed.',
-  },
-  {
-    key: 'is_iht_exempt',
-    label: 'IHT Exempt Status',
-    weight: 0.15,
-    appliesTo: (a) => ['eis', 'aim_shares'].includes(a.asset_class),
-    isMissing: (a) => a.is_iht_exempt !== true,
-    consequence: 'Asset will be included in IHT-liable estate — BPR relief will not be applied.',
-  },
-  {
-    key: 'wrapper_type',
-    label: 'Wrapper Type',
-    weight: 0.10,
-    appliesTo: () => true,
-    isMissing: (a) => !a.wrapper_type,
-    consequence: 'Tax treatment will default to unwrapped — ISA and pension benefits ignored.',
-  },
-  {
-    key: 'pension_type',
-    label: 'Pension Type',
-    weight: 0.10,
-    appliesTo: (a) => a.asset_class === 'pension',
-    isMissing: (a) => !a.pension_type,
-    consequence: 'Pension type will default to SIPP — may affect drawdown rules if this is a DB pension.',
-  },
-  {
-    key: 'tax_relief_claimed',
-    label: 'Tax Relief Claimed',
-    weight: 0.08,
-    appliesTo: (a) => ['vct', 'eis'].includes(a.asset_class),
-    isMissing: (a) => !a.tax_relief_claimed || a.tax_relief_claimed === 0,
-    consequence: 'No prior relief will be recorded — net cost calculations will overstate the true cost.',
-  },
-  {
-    key: 'original_subscription_amount',
-    label: 'Original Subscription',
-    weight: 0.08,
-    appliesTo: (a) => ['vct', 'eis'].includes(a.asset_class),
-    isMissing: (a) => !a.original_subscription_amount,
-    consequence: 'Relief entitlement cannot be validated against the original investment amount.',
-  },
-  {
-    key: 'estimated_disposal_cost_pct',
-    label: 'Disposal Cost %',
-    weight: 0.05,
-    appliesTo: (a) => ['property_investment', 'property_residential'].includes(a.asset_class),
-    isMissing: (a) => !a.estimated_disposal_cost_pct || a.estimated_disposal_cost_pct === 0,
-    consequence: 'No selling costs will be deducted — net proceeds will be overstated.',
-  },
-  {
-    key: 'acquisition_date',
-    label: 'Acquisition Date',
-    weight: 0.04,
-    appliesTo: (a) => ['eis', 'aim_shares', 'property_investment'].includes(a.asset_class),
-    isMissing: (a) => !a.acquisition_date,
-    consequence: 'BPR qualifying period cannot be verified — may affect IHT relief timing.',
-  },
-  {
-    key: 'mortgage_balance',
-    label: 'Mortgage Balance',
-    weight: 0.04,
-    appliesTo: (a) => ['property_investment', 'property_residential'].includes(a.asset_class),
-    isMissing: (a) => false, // 0 is valid (no mortgage)
-    consequence: '',
-  },
-];
-
-/* ─── Score calculation ─── */
-
-interface AssetAssessment {
-  asset: Asset;
-  score: number; // 0–100
-  missingFields: { check: FieldCheck; }[];
-  applicableChecks: number;
-}
-
-function assessAsset(asset: Asset): AssetAssessment {
-  const applicable = FIELD_CHECKS.filter(c => c.appliesTo(asset));
-  const missing = applicable.filter(c => c.isMissing(asset));
-
-  const totalWeight = applicable.reduce((s, c) => s + c.weight, 0);
-  const missingWeight = missing.reduce((s, c) => s + c.weight, 0);
-
-  const score = totalWeight > 0
-    ? Math.round(((totalWeight - missingWeight) / totalWeight) * 100)
-    : 100;
-
-  return {
-    asset,
-    score,
-    missingFields: missing.map(c => ({ check: c })),
-    applicableChecks: applicable.length,
-  };
-}
+/* Uses shared checks from lib/completenessChecks */
 
 /* ─── Portfolio-level observations ─── */
 
@@ -227,7 +100,7 @@ export default function DataCompletenessPanel({ assets }: Props) {
   if (assets.length === 0) return null;
 
   const assessments = assets
-    .map(a => assessAsset(a))
+    .map(a => ({ asset: a, ...assessAsset(a) }))
     .sort((a, b) => a.score - b.score); // worst first
 
   // Value-weighted overall score
@@ -325,9 +198,9 @@ export default function DataCompletenessPanel({ assets }: Props) {
                     {isExpanded && hasMissing && (
                       <div className="completeness-missing">
                         {a.missingFields.map(m => (
-                          <div key={m.check.key} className="completeness-missing-row">
-                            <span className="missing-field">{m.check.label}</span>
-                            <span className="missing-consequence">{m.check.consequence}</span>
+                          <div key={m.key} className="completeness-missing-row">
+                            <span className="missing-field">{m.label}</span>
+                            <span className="missing-consequence">{m.consequence}</span>
                           </div>
                         ))}
                       </div>

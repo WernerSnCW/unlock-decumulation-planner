@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Asset } from '../engine/decumulation';
+import { getFieldGap } from '../lib/completenessChecks';
 
 interface AssetEditorProps {
   assets: Asset[];
@@ -199,11 +200,15 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
     }
 
     const val = (asset as any)[col.field];
+    const gap = getFieldGap(asset, col.key);
+    const gapClass = gap ? `grid-cell-gap-${gap.impact}` : '';
+
+    const gapTitle = gap ? `⚠ ${gap.consequence}` : undefined;
 
     switch (col.type) {
       case 'text':
         return (
-          <td key={col.key} className="grid-cell">
+          <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>
             <input
               type="text"
               className="grid-input grid-input-text"
@@ -214,7 +219,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
         );
       case 'currency':
         return (
-          <td key={col.key} className="grid-cell">
+          <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>
             <input
               type="number"
               className="grid-input grid-input-num"
@@ -227,7 +232,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
         );
       case 'pct':
         return (
-          <td key={col.key} className="grid-cell">
+          <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>
             <input
               type="number"
               className="grid-input grid-input-num"
@@ -241,7 +246,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
         );
       case 'pct_decimal':
         return (
-          <td key={col.key} className="grid-cell">
+          <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>
             <input
               type="number"
               className="grid-input grid-input-num"
@@ -255,7 +260,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
         );
       case 'number':
         return (
-          <td key={col.key} className="grid-cell">
+          <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>
             <input
               type="number"
               className="grid-input grid-input-num"
@@ -266,7 +271,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
         );
       case 'select':
         return (
-          <td key={col.key} className="grid-cell">
+          <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>
             <select
               className="grid-input grid-input-select"
               value={val ?? ''}
@@ -280,7 +285,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
         );
       case 'checkbox':
         return (
-          <td key={col.key} className="grid-cell grid-cell-center">
+          <td key={col.key} className={`grid-cell grid-cell-center ${gapClass}`} title={gapTitle}>
             <input
               type="checkbox"
               checked={val ?? false}
@@ -290,7 +295,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
         );
       case 'date':
         return (
-          <td key={col.key} className="grid-cell">
+          <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>
             <input
               type="date"
               className="grid-input grid-input-date"
@@ -300,7 +305,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
           </td>
         );
       default:
-        return <td key={col.key} className="grid-cell">{String(val ?? '')}</td>;
+        return <td key={col.key} className={`grid-cell ${gapClass}`} title={gapTitle}>{String(val ?? '')}</td>;
     }
   };
 
