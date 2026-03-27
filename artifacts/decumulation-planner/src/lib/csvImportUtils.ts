@@ -7,45 +7,87 @@ const COLUMN_ALIASES: Record<string, string> = {
   name: 'label', 'asset name': 'label', asset: 'label', label: 'label',
   description: 'label', holding: 'label', 'fund name': 'label', fund: 'label',
 
+  // asset_id
+  'asset id': 'asset_id', asset_id: 'asset_id', id: 'asset_id',
+
   // current_value
-  value: 'current_value', 'current value': 'current_value', 'market value': 'current_value',
+  value: 'current_value', 'current value': 'current_value', current_value: 'current_value',
+  'market value': 'current_value',
   amount: 'current_value', balance: 'current_value', worth: 'current_value',
   'total value': 'current_value', 'portfolio value': 'current_value',
 
   // asset_class
-  'asset class': 'asset_class', 'asset type': 'asset_class', type: 'asset_class',
+  'asset class': 'asset_class', asset_class: 'asset_class',
+  'asset type': 'asset_class', type: 'asset_class',
   class: 'asset_class', category: 'asset_class',
 
   // wrapper_type
-  wrapper: 'wrapper_type', 'wrapper type': 'wrapper_type', 'account type': 'wrapper_type',
-  'tax wrapper': 'wrapper_type',
+  wrapper: 'wrapper_type', 'wrapper type': 'wrapper_type', wrapper_type: 'wrapper_type',
+  'account type': 'wrapper_type', 'tax wrapper': 'wrapper_type',
 
   // assumed_growth_rate
   growth: 'assumed_growth_rate', 'growth rate': 'assumed_growth_rate',
+  assumed_growth_rate: 'assumed_growth_rate', 'assumed growth rate': 'assumed_growth_rate',
   return: 'assumed_growth_rate', 'expected return': 'assumed_growth_rate',
   'annual return': 'assumed_growth_rate',
 
   // income_generated
   income: 'income_generated', 'annual income': 'income_generated',
-  yield: 'income_generated', 'income generated': 'income_generated',
-  dividend: 'income_generated', dividends: 'income_generated', rent: 'income_generated',
+  income_generated: 'income_generated', 'income generated': 'income_generated',
+  yield: 'income_generated', dividend: 'income_generated', dividends: 'income_generated',
+  rent: 'income_generated',
 
   // acquisition_cost
   cost: 'acquisition_cost', 'acquisition cost': 'acquisition_cost',
+  acquisition_cost: 'acquisition_cost',
   'purchase price': 'acquisition_cost', 'cost basis': 'acquisition_cost',
   'book cost': 'acquisition_cost', 'original cost': 'acquisition_cost',
 
   // acquisition_date
   date: 'acquisition_date', 'acquisition date': 'acquisition_date',
+  acquisition_date: 'acquisition_date',
   'purchase date': 'acquisition_date', 'date acquired': 'acquisition_date',
 
   // mortgage_balance
   mortgage: 'mortgage_balance', 'mortgage balance': 'mortgage_balance',
-  'outstanding mortgage': 'mortgage_balance',
+  mortgage_balance: 'mortgage_balance', 'outstanding mortgage': 'mortgage_balance',
 
   // reinvested_pct
   reinvested: 'reinvested_pct', 'reinvested pct': 'reinvested_pct',
+  reinvested_pct: 'reinvested_pct',
   reinvestment: 'reinvested_pct', 'reinvestment %': 'reinvested_pct',
+
+  // is_iht_exempt
+  is_iht_exempt: 'is_iht_exempt', 'iht exempt': 'is_iht_exempt',
+  'iht exemption': 'is_iht_exempt', 'bpr exempt': 'is_iht_exempt',
+
+  // pension_type
+  pension_type: 'pension_type', 'pension type': 'pension_type',
+
+  // tax_relief_claimed
+  tax_relief_claimed: 'tax_relief_claimed', 'tax relief claimed': 'tax_relief_claimed',
+  'relief claimed': 'tax_relief_claimed', 'tax relief': 'tax_relief_claimed',
+
+  // original_subscription_amount
+  original_subscription_amount: 'original_subscription_amount',
+  'original subscription amount': 'original_subscription_amount',
+  'original subscription': 'original_subscription_amount',
+  subscription: 'original_subscription_amount',
+
+  // relief_claimed_type
+  relief_claimed_type: 'relief_claimed_type', 'relief claimed type': 'relief_claimed_type',
+  'relief type': 'relief_claimed_type',
+
+  // estimated_disposal_cost_pct
+  estimated_disposal_cost_pct: 'estimated_disposal_cost_pct',
+  'estimated disposal cost pct': 'estimated_disposal_cost_pct',
+  'disposal cost': 'estimated_disposal_cost_pct', 'disposal cost %': 'estimated_disposal_cost_pct',
+
+  // disposal_type
+  disposal_type: 'disposal_type', 'disposal type': 'disposal_type',
+
+  // transfer_year
+  transfer_year: 'transfer_year', 'transfer year': 'transfer_year',
 };
 
 /* ─── Asset class alias map ─── */
@@ -125,20 +167,29 @@ export interface TargetField {
   key: string;
   label: string;
   required: boolean;
-  type: 'string' | 'number' | 'date' | 'asset_class' | 'wrapper_type';
+  type: 'string' | 'number' | 'date' | 'boolean' | 'asset_class' | 'wrapper_type';
 }
 
 export const TARGET_FIELDS: TargetField[] = [
-  { key: 'label',               label: 'Asset Name',      required: true,  type: 'string' },
-  { key: 'current_value',       label: 'Current Value',    required: true,  type: 'number' },
-  { key: 'asset_class',         label: 'Asset Class',      required: true,  type: 'asset_class' },
-  { key: 'wrapper_type',        label: 'Wrapper Type',     required: false, type: 'wrapper_type' },
-  { key: 'assumed_growth_rate', label: 'Growth Rate',      required: false, type: 'number' },
-  { key: 'income_generated',    label: 'Annual Income',    required: false, type: 'number' },
-  { key: 'acquisition_cost',    label: 'Acquisition Cost', required: false, type: 'number' },
-  { key: 'acquisition_date',    label: 'Acquisition Date', required: false, type: 'date' },
-  { key: 'mortgage_balance',    label: 'Mortgage Balance', required: false, type: 'number' },
-  { key: 'reinvested_pct',      label: 'Reinvested %',     required: false, type: 'number' },
+  { key: 'label',                        label: 'Asset Name',              required: true,  type: 'string' },
+  { key: 'current_value',               label: 'Current Value',            required: true,  type: 'number' },
+  { key: 'asset_class',                 label: 'Asset Class',              required: true,  type: 'asset_class' },
+  { key: 'wrapper_type',                label: 'Wrapper Type',             required: false, type: 'wrapper_type' },
+  { key: 'assumed_growth_rate',          label: 'Growth Rate',              required: false, type: 'number' },
+  { key: 'income_generated',            label: 'Annual Income',            required: false, type: 'number' },
+  { key: 'acquisition_cost',            label: 'Acquisition Cost',         required: false, type: 'number' },
+  { key: 'acquisition_date',            label: 'Acquisition Date',         required: false, type: 'date' },
+  { key: 'mortgage_balance',            label: 'Mortgage Balance',         required: false, type: 'number' },
+  { key: 'reinvested_pct',              label: 'Reinvested %',             required: false, type: 'number' },
+  { key: 'asset_id',                    label: 'Asset ID',                 required: false, type: 'string' },
+  { key: 'is_iht_exempt',               label: 'IHT Exempt',              required: false, type: 'boolean' },
+  { key: 'pension_type',                label: 'Pension Type',             required: false, type: 'string' },
+  { key: 'tax_relief_claimed',          label: 'Tax Relief Claimed (£)',   required: false, type: 'number' },
+  { key: 'original_subscription_amount', label: 'Original Subscription',   required: false, type: 'number' },
+  { key: 'relief_claimed_type',         label: 'Relief Type',              required: false, type: 'string' },
+  { key: 'estimated_disposal_cost_pct', label: 'Disposal Cost %',          required: false, type: 'number' },
+  { key: 'disposal_type',               label: 'Disposal Type',            required: false, type: 'string' },
+  { key: 'transfer_year',               label: 'Transfer Year',            required: false, type: 'number' },
 ];
 
 /* ─── Public functions ─── */
@@ -149,7 +200,7 @@ export function autoDetectMapping(headers: string[]): Record<string, string> {
   const usedHeaders = new Set<string>();
 
   for (const header of headers) {
-    const normalized = header.toLowerCase().trim().replace(/[^a-z0-9 &%]/g, '');
+    const normalized = header.toLowerCase().trim().replace(/[^a-z0-9 _&%]/g, '');
     const targetField = COLUMN_ALIASES[normalized];
     if (targetField && !mapping[targetField] && !usedHeaders.has(header)) {
       mapping[targetField] = header;
@@ -208,6 +259,15 @@ export function resolveWrapperType(input: string | null, assetClass: string): st
     if (resolved) return resolved;
   }
   return inferWrapperType(assetClass);
+}
+
+/** Parse a boolean — handles true/false, yes/no, 1/0 */
+export function parseBoolean(value: string): boolean | null {
+  if (!value || !value.trim()) return null;
+  const v = value.toLowerCase().trim();
+  if (['true', 'yes', '1', 'y'].includes(v)) return true;
+  if (['false', 'no', '0', 'n'].includes(v)) return false;
+  return null;
 }
 
 /** Parse a date string — ISO, DD/MM/YYYY, MM/DD/YYYY */
@@ -371,6 +431,65 @@ export function validateRows(
       }
     }
 
+    // asset_id (optional — use if provided, otherwise auto-generated)
+    const assetIdStr = get('asset_id');
+    if (assetIdStr) {
+      (parsed as any).asset_id = assetIdStr;
+    }
+
+    // is_iht_exempt (optional boolean)
+    const ihtStr = get('is_iht_exempt');
+    if (ihtStr) {
+      const val = parseBoolean(ihtStr);
+      if (val !== null) (parsed as any).is_iht_exempt = val;
+    }
+
+    // pension_type (optional string — sipp, db, etc.)
+    const pensionTypeStr = get('pension_type');
+    if (pensionTypeStr) {
+      (parsed as any).pension_type = pensionTypeStr.toLowerCase().trim();
+    }
+
+    // tax_relief_claimed (optional number)
+    const reliefStr = get('tax_relief_claimed');
+    if (reliefStr) {
+      const num = parseNumber(reliefStr);
+      if (num !== null) (parsed as any).tax_relief_claimed = num;
+    }
+
+    // original_subscription_amount (optional number)
+    const subStr = get('original_subscription_amount');
+    if (subStr) {
+      const num = parseNumber(subStr);
+      if (num !== null) (parsed as any).original_subscription_amount = num;
+    }
+
+    // relief_claimed_type (optional string)
+    const reliefTypeStr = get('relief_claimed_type');
+    if (reliefTypeStr) {
+      (parsed as any).relief_claimed_type = reliefTypeStr.toLowerCase().trim();
+    }
+
+    // estimated_disposal_cost_pct (optional number)
+    const dispCostStr = get('estimated_disposal_cost_pct');
+    if (dispCostStr) {
+      const num = parseNumber(dispCostStr);
+      if (num !== null) (parsed as any).estimated_disposal_cost_pct = num;
+    }
+
+    // disposal_type (optional string)
+    const dispTypeStr = get('disposal_type');
+    if (dispTypeStr) {
+      (parsed as any).disposal_type = dispTypeStr.toLowerCase().trim() || 'none';
+    }
+
+    // transfer_year (optional number)
+    const transferStr = get('transfer_year');
+    if (transferStr) {
+      const num = parseNumber(transferStr);
+      if (num !== null) (parsed as any).transfer_year = num;
+    }
+
     return {
       rowIndex,
       rawData: row,
@@ -395,36 +514,38 @@ export function buildAssets(
       const assetClass = r.overrideAssetClass ?? r.parsed.asset_class ?? 'cash';
       const template = TEMPLATES[assetClass] ?? TEMPLATES.cash;
 
+      const p = r.parsed as any;
+
       const asset: Asset = {
-        asset_id: `${assetClass}-import-${now}-${idx}`,
+        asset_id: p.asset_id ?? `${assetClass}-import-${now}-${idx}`,
         wrapper_type: r.parsed.wrapper_type ?? template.wrapper_type,
         asset_class: assetClass,
         label: r.parsed.label ?? `Import ${idx + 1}`,
         current_value: r.parsed.current_value ?? 0,
         acquisition_date: r.parsed.acquisition_date ?? null,
         acquisition_cost: r.parsed.acquisition_cost ?? null,
-        original_subscription_amount: null,
-        tax_relief_claimed: 0,
+        original_subscription_amount: p.original_subscription_amount ?? null,
+        tax_relief_claimed: p.tax_relief_claimed ?? 0,
         assumed_growth_rate: r.parsed.assumed_growth_rate ?? template.assumed_growth_rate,
         income_generated: r.parsed.income_generated ?? 0,
         reinvested_pct: r.parsed.reinvested_pct ?? 0,
-        is_iht_exempt: template.is_iht_exempt,
+        is_iht_exempt: p.is_iht_exempt ?? template.is_iht_exempt,
         bpr_qualifying_date: null,
         bpr_last_reviewed: null,
         cgt_exempt_date: null,
         mortgage_balance: r.parsed.mortgage_balance ?? 0,
-        pension_type: template.pension_type,
+        pension_type: p.pension_type ?? template.pension_type,
         tfls_used_amount: 0,
         mpaa_triggered: false,
         in_drawdown: false,
         flexible_isa: false,
         deferred_gain_amount: null,
-        relief_claimed_type: template.relief_claimed_type,
+        relief_claimed_type: p.relief_claimed_type ?? template.relief_claimed_type,
         allowable_improvement_costs: 0,
-        estimated_disposal_cost_pct: template.estimated_disposal_cost_pct,
+        estimated_disposal_cost_pct: p.estimated_disposal_cost_pct ?? template.estimated_disposal_cost_pct,
         estimated_disposal_cost_amount: null,
-        disposal_type: 'none',
-        transfer_year: null,
+        disposal_type: p.disposal_type ?? 'none',
+        transfer_year: p.transfer_year ?? null,
       };
 
       return asset;
