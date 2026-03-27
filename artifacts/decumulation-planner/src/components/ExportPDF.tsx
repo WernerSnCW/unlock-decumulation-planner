@@ -40,8 +40,7 @@ export default function ExportPDF({ inputs, result, assets, taxParams, investorN
   async function handleExport() {
     setExporting(true);
     try {
-      await new Promise(r => setTimeout(r, 50));
-      generatePDF(inputs, result, assets, taxParams, investorName);
+      await generatePDF(inputs, result, assets, taxParams, investorName);
     } finally {
       setExporting(false);
     }
@@ -151,7 +150,39 @@ class PDFBuilder {
   }
 }
 
-function generatePDF(
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1910" height="502" viewBox="0 0 1910 502" fill="none">
+  <path d="M186.058 376.199C186.058 408.759 169.987 423.926 135.449 423.926C100.91 423.926 84.8396 408.759 84.8396 376.199V6.84961H0V378.288C0 455.664 50.6433 501.85 135.483 501.85C220.322 501.85 271 455.698 271 378.356V6.84961H186.092V376.199H186.058Z" fill="white"/>
+  <path d="M542.16 219.372C542.16 255.112 542.81 284.245 543.735 307.558C536.1 286.915 526.583 261.822 514.977 232.21L426.034 6.84966H339.625V494.815H423.741V279.486C423.741 245.287 422.885 216.394 421.687 192.772C429.8 214.271 439.592 239.707 450.958 268.086L539.935 494.747H625.625V6.81543H542.194V219.372H542.16Z" fill="white"/>
+  <path d="M782.589 6.91797H697.852V494.918H915.852V418.493H782.589V6.91797Z" fill="white"/>
+  <path d="M1426.68 0C1342.38 0 1292.04 46.1719 1292.04 123.548V378.452C1292.04 455.828 1342.38 502 1426.68 502C1510.98 502 1562.04 455.828 1562.04 378.452V327.417H1477.95V376.363C1477.95 408.046 1461.18 423.46 1426.75 423.46C1392.32 423.46 1376.2 408.492 1376.2 376.363V125.637C1376.2 93.0632 1392.25 77.8895 1426.75 77.8895C1461.25 77.8895 1477.95 93.0632 1477.95 125.637V175.988H1562.04V123.548C1562.04 46.1719 1511.45 0 1426.68 0Z" fill="white"/>
+  <path d="M1795.51 243.626L1902.99 6.84961H1810.68L1706.17 244.927L1814.1 494.85H1909.17L1795.51 243.626Z" fill="white"/>
+  <path d="M1703.51 6.84961H1618.51V494.85H1703.51V6.84961Z" fill="white"/>
+  <path d="M1198.18 250.966V123.548C1198.18 46.1719 1147.57 0 1062.84 0C978.12 0 928.23 46.1719 928.23 123.548V251H970.284V378.452C970.284 455.828 1020.62 502 1104.9 502C1189.18 502 1240.23 455.828 1240.23 378.452V250.966H1198.18ZM1104.97 423.46C1070.95 423.46 1054.43 408.081 1054.43 376.431V251H1012.37V125.637C1012.37 93.0632 1028.42 77.8895 1062.91 77.8895C1097.4 77.8895 1114.1 93.0632 1114.1 125.637V250.966H1156.12V259.015H1156.16V376.431C1156.16 408.081 1139.39 423.46 1104.97 423.46Z" fill="white"/>
+</svg>`;
+
+function svgToPngDataUrl(svgString: string, width: number, height: number): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
+    const img = new Image();
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve('');
+    };
+    img.src = url;
+  });
+}
+
+async function generatePDF(
   inputs: SimulationInputs,
   result: SimulationResult,
   assets: Asset[],
@@ -167,16 +198,27 @@ function generatePDF(
   doc.setFillColor(...ACCENT);
   doc.rect(0, 0, p.W, 36, 'F');
 
-  // Logo text
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.text('UNLOCK', p.M, 14);
+  // Embed SVG logo as PNG image
+  const logoH = 8; // mm in PDF
+  const logoW = logoH * (1910 / 502); // maintain aspect ratio ~30mm
+  try {
+    const logoPng = await svgToPngDataUrl(LOGO_SVG, 764, 201); // 4x render for clarity
+    if (logoPng) {
+      doc.addImage(logoPng, 'PNG', p.M, 6, logoW, logoH);
+    }
+  } catch {
+    // Fallback: text
+    doc.setFontSize(22);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('UNLOCK', p.M, 14);
+  }
 
   // Subtitle
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Decumulation Plan', p.M + 52, 14);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Decumulation Plan', p.M + logoW + 4, 12);
 
   // Generated for line
   const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
