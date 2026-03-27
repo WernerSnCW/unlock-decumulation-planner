@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import Papa from 'papaparse';
 import type { Asset } from '../engine/decumulation';
 import {
   autoDetectMapping,
@@ -10,6 +9,7 @@ import {
   resolveAssetClass,
   type ValidatedRow,
 } from '../lib/csvImportUtils';
+import { parseFile, type ParseResult } from '../lib/fileParser';
 
 interface Props {
   existingAssets: Asset[];
@@ -33,7 +33,11 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
   const [rawHeaders, setRawHeaders] = useState<string[]>([]);
   const [rawRows, setRawRows] = useState<Record<string, string>[]>([]);
   const [parseError, setParseError] = useState('');
+  const [parseWarning, setParseWarning] = useState('');
+  const [fileFormat, setFileFormat] = useState<string>('');
+  const [pdfRawText, setPdfRawText] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
 
   // Map state
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -44,29 +48,29 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
 
   /* ─── Step 1: Upload ─── */
 
-  const handleFile = useCallback((file: File) => {
+  const handleFile = useCallback(async (file: File) => {
     setParseError('');
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        const headers = result.meta.fields ?? [];
-        const rows = result.data as Record<string, string>[];
+    setParseWarning('');
+    setPdfRawText('');
+    setIsParsing(true);
 
-        if (headers.length === 0 || rows.length === 0) {
-          setParseError('The file appears to be empty or has no header row.');
-          return;
-        }
+    const result = await parseFile(file);
+    setIsParsing(false);
+    setFileFormat(result.format);
 
-        setRawHeaders(headers);
-        setRawRows(rows);
-        setMapping(autoDetectMapping(headers));
-        setStep('map');
-      },
-      error: (err) => {
-        setParseError(`Parse error: ${err.message}`);
-      },
-    });
+    if (!result.success) {
+      setParseError(result.error ?? 'Could not parse the file.');
+      if (result.rawText) setPdfRawText(result.rawText);
+      return;
+    }
+
+    if (result.warning) setParseWarning(result.warning);
+    if (result.rawText) setPdfRawText(result.rawText);
+
+    setRawHeaders(result.headers);
+    setRawRows(result.rows);
+    setMapping(autoDetectMapping(result.headers));
+    setStep('map');
   }, []);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,7 +221,7 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
       <div className="csv-modal" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="csv-header">
-          <h2>Import Assets from CSV</h2>
+          <h2>Import Assets</h2>
           <button className="csv-close" onClick={onClose}>&times;</button>
         </div>
 
@@ -237,8 +241,8 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
           {step === 'upload' && (
             <>
               <div
-                className={`csv-dropzone ${dragActive ? 'active' : ''}`}
-                onClick={() => fileRef.current?.click()}
+                className={`csv-dropzone ${dragActive ? 'active' : ''} ${isParsing ? 'parsing' : ''}`}
+                onClick={() => !isParsing && fileRef.current?.click()}
                 onDragOver={e => { e.preventDefault(); setDragActive(true); }}
                 onDragLeave={() => setDragActive(false)}
                 onDrop={onDrop}
@@ -246,15 +250,42 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".csv,.tsv,.txt"
+                  accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.pdf"
                   onChange={onFileChange}
                   style={{ display: 'none' }}
                 />
-                <div className="csv-dropzone-icon">CSV</div>
-                <p className="csv-dropzone-title">Drop your CSV file here</p>
-                <p className="csv-dropzone-sub">or click to browse</p>
-                <p className="csv-dropzone-hint">Supports .csv, .tsv, and tab-delimited files. Columns are auto-matched.</p>
-                {parseError && <p className="csv-error">{parseError}</p>}
+                {isParsing ? (
+                  <>
+                    <div className="csv-dropzone-icon parsing-icon">...</div>
+                    <p className="csv-dropzone-title">Processing file...</p>
+                    <p className="csv-dropzone-sub">Extracting asset data</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="csv-dropzone-icon">
+                      <span style={{ fontSize: '14px' }}>CSV / XLSX / PDF</span>
+                    </div>
+                    <p className="csv-dropzone-title">Drop your file here</p>
+                    <p className="csv-dropzone-sub">or click to browse</p>
+                    <p className="csv-dropzone-hint">
+                      Supports CSV, Excel (.xlsx/.xls), and PDF files. Columns are auto-matched.
+                    </p>
+                  </>
+                )}
+                {parseError && (
+                  <div className="csv-error-block">
+                    <p className="csv-error">{parseError}</p>
+                    {pdfRawText && (
+                      <details className="csv-raw-text-details">
+                        <summary>Show extracted text</summary>
+                        <pre className="csv-raw-text">{pdfRawText.slice(0, 2000)}{pdfRawText.length > 2000 ? '\n...(truncated)' : ''}</pre>
+                      </details>
+                    )}
+                  </div>
+                )}
+                {parseWarning && !parseError && (
+                  <p className="csv-warning">{parseWarning}</p>
+                )}
               </div>
 
               <div className="csv-upload-actions">
@@ -311,6 +342,9 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
           {/* ── Map ── */}
           {step === 'map' && (
             <>
+              {parseWarning && (
+                <div className="csv-warning-banner">{parseWarning}</div>
+              )}
               {/* Preview table */}
               <div className="csv-preview-wrap">
                 <p className="csv-section-title">Preview (first {Math.min(5, rawRows.length)} rows of {rawRows.length})</p>

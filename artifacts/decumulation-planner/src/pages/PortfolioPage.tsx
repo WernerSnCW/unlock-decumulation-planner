@@ -45,7 +45,7 @@ export default function PortfolioPage() {
               + Add Assets
             </button>
             <button className="portfolio-action-btn" onClick={() => setCsvImportOpen(true)}>
-              Import CSV
+              Import File
             </button>
             <button className="portfolio-action-btn" onClick={() => {
               updateAssets(defaultRegister.map(a => ({ ...a })));
@@ -104,7 +104,7 @@ export default function PortfolioPage() {
             Edit Assets
           </button>
           <button className="portfolio-action-btn" onClick={() => setCsvImportOpen(true)}>
-            Import CSV
+            Import File
           </button>
         </div>
       </div>

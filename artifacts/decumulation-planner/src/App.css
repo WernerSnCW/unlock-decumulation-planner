@@ -4505,6 +4505,66 @@ body {
   color: var(--unlock-muted);
 }
 
+.csv-dropzone.parsing {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.parsing-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.csv-error-block {
+  margin-top: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.csv-warning {
+  color: #F59E0B;
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.csv-warning-banner {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #fcd34d;
+  margin-bottom: 12px;
+}
+
+.csv-raw-text-details {
+  margin-top: 8px;
+}
+
+.csv-raw-text-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--unlock-accent);
+}
+
+.csv-raw-text {
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 11px;
+  color: var(--unlock-muted);
+  background: var(--unlock-bg);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .csv-error {
   color: var(--tone-error);
   font-size: 13px;
