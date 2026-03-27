@@ -117,7 +117,7 @@ export async function parsePdfFile(file: File): Promise<ParseResult> {
     }
 
     // Extract text from PDF binary
-    const fullText = extractTextFromPdfBytes(bytes);
+    const fullText = await extractTextFromPdfBytes(bytes);
 
     if (!fullText.trim()) {
       return {
@@ -156,7 +156,7 @@ export async function parsePdfFile(file: File): Promise<ParseResult> {
  * Extract readable text from raw PDF bytes by finding text streams.
  * Handles both uncompressed and deflate-compressed streams.
  */
-function extractTextFromPdfBytes(bytes: Uint8Array): string {
+async function extractTextFromPdfBytes(bytes: Uint8Array): Promise<string> {
   const text = new TextDecoder('latin1').decode(bytes);
   const textChunks: string[] = [];
 
