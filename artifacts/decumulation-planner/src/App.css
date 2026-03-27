@@ -1,12 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --unlock-bg:       #0E1114;
-  --unlock-surface:  #11161C;
-  --unlock-text:     #EAF2F7;
-  --unlock-muted:    #9FB3C8;
+  --unlock-bg:       #2b2b2b;
+  --unlock-surface:  #333333;
+  --unlock-text:     #FFFFFF;
+  --unlock-muted:    #B0B0B0;
   --unlock-accent:   #00BB77;
-  --unlock-border:   rgba(234, 242, 247, 0.10);
+  --unlock-border:   rgba(255, 255, 255, 0.12);
 
   --tone-success:    #00BB77;
   --tone-warning:    #F59E0B;

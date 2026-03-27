@@ -17,8 +17,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0E1114',
-        color: '#9FB3C8',
+        background: '#2b2b2b',
+        color: '#B0B0B0',
         fontSize: 16,
       }}>
         Loading…

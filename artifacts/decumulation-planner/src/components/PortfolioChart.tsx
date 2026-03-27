@@ -82,24 +82,24 @@ export default function PortfolioChart({ perYear, planYears, firstShortfallYear,
             <Tooltip
               formatter={(value: number, name: string) => [formatTooltip(value), name]}
               contentStyle={{
-                background: '#11161C',
+                background: '#333333',
                 border: '1px solid rgba(234, 242, 247, 0.10)',
                 borderRadius: '10px',
                 fontSize: 12,
                 fontFamily: 'JetBrains Mono, monospace',
               }}
-              labelStyle={{ color: '#EAF2F7' }}
-              itemStyle={{ color: '#9FB3C8' }}
+              labelStyle={{ color: '#FFFFFF' }}
+              itemStyle={{ color: '#B0B0B0' }}
             />
             <Legend
-              wrapperStyle={{ fontSize: 11, color: '#9FB3C8' }}
+              wrapperStyle={{ fontSize: 11, color: '#B0B0B0' }}
             />
             {planYears < perYear.length && (
               <ReferenceLine
                 x={2025 + planYears - 1}
-                stroke="#9FB3C8"
+                stroke="#B0B0B0"
                 strokeDasharray="4 4"
-                label={{ value: 'Plan End', position: 'top', fill: '#9FB3C8', fontSize: 10 }}
+                label={{ value: 'Plan End', position: 'top', fill: '#B0B0B0', fontSize: 10 }}
               />
             )}
             {firstShortfallYear && (
@@ -160,24 +160,24 @@ export default function PortfolioChart({ perYear, planYears, firstShortfallYear,
           <Tooltip
             formatter={(value: number, name: string) => [formatTooltip(value), name]}
             contentStyle={{
-              background: '#11161C',
+              background: '#333333',
               border: '1px solid rgba(234, 242, 247, 0.10)',
               borderRadius: '10px',
               fontSize: 12,
               fontFamily: 'JetBrains Mono, monospace',
             }}
-            labelStyle={{ color: '#EAF2F7' }}
-            itemStyle={{ color: '#9FB3C8' }}
+            labelStyle={{ color: '#FFFFFF' }}
+            itemStyle={{ color: '#B0B0B0' }}
           />
           <Legend
-            wrapperStyle={{ fontSize: 11, color: '#9FB3C8' }}
+            wrapperStyle={{ fontSize: 11, color: '#B0B0B0' }}
           />
           {planYears < perYear.length && (
             <ReferenceLine
               x={2025 + planYears - 1}
-              stroke="#9FB3C8"
+              stroke="#B0B0B0"
               strokeDasharray="4 4"
-              label={{ value: 'Plan End', position: 'top', fill: '#9FB3C8', fontSize: 10 }}
+              label={{ value: 'Plan End', position: 'top', fill: '#B0B0B0', fontSize: 10 }}
             />
           )}
           {firstShortfallYear && (
