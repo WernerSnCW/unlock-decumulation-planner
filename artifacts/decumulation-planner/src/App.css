@@ -2250,10 +2250,20 @@ body {
   background: rgba(0, 187, 119, 0.05);
 }
 .learning-topic-icon {
-  font-size: 1.6rem;
   flex-shrink: 0;
   width: 36px;
-  text-align: center;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 187, 119, 0.1);
+  border-radius: 10px;
+  color: var(--unlock-accent);
+}
+
+.learning-topic-icon svg {
+  width: 20px;
+  height: 20px;
 }
 .learning-topic-text {
   flex: 1;
