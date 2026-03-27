@@ -17,119 +17,85 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page">
-      {/* Background glow effects */}
       <div className="landing-glow landing-glow-1" />
       <div className="landing-glow landing-glow-2" />
 
-      <div className="landing-content">
-        {/* Hero */}
-        <div className="landing-hero">
+      <div className="landing-split">
+        {/* Left — branding & value prop */}
+        <div className="landing-left">
           <div className="landing-logo">
-            <UnlockLogo height={48} />
+            <UnlockLogo height={40} />
           </div>
           <p className="landing-subtitle">Decumulation Intelligence</p>
-        </div>
 
-        {/* Problem statement */}
-        <div className="landing-message">
-          <h2>Your retirement wealth is complex.<br />Your drawdown plan shouldn't be.</h2>
-          <p>
-            Pensions, ISAs, property, VCTs, EIS holdings, AIM portfolios — each with
-            different tax rules, growth profiles, and IHT implications. The order you
-            draw from them can mean the difference between tens of thousands saved or lost in tax.
-          </p>
-        </div>
+          <h2 className="landing-headline">
+            Your retirement wealth is complex.<br />
+            Your drawdown plan shouldn't be.
+          </h2>
 
-        {/* Key benefits */}
-        <div className="landing-benefits">
-          <div className="landing-benefit">
-            <div className="benefit-icon">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M10 1L12.5 6.5L18 7.5L14 11.5L15 17L10 14.5L5 17L6 11.5L2 7.5L7.5 6.5L10 1Z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-              </svg>
+          <div className="landing-features">
+            <div className="landing-feature">
+              <span className="feature-dot" />
+              <span>Tax-optimised drawdown sequencing across every wrapper</span>
             </div>
-            <h3>Tax-Optimised Sequencing</h3>
-            <p>Model income tax, CGT, pension crystallisation, and allowance stacking across every asset wrapper</p>
-          </div>
-          <div className="landing-benefit">
-            <div className="benefit-icon">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M2 15L6 8L10 11L14 4L18 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="18" cy="7" r="1.5" fill="currentColor"/>
-              </svg>
+            <div className="landing-feature">
+              <span className="feature-dot" />
+              <span>25-year projection with income, growth, tax & estate</span>
             </div>
-            <h3>25-Year Projection</h3>
-            <p>See exactly how your portfolio evolves year by year — income, growth, tax, and residual estate value</p>
-          </div>
-          <div className="landing-benefit">
-            <div className="benefit-icon">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <rect x="3" y="8" width="4" height="9" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-                <rect x="8" y="5" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-                <rect x="13" y="3" width="4" height="14" rx="1" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
-            </div>
-            <h3>IHT & Estate Planning</h3>
-            <p>Quantify BPR relief, gifting strategies, pension IHT exposure, and the 2026 budget impact on your estate</p>
-          </div>
-        </div>
-
-        {/* How it works */}
-        <div className="landing-how">
-          <div className="landing-how-step">
-            <div className="how-num">1</div>
-            <div>
-              <h4>Import your portfolio</h4>
-              <p>Upload a CSV or enter assets manually — pensions, ISAs, property, tax-advantaged holdings</p>
-            </div>
-          </div>
-          <div className="landing-how-step">
-            <div className="how-num">2</div>
-            <div>
-              <h4>Set your income target</h4>
-              <p>Define your desired retirement income, lifestyle phases, and legacy goals</p>
-            </div>
-          </div>
-          <div className="landing-how-step">
-            <div className="how-num">3</div>
-            <div>
-              <h4>See the optimal strategy</h4>
-              <p>Compare drawdown sequences, run the optimiser, and export a year-by-year action plan</p>
+            <div className="landing-feature">
+              <span className="feature-dot" />
+              <span>IHT planning — BPR, gifting, pension exposure & 2026 budget</span>
             </div>
           </div>
         </div>
 
-        {/* Access code entry */}
-        <div className="landing-access">
-          <h3>Enter your access code</h3>
-          <form onSubmit={handleSubmit} className="access-form">
-            <input
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="XXXX-XXXX"
-              className="access-input"
-              maxLength={9}
-              autoFocus
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              className="access-button"
-              disabled={isLoading || !code.trim()}
-            >
-              {isLoading ? 'Verifying...' : 'Continue'}
-            </button>
-          </form>
-          {error && <p className="access-error">{error}</p>}
-          <p className="access-hint">
-            Your access code was provided by your financial advisor.
-          </p>
-        </div>
+        {/* Right — access form + steps */}
+        <div className="landing-right">
+          <div className="landing-access-card">
+            <h3>Enter your access code</h3>
+            <form onSubmit={handleSubmit} className="access-form">
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="XXXX-XXXX"
+                className="access-input"
+                maxLength={9}
+                autoFocus
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                className="access-button"
+                disabled={isLoading || !code.trim()}
+              >
+                {isLoading ? 'Verifying...' : 'Continue'}
+              </button>
+            </form>
+            {error && <p className="access-error">{error}</p>}
+            <p className="access-hint">
+              Your access code was provided by your financial advisor.
+            </p>
+          </div>
 
-        {/* Subtle admin link */}
-        <div className="landing-footer">
-          <a href="/admin" className="admin-link">Admin Portal</a>
+          <div className="landing-steps">
+            <div className="landing-step">
+              <span className="step-num">1</span>
+              <span>Import your portfolio</span>
+            </div>
+            <div className="landing-step">
+              <span className="step-num">2</span>
+              <span>Set your income target</span>
+            </div>
+            <div className="landing-step">
+              <span className="step-num">3</span>
+              <span>See the optimal strategy</span>
+            </div>
+          </div>
+
+          <div className="landing-footer">
+            <a href="/admin" className="admin-link">Admin Portal</a>
+          </div>
         </div>
       </div>
     </div>

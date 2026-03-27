@@ -2329,7 +2329,7 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--unlock-bg);
-  padding: 60px 24px;
+  padding: 40px 48px;
   position: relative;
   overflow: hidden;
 }
@@ -2359,13 +2359,14 @@ body {
   left: -100px;
 }
 
-.landing-content {
-  max-width: 700px;
+/* Two-column split layout */
+.landing-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  max-width: 1100px;
   width: 100%;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 56px;
   position: relative;
   z-index: 1;
   animation: landing-fadein 0.6s ease-out;
@@ -2376,160 +2377,72 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.landing-hero {
-  text-align: center;
+/* Left column — branding */
+.landing-left {
+  display: flex;
+  flex-direction: column;
 }
 
 .landing-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-
-.landing-title {
-  font-size: 52px;
-  font-weight: 700;
-  color: var(--unlock-text);
-  letter-spacing: -1.5px;
-  line-height: 1;
-}
-
-.landing-subtitle {
-  font-size: 18px;
-  color: var(--unlock-muted);
-  margin-top: 10px;
-  font-weight: 400;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-size: 13px;
-}
-
-.landing-message {
-  text-align: center;
-  max-width: 560px;
-}
-
-.landing-message h2 {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--unlock-text);
-  line-height: 1.4;
-  margin-bottom: 16px;
-}
-
-.landing-message p {
-  color: var(--unlock-muted);
-  font-size: 15px;
-  line-height: 1.8;
-  margin-bottom: 0;
-}
-
-.landing-benefits {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  width: 100%;
-}
-
-.landing-benefit {
-  background: var(--unlock-surface);
-  border: 1px solid var(--unlock-border);
-  border-radius: var(--radius-lg);
-  padding: 28px 20px;
-  text-align: center;
-  transition: border-color 0.25s, transform 0.25s;
-}
-
-.landing-benefit:hover {
-  border-color: rgba(0, 187, 119, 0.25);
-  transform: translateY(-2px);
-}
-
-.benefit-icon {
-  width: 44px;
-  height: 44px;
-  background: rgba(0, 187, 119, 0.1);
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: var(--unlock-accent);
-  margin-bottom: 14px;
-}
-
-.landing-benefit h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--unlock-text);
   margin-bottom: 8px;
 }
 
-.landing-benefit p {
-  font-size: 13px;
+.landing-subtitle {
   color: var(--unlock-muted);
-  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 12px;
+  margin-bottom: 32px;
 }
 
-/* How it works */
-.landing-how {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.landing-how-step {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--unlock-border);
-}
-
-.landing-how-step:last-child {
-  border-bottom: none;
-}
-
-.how-num {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--unlock-accent);
-  color: var(--unlock-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.landing-how-step h4 {
-  font-size: 15px;
+.landing-headline {
+  font-size: 26px;
   font-weight: 600;
   color: var(--unlock-text);
-  margin-bottom: 4px;
+  line-height: 1.4;
+  margin-bottom: 28px;
 }
 
-.landing-how-step p {
-  font-size: 13px;
+.landing-features {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.landing-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
   color: var(--unlock-muted);
   line-height: 1.5;
 }
 
-.landing-access {
+.feature-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--unlock-accent);
+  flex-shrink: 0;
+}
+
+/* Right column — access form & steps */
+.landing-right {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.landing-access-card {
   background: var(--unlock-surface);
   border: 1px solid var(--unlock-border);
   border-radius: var(--radius-lg);
-  padding: 36px;
-  width: 100%;
+  padding: 32px;
   text-align: center;
 }
 
-.landing-access h3 {
+.landing-access-card h3 {
   font-size: 16px;
   font-weight: 600;
   color: var(--unlock-text);
@@ -2562,7 +2475,7 @@ body {
 }
 
 .access-input::placeholder {
-  color: rgba(159, 179, 200, 0.4);
+  color: rgba(255, 255, 255, 0.25);
   letter-spacing: 3px;
 }
 
@@ -2600,8 +2513,36 @@ body {
   opacity: 0.7;
 }
 
+/* Steps row */
+.landing-steps {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.landing-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--unlock-muted);
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--unlock-accent);
+  color: var(--unlock-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 .landing-footer {
-  margin-top: 48px;
   text-align: center;
 }
 
@@ -2618,6 +2559,21 @@ body {
 .admin-link:hover {
   border-color: rgba(255, 255, 255, 0.5);
   color: var(--unlock-text);
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 768px) {
+  .landing-split {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .landing-left {
+    text-align: center;
+    align-items: center;
+  }
+  .landing-features {
+    align-items: center;
+  }
 }
 
 /* ───────────────────────── App Shell Navigation ───────────────────────── */
