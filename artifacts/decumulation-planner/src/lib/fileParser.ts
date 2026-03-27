@@ -100,77 +100,38 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
 /* ─── PDF parsing ─── */
 
 /**
- * Load pdf.js from CDN at runtime — avoids Vite bundler/worker issues entirely.
- * The library is loaded once and cached on window.__pdfjsLib.
+ * PDF parsing — uses a lightweight approach without pdfjs-dist.
+ * Reads raw PDF text by scanning for text stream operators in the binary.
+ * This avoids all worker/bundler issues. It won't handle every PDF perfectly
+ * but works well for digitally-generated statements (not scanned images).
  */
-async function loadPdfJs(): Promise<any> {
-  if ((window as any).__pdfjsLib) return (window as any).__pdfjsLib;
-
-  const PDFJS_VERSION = '4.4.168';
-  const cdnBase = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}`;
-
-  // Load the main library
-  await new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `${cdnBase}/pdf.min.mjs`;
-    script.type = 'module';
-    // Fallback to non-module version
-    script.onerror = () => {
-      const script2 = document.createElement('script');
-      script2.src = `${cdnBase}/pdf.min.js`;
-      script2.onload = () => resolve();
-      script2.onerror = () => reject(new Error('Failed to load pdf.js from CDN'));
-      document.head.appendChild(script2);
-    };
-    script.onload = () => resolve();
-    document.head.appendChild(script);
-  });
-
-  // Wait for pdfjsLib to be available on window
-  const pdfjsLib = (window as any).pdfjsLib;
-  if (!pdfjsLib) {
-    throw new Error('pdf.js loaded but pdfjsLib not found on window');
-  }
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `${cdnBase}/pdf.worker.min.js`;
-  (window as any).__pdfjsLib = pdfjsLib;
-  return pdfjsLib;
-}
-
 export async function parsePdfFile(file: File): Promise<ParseResult> {
   try {
-    const pdfjsLib = await loadPdfJs();
-
     const buffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-    const pageCount = pdf.numPages;
+    const bytes = new Uint8Array(buffer);
 
-    // Extract text from all pages
-    const textParts: string[] = [];
-    for (let i = 1; i <= pageCount; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item: any) => item.str)
-        .join(' ');
-      textParts.push(pageText);
+    // Check it's actually a PDF
+    const header = String.fromCharCode(...bytes.slice(0, 5));
+    if (header !== '%PDF-') {
+      return { success: false, headers: [], rows: [], format: 'pdf', error: 'This file does not appear to be a valid PDF.' };
     }
 
-    const fullText = textParts.join('\n\n');
+    // Extract text from PDF binary
+    const fullText = extractTextFromPdfBytes(bytes);
 
     if (!fullText.trim()) {
       return {
-        success: false, headers: [], rows: [], format: 'pdf', pageCount,
+        success: false, headers: [], rows: [], format: 'pdf',
         error: 'This PDF appears to be scanned or image-based — no readable text was found. Please use a CSV or Excel export instead.',
       };
     }
 
-    // Attempt to extract tabular data from the text
+    // Attempt to extract tabular asset data
     const result = extractAssetsFromText(fullText);
 
     if (result.rows.length === 0) {
       return {
-        success: false, headers: [], rows: [], format: 'pdf', pageCount, rawText: fullText,
+        success: false, headers: [], rows: [], format: 'pdf', rawText: fullText,
         error: 'We could read the PDF but couldn\'t identify asset data in a structured format. The text has been extracted — you may want to copy it into a spreadsheet and import as CSV.',
       };
     }
@@ -180,16 +141,142 @@ export async function parsePdfFile(file: File): Promise<ParseResult> {
       headers: result.headers,
       rows: result.rows,
       format: 'pdf',
-      pageCount,
       rawText: fullText,
-      warning: `Extracted ${result.rows.length} potential assets from ${pageCount} page${pageCount > 1 ? 's' : ''}. Please review carefully — PDF extraction is best-effort.`,
+      warning: `Extracted ${result.rows.length} potential assets from the PDF. Please review carefully — PDF extraction is best-effort.`,
     };
   } catch (err: any) {
     return {
       success: false, headers: [], rows: [], format: 'pdf',
-      error: `PDF parse error: ${err.message ?? 'Unknown error'}. Try a CSV or Excel export instead.`,
+      error: `PDF parse error: ${err?.message ?? 'Unknown error'}. Try a CSV or Excel export instead.`,
     };
   }
+}
+
+/**
+ * Extract readable text from raw PDF bytes by finding text streams.
+ * Handles both uncompressed and deflate-compressed streams.
+ */
+function extractTextFromPdfBytes(bytes: Uint8Array): string {
+  const text = new TextDecoder('latin1').decode(bytes);
+  const textChunks: string[] = [];
+
+  // Strategy 1: Find BT...ET text blocks (PDF text operators)
+  const btEtRegex = /BT\s([\s\S]*?)ET/g;
+  let match;
+  while ((match = btEtRegex.exec(text)) !== null) {
+    const block = match[1];
+    // Extract text from Tj, TJ, ', " operators
+    const tjMatches = block.match(/\(([^)]*)\)\s*Tj/g);
+    if (tjMatches) {
+      for (const tj of tjMatches) {
+        const inner = tj.match(/\(([^)]*)\)/);
+        if (inner) textChunks.push(decodePdfString(inner[1]));
+      }
+    }
+    // TJ array operator
+    const tjArrayMatches = block.match(/\[(.*?)\]\s*TJ/g);
+    if (tjArrayMatches) {
+      for (const tja of tjArrayMatches) {
+        const parts = tja.match(/\(([^)]*)\)/g);
+        if (parts) {
+          const combined = parts.map(p => decodePdfString(p.slice(1, -1))).join('');
+          textChunks.push(combined);
+        }
+      }
+    }
+  }
+
+  // Strategy 2: Try to decompress FlateDecode streams and extract text
+  if (textChunks.length < 3) {
+    try {
+      const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+      let streamMatch;
+      while ((streamMatch = streamRegex.exec(text)) !== null) {
+        const rawStream = streamMatch[1];
+        // Try to decompress with DecompressionStream (available in modern browsers)
+        try {
+          const streamBytes = new Uint8Array(rawStream.length);
+          for (let i = 0; i < rawStream.length; i++) {
+            streamBytes[i] = rawStream.charCodeAt(i);
+          }
+
+          // Check for zlib header (0x78)
+          if (streamBytes[0] === 0x78) {
+            const ds = new DecompressionStream('deflate');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+
+            writer.write(streamBytes).catch(() => {});
+            writer.close().catch(() => {});
+
+            const chunks: Uint8Array[] = [];
+            try {
+              while (true) {
+                const { done, value } = await readWithTimeout(reader, 500);
+                if (done || !value) break;
+                chunks.push(value);
+              }
+            } catch { /* timeout or done */ }
+
+            if (chunks.length > 0) {
+              const total = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
+              let offset = 0;
+              for (const chunk of chunks) {
+                total.set(chunk, offset);
+                offset += chunk.length;
+              }
+              const decoded = new TextDecoder('latin1').decode(total);
+              // Extract text from decompressed stream
+              const innerBtEt = /BT\s([\s\S]*?)ET/g;
+              let innerMatch;
+              while ((innerMatch = innerBtEt.exec(decoded)) !== null) {
+                const block = innerMatch[1];
+                const tjMatches = block.match(/\(([^)]*)\)\s*Tj/g);
+                if (tjMatches) {
+                  for (const tj of tjMatches) {
+                    const inner = tj.match(/\(([^)]*)\)/);
+                    if (inner) textChunks.push(decodePdfString(inner[1]));
+                  }
+                }
+                const tjArrayMatches = block.match(/\[(.*?)\]\s*TJ/g);
+                if (tjArrayMatches) {
+                  for (const tja of tjArrayMatches) {
+                    const parts = tja.match(/\(([^)]*)\)/g);
+                    if (parts) {
+                      const combined = parts.map(p => decodePdfString(p.slice(1, -1))).join('');
+                      textChunks.push(combined);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch { /* skip undecompressable streams */ }
+      }
+    } catch { /* ignore decompression failures */ }
+  }
+
+  return textChunks.join('\n');
+}
+
+async function readWithTimeout(reader: ReadableStreamDefaultReader<Uint8Array>, ms: number): Promise<ReadableStreamReadResult<Uint8Array>> {
+  return Promise.race([
+    reader.read(),
+    new Promise<ReadableStreamReadResult<Uint8Array>>((resolve) =>
+      setTimeout(() => resolve({ done: true, value: undefined }), ms)
+    ),
+  ]);
+}
+
+function decodePdfString(s: string): string {
+  // Handle PDF escape sequences
+  return s
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\([()])/g, '$1')
+    .replace(/\\(\d{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
 }
 
 /* ─── PDF text → structured data extraction ─── */
