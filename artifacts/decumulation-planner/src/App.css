@@ -3330,6 +3330,30 @@ body {
   color: var(--tone-error) !important;
 }
 
+.val-highlight {
+  color: var(--unlock-accent) !important;
+  font-weight: 600 !important;
+}
+
+.report-divider {
+  border-top: 1px solid var(--unlock-border);
+  margin: 4px 0;
+}
+
+.report-row.sub span:first-child {
+  padding-left: 12px;
+  font-size: 12px;
+}
+
+.report-row.sub span:last-child {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.report-section-muted {
+  opacity: 0.75;
+}
+
 .report-disclaimer {
   color: var(--unlock-muted);
   font-size: 13px;
