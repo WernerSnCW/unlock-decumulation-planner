@@ -7,6 +7,7 @@ import PlanningPage from './PlanningPage';
 import AnalysisPage from './AnalysisPage';
 import ReportPage from './ReportPage';
 import { useState } from 'react';
+import UnlockLogo from '../components/UnlockLogo';
 
 const NAV_ITEMS = [
   { path: '/app/portfolio', label: 'Portfolio' },
@@ -25,7 +26,7 @@ function AppShellInner() {
     return (
       <div className="app-layout">
         <div className="app-loading">
-          <div className="landing-logo">U</div>
+          <UnlockLogo height={36} />
           <p>Loading your plan…</p>
         </div>
       </div>
@@ -35,7 +36,7 @@ function AppShellInner() {
   return (
     <div className="app-layout">
       <header className="app-header">
-        <div className="logo">U</div>
+        <UnlockLogo height={28} />
         <h1>Decumulation Planner</h1>
 
         <nav className="app-nav">

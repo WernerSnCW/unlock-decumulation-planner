@@ -2381,22 +2381,10 @@ body {
 }
 
 .landing-logo {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, var(--unlock-accent) 0%, #00d68f 100%);
-  border-radius: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  box-shadow: 0 8px 32px rgba(0, 187, 119, 0.2);
-}
-
-.landing-logo-letter {
-  font-weight: 800;
-  color: #fff;
-  font-size: 32px;
-  line-height: 1;
 }
 
 .landing-title {

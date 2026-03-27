@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'wouter';
+import UnlockLogo from '../components/UnlockLogo';
 
 export default function LandingPage() {
   const { login, error, isLoading } = useAuth();
@@ -24,9 +25,8 @@ export default function LandingPage() {
         {/* Hero */}
         <div className="landing-hero">
           <div className="landing-logo">
-            <span className="landing-logo-letter">U</span>
+            <UnlockLogo height={48} />
           </div>
-          <h1 className="landing-title">Unlock</h1>
           <p className="landing-subtitle">Decumulation Intelligence</p>
         </div>
 
