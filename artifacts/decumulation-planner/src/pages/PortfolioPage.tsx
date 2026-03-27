@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { usePlanner } from '../context/PlannerContext';
 import AssetEditor from '../components/AssetEditor';
 import CsvImportWizard from '../components/CsvImportWizard';
@@ -135,6 +136,12 @@ export default function PortfolioPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="next-step">
+        <Link href="/app/planning" className="next-step-btn">
+          Next: Set up your plan →
+        </Link>
       </div>
     </div>
   );

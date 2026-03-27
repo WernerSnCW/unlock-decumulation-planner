@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { usePlanner } from '../context/PlannerContext';
 import InputPanel from '../components/InputPanel';
 import OptimiserPanel from '../components/OptimiserPanel';
@@ -128,6 +129,14 @@ export default function PlanningPage() {
           <div className="page-placeholder">
             <h2>Simulation error</h2>
             <p>Check your inputs and try again.</p>
+          </div>
+        )}
+
+        {result && (
+          <div className="next-step">
+            <Link href="/app/analysis" className="next-step-btn">
+              Next: View analysis →
+            </Link>
           </div>
         )}
       </div>

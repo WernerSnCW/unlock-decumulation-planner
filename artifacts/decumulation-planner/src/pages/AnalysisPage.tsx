@@ -1,3 +1,4 @@
+import { Link } from 'wouter';
 import { usePlanner } from '../context/PlannerContext';
 import FundedYearsIndicator from '../components/FundedYearsIndicator';
 import PortfolioChart from '../components/PortfolioChart';
@@ -107,6 +108,12 @@ export default function AnalysisPage() {
       </div>
 
       <DisclosurePanel taxParams={taxParams} />
+
+      <div className="next-step">
+        <Link href="/app/report" className="next-step-btn">
+          Next: View report →
+        </Link>
+      </div>
     </div>
   );
 }

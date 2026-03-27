@@ -2844,6 +2844,35 @@ body {
   opacity: 0.8;
 }
 
+/* ───────────────────────── Next Step Button ───────────────────────── */
+
+.next-step {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--unlock-border);
+}
+
+.next-step-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  background: var(--unlock-accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.next-step-btn:hover {
+  background: #00d68f;
+  transform: translateY(-1px);
+}
+
 /* ───────────────────────── Portfolio Page ───────────────────────── */
 
 .portfolio-page {
