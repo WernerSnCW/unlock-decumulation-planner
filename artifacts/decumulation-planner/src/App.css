@@ -2791,6 +2791,59 @@ body {
   font-size: 15px;
 }
 
+/* ───────────────────────── Page Intro ───────────────────────── */
+
+.page-intro {
+  margin-bottom: 4px;
+}
+
+.page-intro h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--unlock-text);
+  margin-bottom: 4px;
+}
+
+.page-intro p {
+  color: var(--unlock-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 600px;
+}
+
+.page-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--unlock-muted);
+}
+
+.page-tip summary {
+  cursor: pointer;
+  color: var(--unlock-accent);
+  font-weight: 500;
+  font-size: 12px;
+  user-select: none;
+  outline: none;
+  list-style: none;
+}
+
+.page-tip summary::-webkit-details-marker {
+  display: none;
+}
+
+.page-tip summary::before {
+  content: '💡 ';
+}
+
+.page-tip span {
+  display: block;
+  margin-top: 4px;
+  padding-left: 20px;
+  color: var(--unlock-muted);
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
 /* ───────────────────────── Portfolio Page ───────────────────────── */
 
 .portfolio-page {

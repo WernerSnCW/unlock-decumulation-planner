@@ -56,6 +56,15 @@ export default function PlanningPage() {
 
   return (
     <div className="planning-page-v2">
+      <div className="page-intro">
+        <h2>Planning</h2>
+        <p>Set your income target and strategy preferences. The simulation recalculates automatically as you change settings.</p>
+        <details className="page-tip">
+          <summary>Tip</summary>
+          <span>Start with a strategy preset (Balanced, Tax, IHT) then fine-tune the sliders. Use the Optimiser to let the engine find the best weights for you.</span>
+        </details>
+      </div>
+
       {/* Collapsible settings bar */}
       <div className={`settings-bar ${settingsOpen ? 'open' : ''}`}>
         <button

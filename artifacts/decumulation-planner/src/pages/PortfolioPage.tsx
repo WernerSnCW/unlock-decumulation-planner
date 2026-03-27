@@ -74,6 +74,15 @@ export default function PortfolioPage() {
         />
       )}
 
+      <div className="page-intro">
+        <h2>Portfolio</h2>
+        <p>Add your assets with their current values and tax wrappers. Growth rates and income figures feed directly into the simulation.</p>
+        <details className="page-tip">
+          <summary>Tip</summary>
+          <span>Use CSV import if you have a spreadsheet from your platform or advisor. You can map the columns on the next screen.</span>
+        </details>
+      </div>
+
       {/* Summary cards */}
       <div className="portfolio-summary">
         <div className="summary-card">

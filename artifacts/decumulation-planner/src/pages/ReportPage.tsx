@@ -34,6 +34,11 @@ export default function ReportPage() {
 
   return (
     <div className="report-page">
+      <div className="page-intro">
+        <h2>Report</h2>
+        <p>Summary of your plan for review. Export as PDF to share with your advisor or keep for your records.</p>
+      </div>
+
       <div className="report-header">
         <h2>Plan Summary</h2>
         <ExportPDF

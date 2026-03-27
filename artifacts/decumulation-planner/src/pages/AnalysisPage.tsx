@@ -41,6 +41,15 @@ export default function AnalysisPage() {
 
   return (
     <div className="analysis-page">
+      <div className="page-intro">
+        <h2>Analysis</h2>
+        <p>Year-by-year projection of how your assets are drawn down, taxes paid, and estate value over the plan period.</p>
+        <details className="page-tip">
+          <summary>Tip</summary>
+          <span>Scroll down to the Action Plan for specific steps in the first few years. The Year Detail table shows the full numbers behind each year.</span>
+        </details>
+      </div>
+
       {scenarioActive && (
         <div className="scenario-banner">
           <span>⚠</span>
