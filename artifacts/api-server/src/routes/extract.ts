@@ -58,17 +58,15 @@ router.post("/investor/extract-assets", investorAuth, async (req, res) => {
     return;
   }
 
-  if (text.length > 100000) {
-    res.status(400).json({ error: "Text too long (max 100,000 characters)" });
-    return;
-  }
+  // Truncate text to keep API calls fast and within limits
+  const truncatedText = text.slice(0, 30000);
 
-  try {
+  const callApi = async (attempt: number): Promise<Response> => {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
+        "x-api-key": apiKey!,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -77,16 +75,33 @@ router.post("/investor/extract-assets", investorAuth, async (req, res) => {
         messages: [
           {
             role: "user",
-            content: `${EXTRACTION_PROMPT}\n\n--- DOCUMENT TEXT (from file: ${filename ?? "unknown"}) ---\n\n${text}`,
+            content: `${EXTRACTION_PROMPT}\n\n--- DOCUMENT TEXT (from file: ${filename ?? "unknown"}) ---\n\n${truncatedText}`,
           },
         ],
       }),
     });
 
+    // Retry on 529 (overloaded) up to 2 times
+    if (response.status === 529 && attempt < 3) {
+      const wait = 2000 * attempt;
+      console.log(`Anthropic API overloaded (529), retrying in ${wait}ms (attempt ${attempt})...`);
+      await new Promise(r => setTimeout(r, wait));
+      return callApi(attempt + 1);
+    }
+
+    return response;
+  };
+
+  try {
+    const response = await callApi(1);
+
     if (!response.ok) {
       const errBody = await response.text();
       console.error("Anthropic API error:", response.status, errBody);
-      res.status(502).json({ error: `AI extraction failed (${response.status}). Try CSV or Excel import instead.` });
+      const hint = response.status === 529
+        ? "The AI service is temporarily busy. Please try again in a moment."
+        : `AI extraction failed (${response.status}). Try CSV or Excel import instead.`;
+      res.status(502).json({ error: hint });
       return;
     }
 

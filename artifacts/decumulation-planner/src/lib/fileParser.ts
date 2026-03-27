@@ -92,14 +92,14 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
       : undefined;
 
     // Generate plain text dump for AI extraction fallback
-    // Use only the latest sheet(s) to avoid sending huge historical data
-    const latestSheets = workbook.SheetNames.slice(-3); // last 3 sheets
+    // Use only the LAST sheet to keep text small for the API
+    const latestSheet = workbook.SheetNames[workbook.SheetNames.length - 1];
     const textParts: string[] = [];
-    for (const sn of latestSheets) {
-      const sheet = workbook.Sheets[sn];
+    {
+      const sheet = workbook.Sheets[latestSheet];
       const txt = XLSX.utils.sheet_to_csv(sheet, { FS: '\t', RS: '\n' });
       if (txt.trim()) {
-        textParts.push(`--- Sheet: ${sn} ---\n${txt}`);
+        textParts.push(`--- Sheet: ${latestSheet} ---\n${txt}`);
       }
     }
     const rawText = textParts.join('\n\n');
