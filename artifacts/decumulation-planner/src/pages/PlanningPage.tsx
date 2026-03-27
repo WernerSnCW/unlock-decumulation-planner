@@ -79,43 +79,43 @@ export default function PlanningPage() {
             {!settingsOpen && (
               <div className="settings-bar-chips">
                 {/* Portfolio value */}
-                <span className="settings-chip highlight">{fmt(assets.reduce((s, a) => s + (a.current_value ?? 0), 0))}</span>
+                <span className="settings-chip highlight" title={`Total portfolio value across ${assets.length} assets`}>{fmt(assets.reduce((s, a) => s + (a.current_value ?? 0), 0))}</span>
 
                 {/* Core settings */}
-                <span className="settings-chip">{fmt(inputs.annual_income_target)} {inputs.income_is_net ? 'net' : 'gross'}</span>
-                <span className="settings-chip">{inputs.plan_years}yr · Age {inputs.current_age}–{inputs.current_age + inputs.plan_years}</span>
-                <span className="settings-chip">{lifestyle}</span>
-                <span className="settings-chip">{strategy}</span>
-                <span className="settings-chip">Inflation {(inputs.inflation_rate * 100).toFixed(0)}%</span>
+                <span className="settings-chip" title={`Annual income target (${inputs.income_is_net ? 'after tax' : 'before tax'})`}>{fmt(inputs.annual_income_target)} {inputs.income_is_net ? 'net' : 'gross'}</span>
+                <span className="settings-chip" title={`Plan runs for ${inputs.plan_years} years from age ${inputs.current_age} to age ${inputs.current_age + inputs.plan_years}`}>{inputs.plan_years}yr · Age {inputs.current_age}–{inputs.current_age + inputs.plan_years}</span>
+                <span className="settings-chip" title={`Lifestyle spending level — adjusts the income target by a multiplier`}>{lifestyle}</span>
+                <span className="settings-chip" title={`Drawdown strategy — controls how assets are prioritised for withdrawal`}>{strategy}</span>
+                <span className="settings-chip" title={`Assumed annual inflation rate applied to spending targets`}>Inflation {(inputs.inflation_rate * 100).toFixed(0)}%</span>
 
                 {/* Pension income */}
                 {(inputs.state_pension_annual > 0 || inputs.private_pension_income > 0) && (
-                  <span className="settings-chip">Pension {fmt(inputs.state_pension_annual + inputs.private_pension_income)}/yr</span>
+                  <span className="settings-chip" title={`State pension: ${fmt(inputs.state_pension_annual)}/yr\nPrivate pension: ${fmt(inputs.private_pension_income)}/yr`}>Pension {fmt(inputs.state_pension_annual + inputs.private_pension_income)}/yr</span>
                 )}
 
                 {/* Legacy & reserve */}
-                {inputs.legacy_target > 0 && <span className="settings-chip">Legacy {fmt(inputs.legacy_target)}</span>}
-                {inputs.cash_reserve > 0 && <span className="settings-chip">Reserve {fmt(inputs.cash_reserve)}</span>}
+                {inputs.legacy_target > 0 && <span className="settings-chip" title="Target amount to leave as inheritance at end of plan">Legacy {fmt(inputs.legacy_target)}</span>}
+                {inputs.cash_reserve > 0 && <span className="settings-chip" title="Minimum cash balance to maintain throughout the plan">Reserve {fmt(inputs.cash_reserve)}</span>}
 
                 {/* Gifting */}
                 {inputs.annual_gift_amount > 0 && (
-                  <span className="settings-chip accent">Gifting {fmt(inputs.annual_gift_amount)}/yr</span>
+                  <span className="settings-chip accent" title={`Annual gifting of ${fmt(inputs.annual_gift_amount)} as ${inputs.gift_type.replace(/_/g, ' ')}`}>Gifting {fmt(inputs.annual_gift_amount)}/yr</span>
                 )}
 
                 {/* Optional programmes */}
                 {inputs.glory_years?.enabled && (
-                  <span className="settings-chip accent">Glory Years ({inputs.glory_years.duration}yr +{((inputs.glory_years.multiplier - 1) * 100).toFixed(0)}%)</span>
+                  <span className="settings-chip accent" title={`Spend ${((inputs.glory_years.multiplier - 1) * 100).toFixed(0)}% more in the first ${inputs.glory_years.duration} years of the plan`}>Glory Years ({inputs.glory_years.duration}yr +{((inputs.glory_years.multiplier - 1) * 100).toFixed(0)}%)</span>
                 )}
                 {inputs.eis_strategy?.enabled && (
-                  <span className="settings-chip accent">EIS {fmt(inputs.eis_strategy.annual_amount ?? 0)}/yr</span>
+                  <span className="settings-chip accent" title={`Enterprise Investment Scheme — ${fmt(inputs.eis_strategy.annual_amount ?? 0)}/yr for income tax relief and IHT exemption after 2 years`}>EIS {fmt(inputs.eis_strategy.annual_amount ?? 0)}/yr</span>
                 )}
                 {inputs.vct_strategy?.enabled && (
-                  <span className="settings-chip accent">VCT {fmt(inputs.vct_strategy.annual_amount ?? 0)}/yr</span>
+                  <span className="settings-chip accent" title={`Venture Capital Trust — ${fmt(inputs.vct_strategy.annual_amount ?? 0)}/yr for 30% income tax relief and tax-free dividends`}>VCT {fmt(inputs.vct_strategy.annual_amount ?? 0)}/yr</span>
                 )}
 
                 {/* Scenario flags */}
-                {inputs.apply_2026_bpr_cap && <span className="settings-chip warn">2026 BPR Cap</span>}
-                {inputs.apply_2027_pension_iht && <span className="settings-chip warn">2027 Pension IHT</span>}
+                {inputs.apply_2026_bpr_cap && <span className="settings-chip warn" title="Models the proposed 2026 cap on Business Property Relief at £1m (50% relief above)">2026 BPR Cap</span>}
+                {inputs.apply_2027_pension_iht && <span className="settings-chip warn" title="Models the proposed 2027 change bringing pensions into the IHT-liable estate">2027 Pension IHT</span>}
               </div>
             )}
           </div>
