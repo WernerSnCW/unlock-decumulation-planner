@@ -129,7 +129,7 @@ export default function LandingPage() {
 
         {/* Subtle admin link */}
         <div className="landing-footer">
-          <a href="/admin" className="admin-link">Admin</a>
+          <a href="/admin" className="admin-link">Admin Portal</a>
         </div>
       </div>
     </div>

@@ -2607,14 +2607,17 @@ body {
 
 .admin-link {
   color: var(--unlock-muted);
-  font-size: 11px;
+  font-size: 13px;
   text-decoration: none;
-  opacity: 0.3;
-  transition: opacity 0.2s;
+  padding: 8px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  transition: border-color 0.2s, color 0.2s;
 }
 
 .admin-link:hover {
-  opacity: 0.7;
+  border-color: rgba(255, 255, 255, 0.5);
+  color: var(--unlock-text);
 }
 
 /* ───────────────────────── App Shell Navigation ───────────────────────── */
