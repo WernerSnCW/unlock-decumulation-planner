@@ -3,10 +3,32 @@ import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType
 import { DEFAULT_EIS_STRATEGY, DEFAULT_VCT_STRATEGY } from '../engine/decumulation';
 
 function InfoTip({ text }: { text: string }) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const iconRef = useRef<HTMLSpanElement>(null);
+
+  const show = () => {
+    if (!iconRef.current) return;
+    const rect = iconRef.current.getBoundingClientRect();
+    const bubbleWidth = 240;
+    let left = rect.left + rect.width / 2 - bubbleWidth / 2;
+    if (left < 8) left = 8;
+    if (left + bubbleWidth > window.innerWidth - 8) left = window.innerWidth - 8 - bubbleWidth;
+    setPos({ top: rect.top - 8, left });
+  };
+
+  const hide = () => setPos(null);
+
   return (
-    <span className="info-tip">
-      <span className="info-tip-icon">i</span>
-      <span className="info-tip-bubble">{text}</span>
+    <span className="info-tip" onMouseEnter={show} onMouseLeave={hide}>
+      <span className="info-tip-icon" ref={iconRef}>i</span>
+      {pos && (
+        <span
+          className="info-tip-bubble visible"
+          style={{ top: pos.top, left: pos.left, transform: 'translateY(-100%)' }}
+        >
+          {text}
+        </span>
+      )}
     </span>
   );
 }
