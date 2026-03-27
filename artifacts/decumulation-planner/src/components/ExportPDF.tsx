@@ -52,7 +52,7 @@ export default function ExportPDF({ inputs, result, assets, taxParams, investorN
       onClick={handleExport}
       disabled={exporting}
     >
-      {exporting ? 'Generating...' : 'Export PDF'}
+      {exporting ? 'Generating...' : 'Export Detailed Report to PDF'}
     </button>
   );
 }
