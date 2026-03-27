@@ -3509,8 +3509,30 @@ body {
 .admin-create-form {
   display: flex;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.admin-field-error {
+  font-size: 12px;
+  color: var(--tone-error);
+}
+
+.input-invalid {
+  border-color: var(--tone-error) !important;
+}
+
+.admin-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
 }
 
 .admin-create-form input {
@@ -3520,8 +3542,7 @@ body {
   background: var(--unlock-surface);
   color: var(--unlock-text);
   font-size: 14px;
-  flex: 1;
-  min-width: 160px;
+  width: 100%;
 }
 
 .admin-create-form button {

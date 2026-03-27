@@ -33,6 +33,9 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState('');
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
 
   // delete confirmation
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -93,11 +96,42 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
+  const validateForm = (): boolean => {
+    let valid = true;
+    setNameError('');
+    setEmailError('');
+
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+      setNameError('Name is required');
+      valid = false;
+    } else if (trimmedName.length < 2) {
+      setNameError('Name must be at least 2 characters');
+      valid = false;
+    }
+
+    const trimmedEmail = newEmail.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailError('Invalid email format');
+      valid = false;
+    }
+
+    return valid;
+  };
+
+  const checkDuplicate = (): boolean => {
+    const trimmedName = newName.trim().toLowerCase();
+    const trimmedEmail = newEmail.trim().toLowerCase();
+    return investors.some(inv =>
+      inv.name.toLowerCase() === trimmedName &&
+      (inv.email ?? '').toLowerCase() === trimmedEmail
+    );
+  };
+
+  const doCreate = async () => {
     setCreating(true);
     setCreateMsg('');
+    setDuplicateWarning(false);
     try {
       const res = await fetch(`${API_BASE}/investors`, {
         method: 'POST',
@@ -118,6 +152,18 @@ export default function AdminPage() {
       setCreateMsg('Failed to create investor');
     }
     setCreating(false);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    if (checkDuplicate() && !duplicateWarning) {
+      setDuplicateWarning(true);
+      return;
+    }
+
+    await doCreate();
   };
 
   const handleDelete = async (id: number) => {
@@ -175,22 +221,35 @@ export default function AdminPage() {
       <section className="admin-section">
         <h2>Create Investor</h2>
         <form className="admin-create-form" onSubmit={handleCreate}>
-          <input
-            type="text"
-            placeholder="Name (required)"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-          />
-          <input
-            type="email"
-            placeholder="Email (optional)"
-            value={newEmail}
-            onChange={e => setNewEmail(e.target.value)}
-          />
+          <div className="admin-field">
+            <input
+              type="text"
+              placeholder="Name (required)"
+              value={newName}
+              onChange={e => { setNewName(e.target.value); setNameError(''); setDuplicateWarning(false); }}
+              className={nameError ? 'input-invalid' : ''}
+            />
+            {nameError && <span className="admin-field-error">{nameError}</span>}
+          </div>
+          <div className="admin-field">
+            <input
+              type="email"
+              placeholder="Email (optional)"
+              value={newEmail}
+              onChange={e => { setNewEmail(e.target.value); setEmailError(''); setDuplicateWarning(false); }}
+              className={emailError ? 'input-invalid' : ''}
+            />
+            {emailError && <span className="admin-field-error">{emailError}</span>}
+          </div>
           <button type="submit" disabled={creating || !newName.trim()}>
-            {creating ? 'Creating...' : 'Create'}
+            {creating ? 'Creating...' : duplicateWarning ? 'Confirm Create' : 'Create'}
           </button>
         </form>
+        {duplicateWarning && (
+          <div className="admin-msg admin-warning">
+            An investor with this name and email already exists. Press "Confirm Create" to add anyway, or change the details.
+          </div>
+        )}
         {createMsg && (
           <div className={`admin-msg ${createMsg.startsWith('Error') ? 'admin-error' : 'admin-success'}`}>
             {createMsg}
