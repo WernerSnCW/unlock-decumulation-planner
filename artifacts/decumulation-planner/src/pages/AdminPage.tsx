@@ -39,6 +39,9 @@ export default function AdminPage() {
 
   // delete confirmation
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteDataInfo, setDeleteDataInfo] = useState<{ assets: number; settings: number } | null>(null);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [checkingDelete, setCheckingDelete] = useState(false);
 
   // copied feedback
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -166,15 +169,47 @@ export default function AdminPage() {
     await doCreate();
   };
 
-  const handleDelete = async (id: number) => {
+  const initiateDelete = async (id: number) => {
+    setDeleteId(id);
+    setDeleteConfirmed(false);
+    setDeleteDataInfo(null);
+    setCheckingDelete(true);
+    try {
+      const res = await fetch(`${API_BASE}/investors/${id}/data-check`, {
+        headers: headers(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.hasData) {
+          // No data — delete immediately
+          await doDelete(id);
+          return;
+        }
+        setDeleteDataInfo({ assets: data.assets, settings: data.settings });
+      }
+    } catch { /* ignore */ }
+    setCheckingDelete(false);
+  };
+
+  const doDelete = async (id: number) => {
     try {
       await fetch(`${API_BASE}/investors/${id}`, {
         method: 'DELETE',
         headers: headers(),
       });
       setDeleteId(null);
+      setDeleteDataInfo(null);
+      setDeleteConfirmed(false);
       setInvestors(prev => prev.filter(i => i.id !== id));
     } catch { /* ignore */ }
+    setCheckingDelete(false);
+  };
+
+  const cancelDelete = () => {
+    setDeleteId(null);
+    setDeleteDataInfo(null);
+    setDeleteConfirmed(false);
+    setCheckingDelete(false);
   };
 
   const copyCode = (code: string, id: number) => {
@@ -309,13 +344,26 @@ export default function AdminPage() {
                   <td>{fmt(inv.createdAt)}</td>
                   <td>
                     {deleteId === inv.id ? (
-                      <span className="delete-confirm">
-                        Sure?{' '}
-                        <button className="del-yes" onClick={() => handleDelete(inv.id)}>Yes</button>
-                        <button className="del-no" onClick={() => setDeleteId(null)}>No</button>
-                      </span>
+                      checkingDelete && !deleteDataInfo ? (
+                        <span className="delete-confirm">Checking...</span>
+                      ) : deleteDataInfo ? (
+                        <span className="delete-confirm delete-confirm-data">
+                          <span className="delete-data-warning">
+                            Has {deleteDataInfo.assets} asset{deleteDataInfo.assets !== 1 ? 's' : ''}
+                            {deleteDataInfo.settings > 0 ? ' + saved settings' : ''}. Delete?
+                          </span>
+                          <button className="del-yes" onClick={() => doDelete(inv.id)}>Yes, delete all</button>
+                          <button className="del-no" onClick={cancelDelete}>Cancel</button>
+                        </span>
+                      ) : (
+                        <span className="delete-confirm">
+                          Sure?{' '}
+                          <button className="del-yes" onClick={() => doDelete(inv.id)}>Yes</button>
+                          <button className="del-no" onClick={cancelDelete}>No</button>
+                        </span>
+                      )
                     ) : (
-                      <button className="del-btn" onClick={() => setDeleteId(inv.id)}>Delete</button>
+                      <button className="del-btn" onClick={() => initiateDelete(inv.id)}>Delete</button>
                     )}
                   </td>
                 </tr>

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { investorsTable, assetsTable } from "@workspace/db/schema";
-import { eq, ilike, or } from "drizzle-orm";
+import { investorsTable, assetsTable, simulationSettingsTable } from "@workspace/db/schema";
+import { eq, ilike, or, count } from "drizzle-orm";
 import { adminAuth } from "../middlewares/admin-auth";
 import { generateAccessCode } from "../lib/access-code";
 
@@ -83,6 +83,31 @@ router.post("/admin/investors", adminAuth, async (req, res) => {
   }
 
   res.status(201).json(investor);
+});
+
+// GET /admin/investors/:id/data-check — check if investor has assets or settings
+router.get("/admin/investors/:id/data-check", adminAuth, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid investor id" });
+    return;
+  }
+
+  const [assetCount] = await db
+    .select({ count: count() })
+    .from(assetsTable)
+    .where(eq(assetsTable.investorId, id));
+
+  const [settingsCount] = await db
+    .select({ count: count() })
+    .from(simulationSettingsTable)
+    .where(eq(simulationSettingsTable.investorId, id));
+
+  res.json({
+    assets: assetCount?.count ?? 0,
+    settings: settingsCount?.count ?? 0,
+    hasData: (assetCount?.count ?? 0) > 0 || (settingsCount?.count ?? 0) > 0,
+  });
 });
 
 // DELETE /admin/investors/:id — delete an investor (cascades to assets & settings)
