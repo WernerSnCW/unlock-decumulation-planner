@@ -3141,10 +3141,23 @@ body {
   border: 1px solid var(--unlock-border);
 }
 
+.settings-chip.highlight {
+  background: rgba(0, 187, 119, 0.12);
+  color: var(--unlock-accent);
+  border-color: rgba(0, 187, 119, 0.25);
+  font-weight: 600;
+}
+
 .settings-chip.accent {
   background: rgba(0, 187, 119, 0.1);
   color: var(--unlock-accent);
   border-color: rgba(0, 187, 119, 0.2);
+}
+
+.settings-chip.warn {
+  background: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
 .settings-bar-chevron {

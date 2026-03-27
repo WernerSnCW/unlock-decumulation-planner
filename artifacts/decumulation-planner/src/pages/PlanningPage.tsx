@@ -78,15 +78,44 @@ export default function PlanningPage() {
             </span>
             {!settingsOpen && (
               <div className="settings-bar-chips">
+                {/* Portfolio value */}
+                <span className="settings-chip highlight">{fmt(assets.reduce((s, a) => s + (a.current_value ?? 0), 0))}</span>
+
+                {/* Core settings */}
                 <span className="settings-chip">{fmt(inputs.annual_income_target)} {inputs.income_is_net ? 'net' : 'gross'}</span>
-                <span className="settings-chip">{inputs.plan_years}yr</span>
-                <span className="settings-chip">Age {inputs.current_age}</span>
+                <span className="settings-chip">{inputs.plan_years}yr · Age {inputs.current_age}–{inputs.current_age + inputs.plan_years}</span>
                 <span className="settings-chip">{lifestyle}</span>
                 <span className="settings-chip">{strategy}</span>
-                {inputs.glory_years.enabled && <span className="settings-chip accent">Glory Years</span>}
-                {inputs.eis_strategy?.enabled && <span className="settings-chip accent">EIS</span>}
-                {inputs.vct_strategy?.enabled && <span className="settings-chip accent">VCT</span>}
-                {inputs.annual_gift_amount > 0 && <span className="settings-chip accent">Gifting</span>}
+                <span className="settings-chip">Inflation {(inputs.inflation_rate * 100).toFixed(0)}%</span>
+
+                {/* Pension income */}
+                {(inputs.state_pension_annual > 0 || inputs.private_pension_income > 0) && (
+                  <span className="settings-chip">Pension {fmt(inputs.state_pension_annual + inputs.private_pension_income)}/yr</span>
+                )}
+
+                {/* Legacy & reserve */}
+                {inputs.legacy_target > 0 && <span className="settings-chip">Legacy {fmt(inputs.legacy_target)}</span>}
+                {inputs.cash_reserve > 0 && <span className="settings-chip">Reserve {fmt(inputs.cash_reserve)}</span>}
+
+                {/* Gifting */}
+                {inputs.annual_gift_amount > 0 && (
+                  <span className="settings-chip accent">Gifting {fmt(inputs.annual_gift_amount)}/yr</span>
+                )}
+
+                {/* Optional programmes */}
+                {inputs.glory_years?.enabled && (
+                  <span className="settings-chip accent">Glory Years ({inputs.glory_years.duration}yr +{((inputs.glory_years.multiplier - 1) * 100).toFixed(0)}%)</span>
+                )}
+                {inputs.eis_strategy?.enabled && (
+                  <span className="settings-chip accent">EIS {fmt(inputs.eis_strategy.annual_amount ?? 0)}/yr</span>
+                )}
+                {inputs.vct_strategy?.enabled && (
+                  <span className="settings-chip accent">VCT {fmt(inputs.vct_strategy.annual_amount ?? 0)}/yr</span>
+                )}
+
+                {/* Scenario flags */}
+                {inputs.apply_2026_bpr_cap && <span className="settings-chip warn">2026 BPR Cap</span>}
+                {inputs.apply_2027_pension_iht && <span className="settings-chip warn">2027 Pension IHT</span>}
               </div>
             )}
           </div>
