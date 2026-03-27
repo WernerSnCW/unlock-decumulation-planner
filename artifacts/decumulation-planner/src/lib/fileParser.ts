@@ -122,7 +122,7 @@ export async function parsePdfFile(file: File): Promise<ParseResult> {
     if (!fullText.trim()) {
       return {
         success: false, headers: [], rows: [], format: 'pdf',
-        error: 'This PDF appears to be scanned or image-based — no readable text was found. Please use a CSV or Excel export instead.',
+        error: 'We couldn\'t extract text from this PDF — it may use embedded fonts or compression that can\'t be read in the browser. Try this instead: open the PDF, select all text (Ctrl+A), copy and paste into Excel or Google Sheets, save as CSV, then import that file.',
       };
     }
 
