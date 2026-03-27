@@ -143,6 +143,62 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
   const importedAssets = validatedRows.filter(r => !r.skip);
   const totalValue = importedAssets.reduce((sum, r) => sum + (r.parsed.current_value ?? 0), 0);
 
+  /* ─── Template download ─── */
+
+  const downloadTemplate = () => {
+    const headers = TARGET_FIELDS.map(f => f.key);
+    const exampleRow = [
+      'NatWest Current Account',  // label
+      '50000',                     // current_value
+      'cash',                      // asset_class
+      'unwrapped',                 // wrapper_type
+      '0.045',                     // assumed_growth_rate
+      '2250',                      // income_generated
+      '50000',                     // acquisition_cost
+      '2020-01-15',                // acquisition_date
+      '0',                         // mortgage_balance
+      '0',                         // reinvested_pct
+      'cash-001',                  // asset_id
+      'false',                     // is_iht_exempt
+      '',                          // pension_type
+      '0',                         // tax_relief_claimed
+      '',                          // original_subscription_amount
+      'none',                      // relief_claimed_type
+      '0',                         // estimated_disposal_cost_pct
+      'none',                      // disposal_type
+      '',                          // transfer_year
+    ];
+    const csv = [headers.join(','), exampleRow.join(',')].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'unlock_asset_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const [showFieldGuide, setShowFieldGuide] = useState(false);
+
+  const FIELD_GUIDE: { key: string; label: string; required: boolean; impact: 'critical' | 'high' | 'medium' | 'low'; description: string; example: string }[] = [
+    { key: 'label', label: 'Asset Name', required: true, impact: 'critical', description: 'Identifies the asset throughout the tool', example: 'ISA — Vanguard' },
+    { key: 'current_value', label: 'Current Value', required: true, impact: 'critical', description: 'Market value today — drives all projections', example: '250000' },
+    { key: 'asset_class', label: 'Asset Class', required: true, impact: 'critical', description: 'Determines tax treatment, drawdown priority, and IHT rules', example: 'isa, pension, cash, vct, eis, property_investment, property_residential, aim_shares' },
+    { key: 'wrapper_type', label: 'Wrapper Type', required: false, impact: 'high', description: 'Tax wrapper — affects income tax and CGT treatment. Auto-inferred from asset class if missing', example: 'unwrapped, isa, pension' },
+    { key: 'assumed_growth_rate', label: 'Growth Rate', required: false, impact: 'high', description: 'Annual capital growth rate (decimal or %). Template default used if missing', example: '0.06 or 6%' },
+    { key: 'income_generated', label: 'Annual Income', required: false, impact: 'high', description: 'Dividends, rent, or interest generated per year — feeds into tax calculations', example: '12000' },
+    { key: 'acquisition_cost', label: 'Acquisition Cost', required: false, impact: 'high', description: 'Original purchase price — used to calculate capital gains on disposal', example: '180000' },
+    { key: 'is_iht_exempt', label: 'IHT Exempt', required: false, impact: 'high', description: 'Whether the asset qualifies for BPR (Business Property Relief). Critical for EIS, AIM', example: 'true or false' },
+    { key: 'pension_type', label: 'Pension Type', required: false, impact: 'medium', description: 'SIPP, DB, or SSAS — controls drawdown rules and tax-free lump sum', example: 'sipp' },
+    { key: 'tax_relief_claimed', label: 'Tax Relief Claimed', required: false, impact: 'medium', description: 'Amount of income tax or CGT relief already received (EIS/VCT)', example: '12000' },
+    { key: 'original_subscription_amount', label: 'Original Subscription', required: false, impact: 'medium', description: 'Amount originally invested in EIS/VCT — used for relief calculations', example: '40000' },
+    { key: 'relief_claimed_type', label: 'Relief Type', required: false, impact: 'medium', description: 'Type of relief claimed: income_tax_relief, cgt_deferral, both, or none', example: 'income_tax_relief' },
+    { key: 'estimated_disposal_cost_pct', label: 'Disposal Cost %', required: false, impact: 'medium', description: 'Percentage deducted on sale (e.g. agent fees for property)', example: '0.025' },
+    { key: 'acquisition_date', label: 'Acquisition Date', required: false, impact: 'low', description: 'Date purchased — used for BPR qualifying period checks', example: '2020-01-15' },
+    { key: 'mortgage_balance', label: 'Mortgage Balance', required: false, impact: 'low', description: 'Outstanding mortgage on property — reduces net estate value', example: '120000' },
+    { key: 'reinvested_pct', label: 'Reinvested %', required: false, impact: 'low', description: 'Percentage of income reinvested back into the asset (0-100)', example: '50' },
+  ];
+
   /* ─── Step indicator ─── */
 
   const steps: { key: Step; label: string }[] = [
@@ -179,26 +235,77 @@ export default function CsvImportWizard({ existingAssets, onImport, onClose }: P
         <div className="csv-body">
           {/* ── Upload ── */}
           {step === 'upload' && (
-            <div
-              className={`csv-dropzone ${dragActive ? 'active' : ''}`}
-              onClick={() => fileRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragActive(true); }}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={onDrop}
-            >
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".csv,.tsv,.txt"
-                onChange={onFileChange}
-                style={{ display: 'none' }}
-              />
-              <div className="csv-dropzone-icon">CSV</div>
-              <p className="csv-dropzone-title">Drop your CSV file here</p>
-              <p className="csv-dropzone-sub">or click to browse</p>
-              <p className="csv-dropzone-hint">Supports .csv, .tsv, .txt files</p>
-              {parseError && <p className="csv-error">{parseError}</p>}
-            </div>
+            <>
+              <div
+                className={`csv-dropzone ${dragActive ? 'active' : ''}`}
+                onClick={() => fileRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={onDrop}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".csv,.tsv,.txt"
+                  onChange={onFileChange}
+                  style={{ display: 'none' }}
+                />
+                <div className="csv-dropzone-icon">CSV</div>
+                <p className="csv-dropzone-title">Drop your CSV file here</p>
+                <p className="csv-dropzone-sub">or click to browse</p>
+                <p className="csv-dropzone-hint">Supports .csv, .tsv, and tab-delimited files. Columns are auto-matched.</p>
+                {parseError && <p className="csv-error">{parseError}</p>}
+              </div>
+
+              <div className="csv-upload-actions">
+                <button className="csv-btn secondary" onClick={downloadTemplate}>
+                  Download Template CSV
+                </button>
+                <button
+                  className="csv-btn secondary"
+                  onClick={() => setShowFieldGuide(!showFieldGuide)}
+                >
+                  {showFieldGuide ? 'Hide' : 'Show'} Field Guide
+                </button>
+              </div>
+
+              {showFieldGuide && (
+                <div className="csv-field-guide">
+                  <p className="csv-section-title">Field Guide — what each column does</p>
+                  <p className="csv-field-guide-intro">
+                    Only <strong>Asset Name</strong>, <strong>Current Value</strong>, and <strong>Asset Class</strong> are required.
+                    The more fields you provide, the more accurate the simulation will be.
+                  </p>
+                  <table className="csv-field-guide-table">
+                    <thead>
+                      <tr>
+                        <th>Field</th>
+                        <th>Impact</th>
+                        <th>Description</th>
+                        <th>Example</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {FIELD_GUIDE.map(f => (
+                        <tr key={f.key} className={f.required ? 'csv-field-required' : ''}>
+                          <td>
+                            <span className="csv-field-name">{f.label}</span>
+                            {f.required && <span className="csv-req">*</span>}
+                          </td>
+                          <td>
+                            <span className={`csv-impact csv-impact-${f.impact}`}>
+                              {f.impact}
+                            </span>
+                          </td>
+                          <td className="csv-field-desc">{f.description}</td>
+                          <td><code>{f.example}</code></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
 
           {/* ── Map ── */}
