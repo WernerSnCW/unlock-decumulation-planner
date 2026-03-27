@@ -103,11 +103,19 @@ export async function parsePdfFile(file: File): Promise<ParseResult> {
   try {
     const pdfjsLib = await import('pdfjs-dist');
 
-    // Set worker source
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    // Disable worker — runs PDF parsing on the main thread.
+    // Avoids Vite/bundler issues with worker file resolution.
+    // Fine for portfolio statements (typically < 10 pages).
+    if (typeof window !== 'undefined') {
+      (pdfjsLib as any).GlobalWorkerOptions.workerSrc = '';
+    }
 
     const buffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    const pdf = await pdfjsLib.getDocument({
+      data: new Uint8Array(buffer),
+      useWorkerFetch: false,
+      isEvalSupported: false,
+    }).promise;
     const pageCount = pdf.numPages;
 
     // Extract text from all pages
