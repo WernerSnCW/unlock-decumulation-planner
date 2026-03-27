@@ -9,92 +9,42 @@ interface AssetEditorProps {
 }
 
 const ASSET_CLASS_LABELS: Record<string, string> = {
-  cash: 'Cash',
-  isa: 'ISA',
-  pension: 'Pension',
-  property_investment: 'Property (Investment)',
-  property_residential: 'Property (Residential)',
-  vct: 'VCT',
-  eis: 'EIS',
-  aim_shares: 'AIM Shares',
+  cash: 'Cash', isa: 'ISA', pension: 'Pension',
+  property_investment: 'Property (Inv)', property_residential: 'Property (Res)',
+  vct: 'VCT', eis: 'EIS', aim_shares: 'AIM',
 };
 
-const ASSET_CLASS_COLORS: Record<string, string> = {
-  cash: '#6366f1',
-  isa: '#22c55e',
-  pension: '#f59e0b',
-  property_investment: '#ef4444',
-  property_residential: '#f87171',
-  vct: '#8b5cf6',
-  eis: '#ec4899',
-  aim_shares: '#06b6d4',
-};
+const ASSET_CLASSES = ['cash', 'isa', 'pension', 'property_investment', 'property_residential', 'vct', 'eis', 'aim_shares'];
+
+const WRAPPER_TYPES = ['unwrapped', 'isa', 'pension'];
+
+const RELIEF_TYPES = ['none', 'income_tax_relief', 'cgt_deferral', 'both'];
+
+const PENSION_TYPES = ['sipp', 'ssas', 'db'];
 
 interface AssetTemplate {
   asset_class: string;
   wrapper_type: string;
   assumed_growth_rate: number;
-  income_generated: number;
   is_iht_exempt: boolean;
   pension_type: string | null;
   relief_claimed_type: string;
   estimated_disposal_cost_pct: number;
-  hint: string;
 }
 
-const ASSET_TEMPLATES: Record<string, AssetTemplate> = {
-  cash: {
-    asset_class: 'cash', wrapper_type: 'unwrapped', assumed_growth_rate: 0.045,
-    income_generated: 0, is_iht_exempt: false, pension_type: null,
-    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0,
-    hint: 'Savings accounts, current accounts, NS&I. Interest taxed as savings income.',
-  },
-  isa: {
-    asset_class: 'isa', wrapper_type: 'isa', assumed_growth_rate: 0.06,
-    income_generated: 0, is_iht_exempt: false, pension_type: null,
-    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0,
-    hint: 'Tax-free growth and income. No CGT on disposal. Part of estate for IHT.',
-  },
-  pension: {
-    asset_class: 'pension', wrapper_type: 'pension', assumed_growth_rate: 0.055,
-    income_generated: 0, is_iht_exempt: false, pension_type: 'sipp',
-    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0,
-    hint: 'SIPP or SSAS. Draws taxed as income. PCLS/TFLS available. Currently outside estate pre-2027.',
-  },
-  property_investment: {
-    asset_class: 'property_investment', wrapper_type: 'unwrapped', assumed_growth_rate: 0.03,
-    income_generated: 0, is_iht_exempt: false, pension_type: null,
-    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.025,
-    hint: 'Buy-to-let or commercial. Rental income taxed as non-savings. CGT on sale with ATED/letting relief.',
-  },
-  property_residential: {
-    asset_class: 'property_residential', wrapper_type: 'unwrapped', assumed_growth_rate: 0.03,
-    income_generated: 0, is_iht_exempt: false, pension_type: null,
-    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.025,
-    hint: 'Primary or secondary residence. Main residence may qualify for PPR relief on CGT.',
-  },
-  vct: {
-    asset_class: 'vct', wrapper_type: 'unwrapped', assumed_growth_rate: 0.07,
-    income_generated: 0, is_iht_exempt: false, pension_type: null,
-    relief_claimed_type: 'income_tax_relief', estimated_disposal_cost_pct: 0,
-    hint: 'Tax-free dividends, CGT-exempt after 5yr hold. Early disposal claws back income tax relief.',
-  },
-  eis: {
-    asset_class: 'eis', wrapper_type: 'unwrapped', assumed_growth_rate: 0.12,
-    income_generated: 0, is_iht_exempt: true, pension_type: null,
-    relief_claimed_type: 'both', estimated_disposal_cost_pct: 0,
-    hint: 'IHT-exempt via BPR after 2yr hold. CGT-exempt if held 3yr+. Loss relief available.',
-  },
-  aim_shares: {
-    asset_class: 'aim_shares', wrapper_type: 'unwrapped', assumed_growth_rate: 0.065,
-    income_generated: 0, is_iht_exempt: true, pension_type: null,
-    relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.01,
-    hint: 'IHT-exempt via BPR after 2yr hold (subject to 2026 cap). Standard CGT applies on disposal.',
-  },
+const TEMPLATES: Record<string, AssetTemplate> = {
+  cash:                 { asset_class: 'cash', wrapper_type: 'unwrapped', assumed_growth_rate: 0.045, is_iht_exempt: false, pension_type: null, relief_claimed_type: 'none', estimated_disposal_cost_pct: 0 },
+  isa:                  { asset_class: 'isa', wrapper_type: 'isa', assumed_growth_rate: 0.06, is_iht_exempt: false, pension_type: null, relief_claimed_type: 'none', estimated_disposal_cost_pct: 0 },
+  pension:              { asset_class: 'pension', wrapper_type: 'pension', assumed_growth_rate: 0.055, is_iht_exempt: false, pension_type: 'sipp', relief_claimed_type: 'none', estimated_disposal_cost_pct: 0 },
+  property_investment:  { asset_class: 'property_investment', wrapper_type: 'unwrapped', assumed_growth_rate: 0.03, is_iht_exempt: false, pension_type: null, relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.025 },
+  property_residential: { asset_class: 'property_residential', wrapper_type: 'unwrapped', assumed_growth_rate: 0.03, is_iht_exempt: false, pension_type: null, relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.025 },
+  vct:                  { asset_class: 'vct', wrapper_type: 'unwrapped', assumed_growth_rate: 0.07, is_iht_exempt: false, pension_type: null, relief_claimed_type: 'income_tax_relief', estimated_disposal_cost_pct: 0 },
+  eis:                  { asset_class: 'eis', wrapper_type: 'unwrapped', assumed_growth_rate: 0.12, is_iht_exempt: true, pension_type: null, relief_claimed_type: 'both', estimated_disposal_cost_pct: 0 },
+  aim_shares:           { asset_class: 'aim_shares', wrapper_type: 'unwrapped', assumed_growth_rate: 0.065, is_iht_exempt: true, pension_type: null, relief_claimed_type: 'none', estimated_disposal_cost_pct: 0.01 },
 };
 
 function createNewAsset(templateKey: string, label: string): Asset {
-  const t = ASSET_TEMPLATES[templateKey];
+  const t = TEMPLATES[templateKey];
   return {
     asset_id: `${t.asset_class}-${Date.now()}`,
     wrapper_type: t.wrapper_type,
@@ -106,7 +56,7 @@ function createNewAsset(templateKey: string, label: string): Asset {
     original_subscription_amount: null,
     tax_relief_claimed: 0,
     assumed_growth_rate: t.assumed_growth_rate,
-    income_generated: t.income_generated,
+    income_generated: 0,
     reinvested_pct: 0,
     is_iht_exempt: t.is_iht_exempt,
     bpr_qualifying_date: null,
@@ -128,92 +78,100 @@ function createNewAsset(templateKey: string, label: string): Asset {
   };
 }
 
-function isOverridden(current: number | null, original: number | null): boolean {
-  return (current ?? 0) !== (original ?? 0);
+/* ─── Column definitions ─── */
+
+interface Column {
+  key: string;
+  label: string;
+  group: string;
+  width: number;
+  type: 'text' | 'currency' | 'pct' | 'pct_decimal' | 'select' | 'checkbox' | 'date' | 'number';
+  options?: { value: string; label: string }[];
+  field: keyof Asset;
+  showFor?: (a: Asset) => boolean;
+  hint?: string;
 }
 
-function formatCurrency(val: number): string {
-  return '\u00A3' + val.toLocaleString('en-GB');
-}
+const COLUMNS: Column[] = [
+  // Core
+  { key: 'label', label: 'Name', group: 'Core', width: 180, type: 'text', field: 'label' },
+  { key: 'asset_class', label: 'Class', group: 'Core', width: 120, type: 'select', field: 'asset_class',
+    options: ASSET_CLASSES.map(c => ({ value: c, label: ASSET_CLASS_LABELS[c] ?? c })) },
+  { key: 'current_value', label: 'Value (£)', group: 'Core', width: 110, type: 'currency', field: 'current_value' },
+  { key: 'assumed_growth_rate', label: 'Growth %', group: 'Core', width: 80, type: 'pct_decimal', field: 'assumed_growth_rate' },
+  { key: 'income_generated', label: 'Income (£)', group: 'Core', width: 100, type: 'currency', field: 'income_generated' },
+  { key: 'wrapper_type', label: 'Wrapper', group: 'Core', width: 100, type: 'select', field: 'wrapper_type',
+    options: WRAPPER_TYPES.map(w => ({ value: w, label: w.charAt(0).toUpperCase() + w.slice(1) })) },
+  { key: 'reinvested_pct', label: 'Reinvest %', group: 'Core', width: 80, type: 'pct', field: 'reinvested_pct' },
 
-function formatPct(val: number): string {
-  return (val * 100).toFixed(1) + '%';
-}
+  // Acquisition & CGT
+  { key: 'acquisition_cost', label: 'Cost (£)', group: 'CGT', width: 100, type: 'currency', field: 'acquisition_cost', hint: 'Purchase price for CGT' },
+  { key: 'acquisition_date', label: 'Acq. Date', group: 'CGT', width: 120, type: 'date', field: 'acquisition_date' },
+  { key: 'estimated_disposal_cost_pct', label: 'Disp. Cost %', group: 'CGT', width: 90, type: 'pct_decimal', field: 'estimated_disposal_cost_pct' },
 
-function getDefault(defaults: Asset[], asset: Asset): Asset | undefined {
-  return defaults.find(d => d.asset_id === asset.asset_id);
-}
+  // IHT
+  { key: 'is_iht_exempt', label: 'IHT Exempt', group: 'IHT', width: 80, type: 'checkbox', field: 'is_iht_exempt' },
+  { key: 'mortgage_balance', label: 'Mortgage (£)', group: 'IHT', width: 100, type: 'currency', field: 'mortgage_balance',
+    showFor: (a) => a.asset_class.startsWith('property') },
 
-function assetHasOverrides(asset: Asset, orig: Asset | undefined): boolean {
-  if (!orig) return true;
-  return asset.current_value !== orig.current_value ||
-    asset.assumed_growth_rate !== orig.assumed_growth_rate ||
-    asset.income_generated !== orig.income_generated ||
-    asset.mortgage_balance !== orig.mortgage_balance ||
-    (asset.acquisition_cost ?? 0) !== (orig.acquisition_cost ?? 0) ||
-    (asset.reinvested_pct ?? 0) !== (orig.reinvested_pct ?? 0) ||
-    (asset.disposal_type ?? 'none') !== (orig.disposal_type ?? 'none') ||
-    (asset.transfer_year ?? null) !== (orig.transfer_year ?? null);
-}
+  // Pension
+  { key: 'pension_type', label: 'Pension Type', group: 'Pension', width: 100, type: 'select', field: 'pension_type',
+    options: PENSION_TYPES.map(p => ({ value: p, label: p.toUpperCase() })),
+    showFor: (a) => a.asset_class === 'pension' },
+
+  // Relief (EIS/VCT)
+  { key: 'original_subscription_amount', label: 'Subscription (£)', group: 'Relief', width: 110, type: 'currency', field: 'original_subscription_amount',
+    showFor: (a) => ['eis', 'vct'].includes(a.asset_class) },
+  { key: 'tax_relief_claimed', label: 'Relief (£)', group: 'Relief', width: 90, type: 'currency', field: 'tax_relief_claimed',
+    showFor: (a) => ['eis', 'vct'].includes(a.asset_class) },
+  { key: 'relief_claimed_type', label: 'Relief Type', group: 'Relief', width: 120, type: 'select', field: 'relief_claimed_type',
+    options: RELIEF_TYPES.map(r => ({ value: r, label: r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) })),
+    showFor: (a) => ['eis', 'vct'].includes(a.asset_class) },
+];
 
 export default function AssetEditor({ assets, defaults, onChange, onClose }: AssetEditorProps) {
   const [local, setLocal] = useState<Asset[]>(() => assets.map(a => ({ ...a })));
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [addType, setAddType] = useState<string>('cash');
   const [addLabel, setAddLabel] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const isDirty = local.length !== assets.length || local.some((a, i) => {
-    const current = assets[i];
-    if (!current) return true;
-    return a.current_value !== current.current_value ||
-      a.assumed_growth_rate !== current.assumed_growth_rate ||
-      a.income_generated !== current.income_generated ||
-      a.mortgage_balance !== current.mortgage_balance ||
-      (a.acquisition_cost ?? 0) !== (current.acquisition_cost ?? 0) ||
-      (a.reinvested_pct ?? 0) !== (current.reinvested_pct ?? 0) ||
-      (a.disposal_type ?? 'none') !== (current.disposal_type ?? 'none') ||
-      (a.transfer_year ?? null) !== (current.transfer_year ?? null) ||
-      a.label !== current.label ||
-      a.asset_id !== current.asset_id;
-  });
+  const isDirty = JSON.stringify(local) !== JSON.stringify(assets);
 
-  const updateAsset = (index: number, field: keyof Asset, value: any) => {
-    const updated = local.map((a, i) => i === index ? { ...a, [field]: value } : a);
-    setLocal(updated);
+  const updateField = (idx: number, field: keyof Asset, value: any) => {
+    setLocal(prev => prev.map((a, i) => {
+      if (i !== idx) return a;
+      const updated = { ...a, [field]: value };
+      // Auto-update wrapper when asset class changes
+      if (field === 'asset_class') {
+        const tmpl = TEMPLATES[value as string];
+        if (tmpl) {
+          updated.wrapper_type = tmpl.wrapper_type;
+          updated.is_iht_exempt = tmpl.is_iht_exempt;
+          updated.pension_type = tmpl.pension_type;
+          updated.relief_claimed_type = tmpl.relief_claimed_type;
+          updated.estimated_disposal_cost_pct = tmpl.estimated_disposal_cost_pct;
+        }
+      }
+      return updated;
+    }));
   };
 
   const handleAddAsset = () => {
-    const template = ASSET_TEMPLATES[addType];
-    if (!template) return;
-    const label = addLabel.trim() || `New ${ASSET_CLASS_LABELS[template.asset_class] ?? addType}`;
+    const label = addLabel.trim() || `New ${ASSET_CLASS_LABELS[addType] ?? addType}`;
     const newAsset = createNewAsset(addType, label);
     setLocal([...local, newAsset]);
-    setExpandedId(newAsset.asset_id);
     setShowAddPanel(false);
     setAddLabel('');
   };
 
-  const handleDeleteAsset = (assetId: string) => {
+  const handleDelete = (assetId: string) => {
     if (confirmDeleteId !== assetId) {
       setConfirmDeleteId(assetId);
       return;
     }
-    setLocal(local.filter(a => a.asset_id !== assetId));
+    setLocal(prev => prev.filter(a => a.asset_id !== assetId));
     setConfirmDeleteId(null);
-    if (expandedId === assetId) setExpandedId(null);
-  };
-
-  const resetAsset = (index: number) => {
-    const orig = getDefault(defaults, local[index]);
-    if (!orig) return;
-    const updated = local.map((a, i) => i === index ? { ...orig } : a);
-    setLocal(updated);
-  };
-
-  const resetAll = () => {
-    setLocal(defaults.map(a => ({ ...a })));
   };
 
   const handleApply = () => {
@@ -222,27 +180,141 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
   };
 
   const handleClose = () => {
-    if (isDirty) {
-      if (!window.confirm('You have unsaved changes. Discard them?')) return;
-    }
+    if (isDirty && !window.confirm('You have unsaved changes. Discard them?')) return;
     onClose();
   };
 
-  const totalValue = local.reduce((sum, a) => sum + a.current_value, 0);
-  const totalIncome = local.reduce((sum, a) => sum + a.income_generated, 0);
+  const totalValue = local.reduce((sum, a) => sum + (a.current_value ?? 0), 0);
+  const totalIncome = local.reduce((sum, a) => sum + (a.income_generated ?? 0), 0);
 
-  const hasAnyOverride = local.some(a => assetHasOverrides(a, getDefault(defaults, a)));
+  const fmt = (n: number) => '£' + Math.round(n).toLocaleString('en-GB');
+
+  // Group columns by their group label
+  const groups = [...new Set(COLUMNS.map(c => c.group))];
+
+  const renderCell = (asset: Asset, col: Column, idx: number) => {
+    // Check if column applies to this asset
+    if (col.showFor && !col.showFor(asset)) {
+      return <td key={col.key} className="grid-cell grid-cell-na">—</td>;
+    }
+
+    const val = (asset as any)[col.field];
+
+    switch (col.type) {
+      case 'text':
+        return (
+          <td key={col.key} className="grid-cell">
+            <input
+              type="text"
+              className="grid-input grid-input-text"
+              value={val ?? ''}
+              onChange={e => updateField(idx, col.field, e.target.value)}
+            />
+          </td>
+        );
+      case 'currency':
+        return (
+          <td key={col.key} className="grid-cell">
+            <input
+              type="number"
+              className="grid-input grid-input-num"
+              value={val ?? 0}
+              onChange={e => updateField(idx, col.field, Number(e.target.value) || 0)}
+              min={0}
+              step={1000}
+            />
+          </td>
+        );
+      case 'pct':
+        return (
+          <td key={col.key} className="grid-cell">
+            <input
+              type="number"
+              className="grid-input grid-input-num"
+              value={val ?? 0}
+              onChange={e => updateField(idx, col.field, Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+              min={0}
+              max={100}
+              step={5}
+            />
+          </td>
+        );
+      case 'pct_decimal':
+        return (
+          <td key={col.key} className="grid-cell">
+            <input
+              type="number"
+              className="grid-input grid-input-num"
+              value={+((val ?? 0) * 100).toFixed(2)}
+              onChange={e => updateField(idx, col.field, (Number(e.target.value) || 0) / 100)}
+              min={-10}
+              max={30}
+              step={0.5}
+            />
+          </td>
+        );
+      case 'number':
+        return (
+          <td key={col.key} className="grid-cell">
+            <input
+              type="number"
+              className="grid-input grid-input-num"
+              value={val ?? 0}
+              onChange={e => updateField(idx, col.field, Number(e.target.value) || 0)}
+            />
+          </td>
+        );
+      case 'select':
+        return (
+          <td key={col.key} className="grid-cell">
+            <select
+              className="grid-input grid-input-select"
+              value={val ?? ''}
+              onChange={e => updateField(idx, col.field, e.target.value)}
+            >
+              {col.options?.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </td>
+        );
+      case 'checkbox':
+        return (
+          <td key={col.key} className="grid-cell grid-cell-center">
+            <input
+              type="checkbox"
+              checked={val ?? false}
+              onChange={e => updateField(idx, col.field, e.target.checked)}
+            />
+          </td>
+        );
+      case 'date':
+        return (
+          <td key={col.key} className="grid-cell">
+            <input
+              type="date"
+              className="grid-input grid-input-date"
+              value={val ?? ''}
+              onChange={e => updateField(idx, col.field, e.target.value || null)}
+            />
+          </td>
+        );
+      default:
+        return <td key={col.key} className="grid-cell">{String(val ?? '')}</td>;
+    }
+  };
 
   return (
-    <div className="asset-editor-overlay" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
-      <div className="asset-editor-modal">
-        <div className="asset-editor-header">
+    <div className="asset-editor-overlay" onClick={e => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="asset-grid-modal">
+        {/* Header */}
+        <div className="asset-grid-header">
           <div>
             <h2>Asset Register</h2>
             <div className="asset-editor-summary">
-              <span>Total: {formatCurrency(totalValue)}</span>
+              <span>Total: {fmt(totalValue)}</span>
               <span className="sep">/</span>
-              <span>Income: {formatCurrency(totalIncome)}/yr</span>
+              <span>Income: {fmt(totalIncome)}/yr</span>
               <span className="sep">/</span>
               <span>{local.length} assets</span>
             </div>
@@ -251,32 +323,26 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
             <button className="ae-btn accent" onClick={() => setShowAddPanel(!showAddPanel)}>
               + Add Asset
             </button>
-            {hasAnyOverride && (
-              <button className="ae-btn secondary" onClick={resetAll}>Reset All</button>
-            )}
-            <button className="ae-btn primary" onClick={handleApply}>Apply Changes</button>
+            <button className="ae-btn primary" onClick={handleApply} disabled={!isDirty}>
+              Apply Changes
+            </button>
             <button className="ae-btn ghost" onClick={handleClose}>{'\u2715'}</button>
           </div>
         </div>
 
+        {/* Add panel */}
         {showAddPanel && (
           <div className="add-asset-panel">
             <div className="add-asset-type-grid">
-              {Object.entries(ASSET_TEMPLATES).map(([key, t]) => (
+              {Object.entries(TEMPLATES).map(([key]) => (
                 <button
                   key={key}
                   className={`add-asset-type-btn ${addType === key ? 'selected' : ''}`}
                   onClick={() => setAddType(key)}
-                  style={{ borderColor: addType === key ? (ASSET_CLASS_COLORS[t.asset_class] ?? '#888') : undefined }}
                 >
-                  <span className="add-type-badge" style={{ background: ASSET_CLASS_COLORS[t.asset_class] ?? '#888' }}>
-                    {ASSET_CLASS_LABELS[t.asset_class] ?? key}
-                  </span>
+                  {ASSET_CLASS_LABELS[key] ?? key}
                 </button>
               ))}
-            </div>
-            <div className="add-asset-hint">
-              {ASSET_TEMPLATES[addType]?.hint}
             </div>
             <div className="add-asset-form">
               <input
@@ -287,335 +353,66 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
                 onKeyDown={e => e.key === 'Enter' && handleAddAsset()}
                 maxLength={60}
               />
-              <button className="ae-btn primary small" onClick={handleAddAsset}>
-                Add
-              </button>
+              <button className="ae-btn primary small" onClick={handleAddAsset}>Add</button>
             </div>
           </div>
         )}
 
-        <div className="asset-editor-body">
-          {local.map((asset, idx) => {
-            const orig = getDefault(defaults, asset);
-            const isExpanded = expandedId === asset.asset_id;
-            const classLabel = ASSET_CLASS_LABELS[asset.asset_class] ?? asset.asset_class;
-            const classColor = ASSET_CLASS_COLORS[asset.asset_class] ?? '#888';
-            const assetHasOverride = assetHasOverrides(asset, orig);
-
-            return (
-              <div
-                key={asset.asset_id}
-                className={`asset-card ${isExpanded ? 'expanded' : ''} ${assetHasOverride ? 'overridden' : ''}`}
-              >
-                <div
-                  className="asset-card-header"
-                  onClick={() => setExpandedId(isExpanded ? null : asset.asset_id)}
-                >
-                  <div className="asset-card-left">
-                    <span className="asset-class-badge" style={{ background: classColor }}>
-                      {classLabel}
-                    </span>
-                    <span className="asset-label">{asset.label}</span>
-                    {assetHasOverride && <span className="override-dot" />}
-                  </div>
-                  <div className="asset-card-right">
-                    <span className="asset-value">{formatCurrency(asset.current_value)}</span>
-                    <span className={`expand-arrow ${isExpanded ? 'open' : ''}`}>{'\u25B8'}</span>
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className="asset-card-fields">
-                    {/* ── Core fields ── */}
-                    <div className="field-section-label">Core</div>
-
-                    <div className="field-row">
-                      <label>Current Value</label>
-                      <div className="field-input-wrap">
-                        <span className="field-prefix">{'\u00A3'}</span>
-                        <input
-                          type="number"
-                          value={asset.current_value}
-                          onChange={(e) => updateAsset(idx, 'current_value', Number(e.target.value) || 0)}
-                          min={0}
-                          step={1000}
-                        />
-                        {orig && isOverridden(asset.current_value, orig.current_value) && (
-                          <span className="field-original">was {formatCurrency(orig.current_value)}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="field-row">
-                      <label>Growth Rate</label>
-                      <div className="field-input-wrap">
-                        <input
-                          type="number"
-                          value={+(asset.assumed_growth_rate * 100).toFixed(2)}
-                          onChange={(e) => updateAsset(idx, 'assumed_growth_rate', (Number(e.target.value) || 0) / 100)}
-                          min={-10}
-                          max={30}
-                          step={0.5}
-                        />
-                        <span className="field-suffix">%</span>
-                        {orig && isOverridden(asset.assumed_growth_rate, orig.assumed_growth_rate) && (
-                          <span className="field-original">was {formatPct(orig.assumed_growth_rate)}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="field-row">
-                      <label>Annual Income</label>
-                      <div className="field-input-wrap">
-                        <span className="field-prefix">{'\u00A3'}</span>
-                        <input
-                          type="number"
-                          value={asset.income_generated}
-                          onChange={(e) => updateAsset(idx, 'income_generated', Number(e.target.value) || 0)}
-                          min={0}
-                          step={500}
-                        />
-                        {orig && isOverridden(asset.income_generated, orig.income_generated) && (
-                          <span className="field-original">was {formatCurrency(orig.income_generated)}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="field-row">
-                      <label>Wrapper Type</label>
-                      <div className="field-input-wrap">
-                        <select
-                          value={asset.wrapper_type}
-                          onChange={(e) => updateAsset(idx, 'wrapper_type', e.target.value)}
-                        >
-                          <option value="unwrapped">Unwrapped</option>
-                          <option value="isa">ISA</option>
-                          <option value="pension">Pension</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="field-row">
-                      <label>Reinvested %</label>
-                      <div className="field-input-wrap">
-                        <input
-                          type="number"
-                          value={asset.reinvested_pct ?? 0}
-                          onChange={(e) => updateAsset(idx, 'reinvested_pct', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
-                          min={0}
-                          max={100}
-                          step={5}
-                        />
-                        <span className="field-suffix">%</span>
-                        <span className="field-hint-inline">Income reinvested back into the asset</span>
-                      </div>
-                    </div>
-
-                    {/* ── CGT & Acquisition ── */}
-                    <div className="field-section-label">Acquisition & CGT</div>
-
-                    <div className="field-row">
-                      <label>Acquisition Cost</label>
-                      <div className="field-input-wrap">
-                        <span className="field-prefix">{'\u00A3'}</span>
-                        <input
-                          type="number"
-                          value={asset.acquisition_cost ?? 0}
-                          onChange={(e) => updateAsset(idx, 'acquisition_cost', Number(e.target.value) || 0)}
-                          min={0}
-                          step={1000}
-                        />
-                        <span className="field-hint-inline">Original purchase price — used for CGT on disposal</span>
-                      </div>
-                    </div>
-
-                    <div className="field-row">
-                      <label>Acquisition Date</label>
-                      <div className="field-input-wrap">
-                        <input
-                          type="date"
-                          value={asset.acquisition_date ?? ''}
-                          onChange={(e) => updateAsset(idx, 'acquisition_date', e.target.value || null)}
-                        />
-                        <span className="field-hint-inline">Used for BPR qualifying period checks</span>
-                      </div>
-                    </div>
-
-                    <div className="field-row">
-                      <label>Disposal Cost</label>
-                      <div className="field-input-wrap">
-                        <input
-                          type="number"
-                          value={+((asset.estimated_disposal_cost_pct ?? 0) * 100).toFixed(2)}
-                          onChange={(e) => updateAsset(idx, 'estimated_disposal_cost_pct', (Number(e.target.value) || 0) / 100)}
-                          min={0}
-                          max={20}
-                          step={0.25}
-                        />
-                        <span className="field-suffix">%</span>
-                        <span className="field-hint-inline">Selling costs deducted on disposal (e.g. agent fees)</span>
-                      </div>
-                    </div>
-
-                    {/* ── IHT ── */}
-                    <div className="field-section-label">IHT & Estate</div>
-
-                    <div className="field-row">
-                      <label>IHT Exempt (BPR)</label>
-                      <div className="field-input-wrap">
-                        <label className="transfer-toggle-label">
-                          <input
-                            type="checkbox"
-                            checked={asset.is_iht_exempt ?? false}
-                            onChange={(e) => updateAsset(idx, 'is_iht_exempt', e.target.checked)}
-                          />
-                          Asset qualifies for Business Property Relief
-                        </label>
-                      </div>
-                    </div>
-
-                    {(asset.asset_class === 'property_investment' || asset.asset_class === 'property_residential') && (
-                      <>
-                        <div className="field-row">
-                          <label>Mortgage Balance</label>
-                          <div className="field-input-wrap">
-                            <span className="field-prefix">{'\u00A3'}</span>
-                            <input
-                              type="number"
-                              value={asset.mortgage_balance ?? 0}
-                              onChange={(e) => updateAsset(idx, 'mortgage_balance', Number(e.target.value) || 0)}
-                              min={0}
-                              step={1000}
-                            />
-                            <span className="field-hint-inline">Outstanding mortgage reduces net estate value</span>
-                          </div>
-                        </div>
-
-                        <div className="field-row">
-                          <label>Transfer to Beneficiary</label>
-                          <div className="field-input-wrap transfer-fields">
-                            <label className="transfer-toggle-label">
-                              <input
-                                type="checkbox"
-                                checked={(asset.disposal_type ?? 'none') === 'transfer'}
-                                onChange={(e) => {
-                                  const updated = local.map((a, i) => i === idx ? {
-                                    ...a,
-                                    disposal_type: e.target.checked ? 'transfer' as const : 'none' as const,
-                                    transfer_year: e.target.checked ? (a.transfer_year ?? 1) : null
-                                  } : a);
-                                  setLocal(updated);
-                                }}
-                              />
-                              Transfer as PET
-                            </label>
-                            {(asset.disposal_type ?? 'none') === 'transfer' && (
-                              <div className="transfer-year-input">
-                                <label>Transfer in year</label>
-                                <input
-                                  type="number"
-                                  value={asset.transfer_year ?? 1}
-                                  onChange={(e) => updateAsset(idx, 'transfer_year', Math.max(1, Number(e.target.value) || 1))}
-                                  min={1}
-                                  max={50}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* ── Pension-specific ── */}
-                    {asset.asset_class === 'pension' && (
-                      <>
-                        <div className="field-section-label">Pension</div>
-                        <div className="field-row">
-                          <label>Pension Type</label>
-                          <div className="field-input-wrap">
-                            <select
-                              value={asset.pension_type ?? 'sipp'}
-                              onChange={(e) => updateAsset(idx, 'pension_type', e.target.value)}
-                            >
-                              <option value="sipp">SIPP</option>
-                              <option value="ssas">SSAS</option>
-                              <option value="db">Defined Benefit</option>
-                            </select>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* ── EIS/VCT-specific ── */}
-                    {(asset.asset_class === 'eis' || asset.asset_class === 'vct') && (
-                      <>
-                        <div className="field-section-label">Tax Relief</div>
-                        <div className="field-row">
-                          <label>Original Subscription</label>
-                          <div className="field-input-wrap">
-                            <span className="field-prefix">{'\u00A3'}</span>
-                            <input
-                              type="number"
-                              value={asset.original_subscription_amount ?? 0}
-                              onChange={(e) => updateAsset(idx, 'original_subscription_amount', Number(e.target.value) || 0)}
-                              min={0}
-                              step={1000}
-                            />
-                            <span className="field-hint-inline">Amount originally invested</span>
-                          </div>
-                        </div>
-
-                        <div className="field-row">
-                          <label>Tax Relief Claimed</label>
-                          <div className="field-input-wrap">
-                            <span className="field-prefix">{'\u00A3'}</span>
-                            <input
-                              type="number"
-                              value={asset.tax_relief_claimed ?? 0}
-                              onChange={(e) => updateAsset(idx, 'tax_relief_claimed', Number(e.target.value) || 0)}
-                              min={0}
-                              step={100}
-                            />
-                            <span className="field-hint-inline">Income tax or CGT relief already received</span>
-                          </div>
-                        </div>
-
-                        <div className="field-row">
-                          <label>Relief Type</label>
-                          <div className="field-input-wrap">
-                            <select
-                              value={asset.relief_claimed_type ?? 'none'}
-                              onChange={(e) => updateAsset(idx, 'relief_claimed_type', e.target.value)}
-                            >
-                              <option value="none">None</option>
-                              <option value="income_tax_relief">Income Tax Relief</option>
-                              <option value="cgt_deferral">CGT Deferral</option>
-                              <option value="both">Both</option>
-                            </select>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    <div className="asset-card-bottom-actions">
-                      {assetHasOverride && (
-                        <button className="ae-btn secondary small" onClick={() => resetAsset(idx)}>
-                          Reset to default
-                        </button>
-                      )}
-                      <button
-                        className={`ae-btn small ${confirmDeleteId === asset.asset_id ? 'danger' : 'danger-outline'}`}
-                        onClick={() => handleDeleteAsset(asset.asset_id)}
-                      >
-                        {confirmDeleteId === asset.asset_id ? 'Confirm Remove' : 'Remove Asset'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        {/* Grid */}
+        <div className="asset-grid-scroll">
+          <table className="asset-grid-table">
+            <thead>
+              {/* Group header row */}
+              <tr className="grid-group-row">
+                {groups.map(g => {
+                  const cols = COLUMNS.filter(c => c.group === g);
+                  return (
+                    <th key={g} colSpan={cols.length} className="grid-group-th">
+                      {g}
+                    </th>
+                  );
+                })}
+                <th className="grid-group-th" />
+              </tr>
+              {/* Column header row */}
+              <tr className="grid-header-row">
+                {COLUMNS.map(col => (
+                  <th
+                    key={col.key}
+                    className="grid-col-th"
+                    style={{ minWidth: col.width, width: col.width }}
+                    title={col.hint}
+                  >
+                    {col.label}
+                  </th>
+                ))}
+                <th className="grid-col-th" style={{ width: 60 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {local.map((asset, idx) => (
+                <tr key={asset.asset_id} className="grid-row">
+                  {COLUMNS.map(col => renderCell(asset, col, idx))}
+                  <td className="grid-cell grid-cell-action">
+                    <button
+                      className={`grid-delete-btn ${confirmDeleteId === asset.asset_id ? 'confirm' : ''}`}
+                      onClick={() => handleDelete(asset.asset_id)}
+                      title={confirmDeleteId === asset.asset_id ? 'Click again to confirm' : 'Remove asset'}
+                    >
+                      {confirmDeleteId === asset.asset_id ? '✓' : '×'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        {local.length === 0 && (
+          <div className="asset-grid-empty">
+            No assets yet. Click "+ Add Asset" to get started.
+          </div>
+        )}
       </div>
     </div>
   );
