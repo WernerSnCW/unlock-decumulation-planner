@@ -179,7 +179,7 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
       a.asset_id !== current.asset_id;
   });
 
-  const updateAsset = (index: number, field: keyof Asset, value: number) => {
+  const updateAsset = (index: number, field: keyof Asset, value: any) => {
     const updated = local.map((a, i) => i === index ? { ...a, [field]: value } : a);
     setLocal(updated);
   };
@@ -326,6 +326,9 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
 
                 {isExpanded && (
                   <div className="asset-card-fields">
+                    {/* ── Core fields ── */}
+                    <div className="field-section-label">Core</div>
+
                     <div className="field-row">
                       <label>Current Value</label>
                       <div className="field-input-wrap">
@@ -378,103 +381,221 @@ export default function AssetEditor({ assets, defaults, onChange, onClose }: Ass
                       </div>
                     </div>
 
-                    {asset.asset_class === 'vct' && (
-                      <div className="field-row">
-                        <label>Reinvested %</label>
-                        <div className="field-input-wrap">
-                          <input
-                            type="number"
-                            value={asset.reinvested_pct ?? 0}
-                            onChange={(e) => updateAsset(idx, 'reinvested_pct', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
-                            min={0}
-                            max={100}
-                            step={5}
-                          />
-                          <span className="field-suffix">%</span>
-                          <span className="field-hint-inline">Portion of dividends reinvested (not drawn as cash)</span>
-                        </div>
+                    <div className="field-row">
+                      <label>Wrapper Type</label>
+                      <div className="field-input-wrap">
+                        <select
+                          value={asset.wrapper_type}
+                          onChange={(e) => updateAsset(idx, 'wrapper_type', e.target.value)}
+                        >
+                          <option value="unwrapped">Unwrapped</option>
+                          <option value="isa">ISA</option>
+                          <option value="pension">Pension</option>
+                        </select>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="field-row">
+                      <label>Reinvested %</label>
+                      <div className="field-input-wrap">
+                        <input
+                          type="number"
+                          value={asset.reinvested_pct ?? 0}
+                          onChange={(e) => updateAsset(idx, 'reinvested_pct', Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                          min={0}
+                          max={100}
+                          step={5}
+                        />
+                        <span className="field-suffix">%</span>
+                        <span className="field-hint-inline">Income reinvested back into the asset</span>
+                      </div>
+                    </div>
+
+                    {/* ── CGT & Acquisition ── */}
+                    <div className="field-section-label">Acquisition & CGT</div>
+
+                    <div className="field-row">
+                      <label>Acquisition Cost</label>
+                      <div className="field-input-wrap">
+                        <span className="field-prefix">{'\u00A3'}</span>
+                        <input
+                          type="number"
+                          value={asset.acquisition_cost ?? 0}
+                          onChange={(e) => updateAsset(idx, 'acquisition_cost', Number(e.target.value) || 0)}
+                          min={0}
+                          step={1000}
+                        />
+                        <span className="field-hint-inline">Original purchase price — used for CGT on disposal</span>
+                      </div>
+                    </div>
+
+                    <div className="field-row">
+                      <label>Acquisition Date</label>
+                      <div className="field-input-wrap">
+                        <input
+                          type="date"
+                          value={asset.acquisition_date ?? ''}
+                          onChange={(e) => updateAsset(idx, 'acquisition_date', e.target.value || null)}
+                        />
+                        <span className="field-hint-inline">Used for BPR qualifying period checks</span>
+                      </div>
+                    </div>
+
+                    <div className="field-row">
+                      <label>Disposal Cost</label>
+                      <div className="field-input-wrap">
+                        <input
+                          type="number"
+                          value={+((asset.estimated_disposal_cost_pct ?? 0) * 100).toFixed(2)}
+                          onChange={(e) => updateAsset(idx, 'estimated_disposal_cost_pct', (Number(e.target.value) || 0) / 100)}
+                          min={0}
+                          max={20}
+                          step={0.25}
+                        />
+                        <span className="field-suffix">%</span>
+                        <span className="field-hint-inline">Selling costs deducted on disposal (e.g. agent fees)</span>
+                      </div>
+                    </div>
+
+                    {/* ── IHT ── */}
+                    <div className="field-section-label">IHT & Estate</div>
+
+                    <div className="field-row">
+                      <label>IHT Exempt (BPR)</label>
+                      <div className="field-input-wrap">
+                        <label className="transfer-toggle-label">
+                          <input
+                            type="checkbox"
+                            checked={asset.is_iht_exempt ?? false}
+                            onChange={(e) => updateAsset(idx, 'is_iht_exempt', e.target.checked)}
+                          />
+                          Asset qualifies for Business Property Relief
+                        </label>
+                      </div>
+                    </div>
 
                     {(asset.asset_class === 'property_investment' || asset.asset_class === 'property_residential') && (
-                      <div className="field-row">
-                        <label>Transfer to Beneficiary</label>
-                        <div className="field-input-wrap transfer-fields">
-                          <label className="transfer-toggle-label">
+                      <>
+                        <div className="field-row">
+                          <label>Mortgage Balance</label>
+                          <div className="field-input-wrap">
+                            <span className="field-prefix">{'\u00A3'}</span>
                             <input
-                              type="checkbox"
-                              checked={(asset.disposal_type ?? 'none') === 'transfer'}
-                              onChange={(e) => {
-                                const updated = local.map((a, i) => i === idx ? {
-                                  ...a,
-                                  disposal_type: e.target.checked ? 'transfer' as const : 'none' as const,
-                                  transfer_year: e.target.checked ? (a.transfer_year ?? 1) : null
-                                } : a);
-                                setLocal(updated);
-                              }}
+                              type="number"
+                              value={asset.mortgage_balance ?? 0}
+                              onChange={(e) => updateAsset(idx, 'mortgage_balance', Number(e.target.value) || 0)}
+                              min={0}
+                              step={1000}
                             />
-                            Transfer as PET
-                          </label>
-                          {(asset.disposal_type ?? 'none') === 'transfer' && (
-                            <div className="transfer-year-input">
-                              <label>Transfer in year</label>
+                            <span className="field-hint-inline">Outstanding mortgage reduces net estate value</span>
+                          </div>
+                        </div>
+
+                        <div className="field-row">
+                          <label>Transfer to Beneficiary</label>
+                          <div className="field-input-wrap transfer-fields">
+                            <label className="transfer-toggle-label">
                               <input
-                                type="number"
-                                value={asset.transfer_year ?? 1}
-                                onChange={(e) => updateAsset(idx, 'transfer_year', Math.max(1, Number(e.target.value) || 1))}
-                                min={1}
-                                max={50}
+                                type="checkbox"
+                                checked={(asset.disposal_type ?? 'none') === 'transfer'}
+                                onChange={(e) => {
+                                  const updated = local.map((a, i) => i === idx ? {
+                                    ...a,
+                                    disposal_type: e.target.checked ? 'transfer' as const : 'none' as const,
+                                    transfer_year: e.target.checked ? (a.transfer_year ?? 1) : null
+                                  } : a);
+                                  setLocal(updated);
+                                }}
                               />
-                            </div>
-                          )}
+                              Transfer as PET
+                            </label>
+                            {(asset.disposal_type ?? 'none') === 'transfer' && (
+                              <div className="transfer-year-input">
+                                <label>Transfer in year</label>
+                                <input
+                                  type="number"
+                                  value={asset.transfer_year ?? 1}
+                                  onChange={(e) => updateAsset(idx, 'transfer_year', Math.max(1, Number(e.target.value) || 1))}
+                                  min={1}
+                                  max={50}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
 
-                    {asset.acquisition_cost !== null && (
-                      <div className="field-row">
-                        <label>Acquisition Cost</label>
-                        <div className="field-input-wrap">
-                          <span className="field-prefix">{'\u00A3'}</span>
-                          <input
-                            type="number"
-                            value={asset.acquisition_cost ?? 0}
-                            onChange={(e) => updateAsset(idx, 'acquisition_cost', Number(e.target.value) || 0)}
-                            min={0}
-                            step={1000}
-                          />
-                          {orig && isOverridden(asset.acquisition_cost, orig.acquisition_cost) && (
-                            <span className="field-original">was {formatCurrency(orig.acquisition_cost ?? 0)}</span>
-                          )}
+                    {/* ── Pension-specific ── */}
+                    {asset.asset_class === 'pension' && (
+                      <>
+                        <div className="field-section-label">Pension</div>
+                        <div className="field-row">
+                          <label>Pension Type</label>
+                          <div className="field-input-wrap">
+                            <select
+                              value={asset.pension_type ?? 'sipp'}
+                              onChange={(e) => updateAsset(idx, 'pension_type', e.target.value)}
+                            >
+                              <option value="sipp">SIPP</option>
+                              <option value="ssas">SSAS</option>
+                              <option value="db">Defined Benefit</option>
+                            </select>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
 
-                    {asset.mortgage_balance > 0 && (
-                      <div className="field-row">
-                        <label>Mortgage Balance</label>
-                        <div className="field-input-wrap">
-                          <span className="field-prefix">{'\u00A3'}</span>
-                          <input
-                            type="number"
-                            value={asset.mortgage_balance}
-                            onChange={(e) => updateAsset(idx, 'mortgage_balance', Number(e.target.value) || 0)}
-                            min={0}
-                            step={1000}
-                          />
-                          {orig && isOverridden(asset.mortgage_balance, orig.mortgage_balance) && (
-                            <span className="field-original">was {formatCurrency(orig.mortgage_balance)}</span>
-                          )}
+                    {/* ── EIS/VCT-specific ── */}
+                    {(asset.asset_class === 'eis' || asset.asset_class === 'vct') && (
+                      <>
+                        <div className="field-section-label">Tax Relief</div>
+                        <div className="field-row">
+                          <label>Original Subscription</label>
+                          <div className="field-input-wrap">
+                            <span className="field-prefix">{'\u00A3'}</span>
+                            <input
+                              type="number"
+                              value={asset.original_subscription_amount ?? 0}
+                              onChange={(e) => updateAsset(idx, 'original_subscription_amount', Number(e.target.value) || 0)}
+                              min={0}
+                              step={1000}
+                            />
+                            <span className="field-hint-inline">Amount originally invested</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
 
-                    <div className="asset-meta">
-                      <span>Wrapper: {asset.wrapper_type}</span>
-                      {asset.is_iht_exempt && <span className="meta-badge">IHT Exempt</span>}
-                      {asset.bpr_qualifying_date && <span className="meta-badge">BPR Qualifying</span>}
-                      {asset.pension_type && <span>Pension: {asset.pension_type}</span>}
-                    </div>
+                        <div className="field-row">
+                          <label>Tax Relief Claimed</label>
+                          <div className="field-input-wrap">
+                            <span className="field-prefix">{'\u00A3'}</span>
+                            <input
+                              type="number"
+                              value={asset.tax_relief_claimed ?? 0}
+                              onChange={(e) => updateAsset(idx, 'tax_relief_claimed', Number(e.target.value) || 0)}
+                              min={0}
+                              step={100}
+                            />
+                            <span className="field-hint-inline">Income tax or CGT relief already received</span>
+                          </div>
+                        </div>
+
+                        <div className="field-row">
+                          <label>Relief Type</label>
+                          <div className="field-input-wrap">
+                            <select
+                              value={asset.relief_claimed_type ?? 'none'}
+                              onChange={(e) => updateAsset(idx, 'relief_claimed_type', e.target.value)}
+                            >
+                              <option value="none">None</option>
+                              <option value="income_tax_relief">Income Tax Relief</option>
+                              <option value="cgt_deferral">CGT Deferral</option>
+                              <option value="both">Both</option>
+                            </select>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     <div className="asset-card-bottom-actions">
                       {assetHasOverride && (
