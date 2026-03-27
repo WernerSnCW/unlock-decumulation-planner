@@ -12,6 +12,7 @@ interface Props {
   result: SimulationResult;
   assets: Asset[];
   taxParams: TaxParametersFile;
+  investorName?: string;
 }
 
 function fmt(v: number): string {
@@ -33,14 +34,14 @@ const RED: RGB = [239, 68, 68];
 const AMBER: RGB = [245, 158, 11];
 const BLUE: RGB = [59, 130, 246];
 
-export default function ExportPDF({ inputs, result, assets, taxParams }: Props) {
+export default function ExportPDF({ inputs, result, assets, taxParams, investorName }: Props) {
   const [exporting, setExporting] = useState(false);
 
   async function handleExport() {
     setExporting(true);
     try {
       await new Promise(r => setTimeout(r, 50));
-      generatePDF(inputs, result, assets, taxParams);
+      generatePDF(inputs, result, assets, taxParams, investorName);
     } finally {
       setExporting(false);
     }
@@ -82,7 +83,7 @@ class PDFBuilder {
   drawFooter() {
     this.doc.setFontSize(6.5);
     this.doc.setTextColor(...MUTED);
-    this.doc.text('Unlock Decumulation Planner \u2014 Planning estimate, not financial advice', this.W / 2, this.H - 7, { align: 'center' });
+    this.doc.text('Unlock Decumulation Planner -- Planning estimate, not financial advice', this.W / 2, this.H - 7, { align: 'center' });
     this.doc.text(`Page ${this.pageNum}`, this.W - this.M, this.H - 7, { align: 'right' });
   }
 
@@ -154,31 +155,45 @@ function generatePDF(
   inputs: SimulationInputs,
   result: SimulationResult,
   assets: Asset[],
-  taxParams: TaxParametersFile
+  taxParams: TaxParametersFile,
+  investorName?: string
 ) {
   const p = new PDFBuilder();
   const { doc } = p;
   const s = result.summary;
   const realYears = result.perYear.filter(yr => !yr.isShadow);
 
+  // Header bar
   doc.setFillColor(...ACCENT);
-  doc.rect(0, 0, p.W, 32, 'F');
-  doc.setFontSize(20);
+  doc.rect(0, 0, p.W, 36, 'F');
+
+  // Logo text
+  doc.setFontSize(22);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text('Unlock Decumulation Plan', p.M, 14);
-  doc.setFontSize(10);
+  doc.text('UNLOCK', p.M, 14);
+
+  // Subtitle
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Generated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`, p.M, 23);
+  doc.text('Decumulation Plan', p.M + 52, 14);
+
+  // Generated for line
+  const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const forLine = investorName ? `Generated ${dateStr} for ${investorName}` : `Generated ${dateStr}`;
+  doc.setFontSize(10);
+  doc.text(forLine, p.M, 24);
+
+  // Age / plan line
   doc.setFontSize(8);
-  doc.text(`Age ${inputs.current_age} \u2014 ${inputs.plan_years}-year plan to age ${inputs.current_age + inputs.plan_years}`, p.M, 29);
-  p.y = 38;
+  doc.text(`Age ${inputs.current_age} -- ${inputs.plan_years}-year plan to age ${inputs.current_age + inputs.plan_years}`, p.M, 31);
+  p.y = 42;
 
   p.cardBg(28);
   const cardW = p.CW / 4;
   const cards = [
     { label: 'FUNDED YEARS', value: `${s.funded_years} / ${inputs.plan_years}`, sub: s.funded_years >= inputs.plan_years ? 'Fully funded' : `Shortfall year ${s.first_shortfall_year}`, color: s.funded_years >= inputs.plan_years ? ACCENT : RED },
-    { label: 'TOTAL TAX', value: fmt(s.total_tax_paid), sub: `Inc: ${fmt(s.total_income_tax_paid)} \u00B7 CGT: ${fmt(s.total_cgt_paid)}`, color: TEXT },
+    { label: 'TOTAL TAX', value: fmt(s.total_tax_paid), sub: `Inc: ${fmt(s.total_income_tax_paid)} | CGT: ${fmt(s.total_cgt_paid)}`, color: TEXT },
     { label: 'ESTATE AT END', value: fmt(s.estate_at_end), sub: `Net after IHT: ${fmt(s.net_estate_after_iht)}`, color: TEXT },
     { label: 'IHT LIABILITY', value: fmt(s.iht_at_end), sub: s.iht_saving_vs_no_plan > 0 ? `Saving ${fmt(s.iht_saving_vs_no_plan)} vs no plan` : '', color: RED },
   ];
@@ -206,7 +221,7 @@ function generatePDF(
   } else {
     summaryLines.push(`Your portfolio of ${fmt(assets.reduce((t, a) => t + a.current_value, 0))} across ${assets.length} assets is projected to fund ${s.funded_years} of your ${inputs.plan_years} planned years. A shortfall occurs in year ${s.first_shortfall_year}. Consider reducing the income target or reviewing asset growth assumptions.`);
   }
-  summaryLines.push(`Over the plan, you will pay an estimated ${fmt(s.total_tax_paid)} in tax (${fmt(s.total_income_tax_paid)} income tax, ${fmt(s.total_cgt_paid)} CGT). Your estate at plan end is projected at ${fmt(s.estate_at_end)}, with an IHT liability of ${fmt(s.iht_at_end)} \u2014 leaving ${fmt(s.net_estate_after_iht)} net to beneficiaries.`);
+  summaryLines.push(`Over the plan, you will pay an estimated ${fmt(s.total_tax_paid)} in tax (${fmt(s.total_income_tax_paid)} income tax, ${fmt(s.total_cgt_paid)} CGT). Your estate at plan end is projected at ${fmt(s.estate_at_end)}, with an IHT liability of ${fmt(s.iht_at_end)} -- leaving ${fmt(s.net_estate_after_iht)} net to beneficiaries.`);
   if (s.iht_saving_vs_no_plan > 0) {
     summaryLines.push(`This plan saves an estimated ${fmt(s.iht_saving_vs_no_plan)} in IHT compared to taking no action (baseline IHT: ${fmt(s.iht_no_plan_baseline)}).`);
   }
@@ -226,7 +241,7 @@ function generatePDF(
 
   if (s.iht_saving_vs_no_plan > 0) {
     p.sectionTitle('How IHT Is Saved');
-    p.explanationText(`You need to draw income regardless \u2014 the IHT saving of ${fmt(s.iht_saving_vs_no_plan)} does not come from spending itself, but from choosing which assets to spend and which to preserve. A na\u00EFve approach (e.g. drawing from cash first, or proportionally) would leave a larger IHT bill. This plan saves tax by drawing strategically:`);
+    p.explanationText(`You need to draw income regardless -- the IHT saving of ${fmt(s.iht_saving_vs_no_plan)} does not come from spending itself, but from choosing which assets to spend and which to preserve. A naive approach (e.g. drawing from cash first, or proportionally) would leave a larger IHT bill. This plan saves tax by drawing strategically:`);
 
     const lastYear = realYears[realYears.length - 1];
     const totalGifted = s.total_gifted;
@@ -247,9 +262,9 @@ function generatePDF(
     if (drawdownOrder.iht_reduction > 0) {
       const ihtWeight = Math.round(drawdownOrder.iht_reduction * 100);
       mechanisms.push({
-        icon: '\u2191',
+        icon: '>',
         title: `Drawing from IHT-liable assets first (IHT weight: ${ihtWeight}%)`,
-        explanation: `The key saving comes from which assets you spend. Cash, GIAs, and ISAs are all fully taxable in your estate at 40%. Pensions and BPR-qualifying assets are not. By spending the IHT-liable assets for your income and preserving the IHT-exempt ones, you shift the composition of your estate towards sheltered assets \u2014 same lifestyle, lower tax bill.`,
+        explanation: `The key saving comes from which assets you spend. Cash, GIAs, and ISAs are all fully taxable in your estate at 40%. Pensions and BPR-qualifying assets are not. By spending the IHT-liable assets for your income and preserving the IHT-exempt ones, you shift the composition of your estate towards sheltered assets -- same lifestyle, lower tax bill.`,
         color: BLUE,
       });
     }
@@ -259,18 +274,18 @@ function generatePDF(
         ? `From April 2027 (if enacted), unused pensions will be included in the estate for IHT. Your plan models this change, which reduces the pension advantage in later years.`
         : `Pension funds currently pass outside the estate on death entirely. By spending other assets first and letting pensions grow, you shift more of your wealth into this IHT-free wrapper.`;
       mechanisms.push({
-        icon: '\u26C1',
+        icon: '>',
         title: `Preserving pensions: ${fmt(pensionStartVal)} in SIPPs`,
-        explanation: `Pensions are the most IHT-efficient asset \u2014 they currently sit entirely outside the estate. If you drew from your SIPP to fund income and left your GIA untouched, you would be spending IHT-free money and keeping IHT-liable money. This plan does the opposite: spend the GIA, keep the pension. ${pensionExplanation}`,
+        explanation: `Pensions are the most IHT-efficient asset -- they currently sit entirely outside the estate. If you drew from your SIPP to fund income and left your GIA untouched, you would be spending IHT-free money and keeping IHT-liable money. This plan does the opposite: spend the GIA, keep the pension. ${pensionExplanation}`,
         color: BLUE,
       });
     }
 
     if (hasBPR) {
       mechanisms.push({
-        icon: '\u2606',
+        icon: '*',
         title: `Preserving BPR assets: ${fmt(bprStartVal)} qualifying`,
-        explanation: `EIS and AIM shares held 2+ years qualify for Business Property Relief \u2014 up to 100% IHT exempt. Selling these to fund income would destroy the relief. By drawing from non-exempt assets instead, these holdings pass to beneficiaries IHT-free. Projected BPR value at plan end: ${fmt(bprEndVal)}.${inputs.apply_2026_bpr_cap ? ' The 2026 BPR cap limits AIM/unlisted relief to 100% on the first \u00A31M, then 50% above.' : ''}`,
+        explanation: `EIS and AIM shares held 2+ years qualify for Business Property Relief -- up to 100% IHT exempt. Selling these to fund income would destroy the relief. By drawing from non-exempt assets instead, these holdings pass to beneficiaries IHT-free. Projected BPR value at plan end: ${fmt(bprEndVal)}.${inputs.apply_2026_bpr_cap ? ' The 2026 BPR cap limits AIM/unlisted relief to 100% on the first \u00A31M, then 50% above.' : ''}`,
         color: ACCENT,
       });
     }
@@ -280,9 +295,9 @@ function generatePDF(
       const isaStartVal = isaAssets.reduce((t, a) => t + a.current_value, 0);
       if (isaStartVal > 0) {
         mechanisms.push({
-          icon: '\u25CB',
+          icon: 'o',
           title: `Spending ISAs before pensions: ${fmt(isaStartVal)} in ISAs`,
-          explanation: `ISAs give tax-free growth and income, which makes them feel valuable \u2014 but they sit fully inside the estate for IHT. Pensions do not. By spending ISAs first and keeping pensions, you get the same tax-free income now while reducing the IHT-liable estate. This is a common area where intuition ("keep ISAs, they\u2019re tax-free") leads to worse outcomes.`,
+          explanation: `ISAs give tax-free growth and income, which makes them feel valuable -- but they sit fully inside the estate for IHT. Pensions do not. By spending ISAs first and keeping pensions, you get the same tax-free income now while reducing the IHT-liable estate. This is a common area where intuition ("keep ISAs, they're tax-free") leads to worse outcomes.`,
           color: AMBER,
         });
       }
@@ -290,22 +305,22 @@ function generatePDF(
 
     if (totalGifted > 0) {
       const giftExplanation = inputs.gift_type === 'pet'
-        ? `As Potentially Exempt Transfers (PETs), these fall outside your estate entirely if you survive 7 years. Taper relief applies between 3\u20137 years.`
+        ? `As Potentially Exempt Transfers (PETs), these fall outside your estate entirely if you survive 7 years. Taper relief applies between 3-7 years.`
         : inputs.gift_type === 'discretionary_trust'
           ? `As Chargeable Lifetime Transfers (CLTs), the first \u00A3325k uses your nil-rate band; excess is taxed at 20% when given but reduces the estate.`
           : `As Normal Expenditure from Income (NEFI), these are immediately IHT-exempt provided they are regular, from income, and leave you with enough to live on.`;
       mechanisms.push({
-        icon: '\u2665',
+        icon: '+',
         title: `Gifting: ${fmt(totalGifted)} transferred out of the estate`,
-        explanation: `Unlike spending (which converts assets to lifestyle), gifting genuinely removes wealth from the estate and passes it to beneficiaries now rather than at death \u2014 avoiding the 40% IHT charge. ${giftExplanation}`,
+        explanation: `Unlike spending (which converts assets to lifestyle), gifting genuinely removes wealth from the estate and passes it to beneficiaries now rather than at death -- avoiding the 40% IHT charge. ${giftExplanation}`,
         color: AMBER,
       });
     }
 
     mechanisms.push({
-      icon: '\u2261',
-      title: `Net result: ${fmt(s.iht_saving_vs_no_plan)} less IHT than a na\u00EFve approach`,
-      explanation: `The "no plan" baseline assumes you draw income but without optimising the order \u2014 all assets grow and deplete proportionally. That baseline produces IHT of ${fmt(s.iht_no_plan_baseline)}. This plan, by drawing strategically, produces IHT of ${fmt(s.iht_at_end)}. The ${fmt(s.iht_saving_vs_no_plan)} difference is genuine tax saved \u2014 your beneficiaries receive more, for the same lifestyle cost to you.`,
+      icon: '=',
+      title: `Net result: ${fmt(s.iht_saving_vs_no_plan)} less IHT than a naive approach`,
+      explanation: `The "no plan" baseline assumes you draw income but without optimising the order -- all assets grow and deplete proportionally. That baseline produces IHT of ${fmt(s.iht_no_plan_baseline)}. This plan, by drawing strategically, produces IHT of ${fmt(s.iht_at_end)}. The ${fmt(s.iht_saving_vs_no_plan)} difference is genuine tax saved -- your beneficiaries receive more, for the same lifestyle cost to you.`,
       color: ACCENT,
     });
 
@@ -404,7 +419,7 @@ function generatePDF(
   const mechItems = [
     ['Preserve EIS for BPR', mechs.preserve_eis_bpr, 'Keep EIS holdings for IHT Business Property Relief (100% relief after 2yrs)'],
     ['Preserve AIM for BPR', mechs.preserve_aim_bpr, 'Keep AIM shares for IHT BPR (subject to 2026 cap)'],
-    ['Protect Property', mechs.protect_property, 'Avoid selling property \u2014 illiquid, CGT & disposal costs'],
+    ['Protect Property', mechs.protect_property, 'Avoid selling property -- illiquid, CGT & disposal costs'],
     ['Draw ISAs Early', mechs.draw_isa_early, 'Use tax-free ISA withdrawals first to reduce IHT-liable estate'],
     ['Draw Pension Early', mechs.draw_pension_early, 'Access pension funds early (taxed as income, currently outside IHT)'],
     ['Preserve VCT Income', mechs.preserve_vct_income, 'Keep VCT holdings to maintain tax-free dividend stream'],
@@ -416,7 +431,7 @@ function generatePDF(
     doc.setFontSize(7);
     const c = val ? ACCENT : RED;
     doc.setTextColor(c[0], c[1], c[2]);
-    doc.text(val ? '\u2713' : '\u2717', p.M + 4, p.y);
+    doc.text(val ? 'Y' : 'x', p.M + 4, p.y);
     doc.setTextColor(...TEXT);
     doc.text(`${label}`, p.M + 10, p.y);
     doc.setFontSize(6);
@@ -438,7 +453,7 @@ function generatePDF(
     doc.setFontSize(7);
     const c = val ? ACCENT : MUTED;
     doc.setTextColor(c[0], c[1], c[2]);
-    doc.text(val ? '\u2713 ON' : '\u2717 OFF', p.M + 4, p.y);
+    doc.text(val ? 'Y ON' : 'x OFF', p.M + 4, p.y);
     doc.setTextColor(...TEXT);
     doc.text(`${label}`, p.M + 18, p.y);
     doc.setFontSize(6);
@@ -497,7 +512,7 @@ function generatePDF(
     doc.setTextColor(...TEXT);
     doc.text(fmt(a.current_value), colX[3], p.y);
     doc.text(pct(a.assumed_growth_rate), colX[4], p.y);
-    doc.text(a.income_generated > 0 ? fmt(a.income_generated) : '\u2014', colX[5], p.y);
+    doc.text(a.income_generated > 0 ? fmt(a.income_generated) : '--', colX[5], p.y);
     p.y += 5;
   }
 
@@ -513,7 +528,7 @@ function generatePDF(
   for (const a of assets) {
     byClass[a.asset_class] = (byClass[a.asset_class] || 0) + a.current_value;
   }
-  p.explanationText('Asset allocation: ' + Object.entries(byClass).map(([cls, val]) => `${assetClassLabels[cls] ?? cls}: ${fmt(val)} (${(val / totalValue * 100).toFixed(0)}%)`).join(' \u00B7 '));
+  p.explanationText('Asset allocation: ' + Object.entries(byClass).map(([cls, val]) => `${assetClassLabels[cls] ?? cls}: ${fmt(val)} (${(val / totalValue * 100).toFixed(0)}%)`).join(' | '));
 
   p.y += 2;
 
@@ -535,11 +550,11 @@ function generatePDF(
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...TEXT);
-    doc.text(`Year ${yr.year} \u2014 Age ${age}`, p.M + 4, p.y + 4.2);
+    doc.text(`Year ${yr.year} -- Age ${age}`, p.M + 4, p.y + 4.2);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...MUTED);
-    doc.text(`Portfolio: ${fmt(yr.totalPortfolioValue)}  \u00B7  IHT: ${fmt(yr.estimatedIHTBill)}  \u00B7  Net: ${fmt(yr.totalPortfolioValue - yr.estimatedIHTBill)}`, p.M + p.CW - 4, p.y + 4.2, { align: 'right' });
+    doc.text(`Portfolio: ${fmt(yr.totalPortfolioValue)}  |  IHT: ${fmt(yr.estimatedIHTBill)}  |  Net: ${fmt(yr.totalPortfolioValue - yr.estimatedIHTBill)}`, p.M + p.CW - 4, p.y + 4.2, { align: 'right' });
     p.y += 8;
 
     const steps: { icon: string; label: string; amount?: string; detail?: string; color: RGB }[] = [];
@@ -554,7 +569,7 @@ function generatePDF(
         }
       }
       steps.push({
-        icon: '\u2192', label: 'Receive natural income',
+        icon: '->', label: 'Receive natural income',
         amount: fmt(yr.baselineCashIncome),
         detail: sources.join(', '),
         color: ACCENT
@@ -563,7 +578,7 @@ function generatePDF(
 
     if (yr.spendTargetNominal > 0) {
       steps.push({
-        icon: '\u25CB', label: `Income target (inflation-adjusted)`,
+        icon: 'o', label: `Income target (inflation-adjusted)`,
         amount: fmt(yr.spendTargetNominal),
         color: TEXT
       });
@@ -580,15 +595,15 @@ function generatePDF(
         if (pclsTaken > 0) detail = `Includes ${fmt(pclsTaken)} tax-free lump sum (PCLS)`;
       }
       steps.push({
-        icon: '\u2197', label: `${verb} ${asset.label}`,
+        icon: '->', label: `${verb} ${asset.label}`,
         amount: fmt(amount), detail, color: BLUE
       });
     }
 
     if (yr.giftedThisYear > 0) {
-      const gType = inputs.gift_type === 'pet' ? 'PET \u2014 exempt if donor survives 7yr' : inputs.gift_type === 'discretionary_trust' ? `CLT \u2014 cumulative ${fmt(yr.clt7yrCumulative)}` : 'NEFI \u2014 immediately IHT exempt';
+      const gType = inputs.gift_type === 'pet' ? 'PET -- exempt if donor survives 7yr' : inputs.gift_type === 'discretionary_trust' ? `CLT -- cumulative ${fmt(yr.clt7yrCumulative)}` : 'NEFI -- immediately IHT exempt';
       steps.push({
-        icon: '\u2665', label: `Gift (${gType})`,
+        icon: '+', label: `Gift (${gType})`,
         amount: fmt(yr.giftedThisYear), color: AMBER
       });
     }
@@ -598,14 +613,14 @@ function generatePDF(
       if (yr.incomeTaxThisYear > 0) parts.push(`Income Tax ${fmt(yr.incomeTaxThisYear)}`);
       if (yr.cgtThisYear > 0) parts.push(`CGT ${fmt(yr.cgtThisYear)}`);
       steps.push({
-        icon: '\u25C7', label: `Tax payable: ${parts.join(' + ')}`,
+        icon: '$', label: `Tax payable: ${parts.join(' + ')}`,
         amount: fmt(yr.incomeTaxThisYear + yr.cgtThisYear), color: RED
       });
     }
 
     if (!yr.spendMet) {
       steps.push({
-        icon: '\u2717', label: 'SHORTFALL \u2014 income target not met',
+        icon: 'x', label: 'SHORTFALL -- income target not met',
         amount: fmt(yr.shortfall),
         detail: `Target: ${fmt(yr.spendTargetNominal)}, shortfall: ${fmt(yr.shortfall)}`,
         color: RED
@@ -613,10 +628,10 @@ function generatePDF(
     }
 
     if (yr.year === 2026 && inputs.apply_2026_bpr_cap) {
-      steps.push({ icon: '\u26A0', label: 'BPR cap takes effect \u2014 100% relief up to \u00A31M, 50% above', color: AMBER });
+      steps.push({ icon: '!', label: 'BPR cap takes effect -- 100% relief up to \u00A31M, 50% above', color: AMBER });
     }
     if (yr.year === 2027 && inputs.apply_2027_pension_iht) {
-      steps.push({ icon: '\u26A0', label: 'Pension funds enter IHT estate from this year', color: AMBER });
+      steps.push({ icon: '!', label: 'Pension funds enter IHT estate from this year', color: AMBER });
     }
 
     if (prevYr) {
@@ -624,7 +639,7 @@ function generatePDF(
         const prev = prevYr.valuesByAssetClass[cls] ?? 0;
         const curr = yr.valuesByAssetClass[cls] ?? 0;
         if (prev > 0 && curr <= 0) {
-          steps.push({ icon: '\u2298', label: `${assetClassLabels[cls] ?? cls} fully depleted`, detail: `Was ${fmt(prev)}, now exhausted`, color: AMBER });
+          steps.push({ icon: 'x', label: `${assetClassLabels[cls] ?? cls} fully depleted`, detail: `Was ${fmt(prev)}, now exhausted`, color: AMBER });
         }
       }
     }
@@ -758,7 +773,7 @@ function generatePDF(
       const wColor = w.severity === 'error' ? RED : w.severity === 'warning' ? AMBER : MUTED;
       doc.setFontSize(6.5);
       doc.setTextColor(...wColor);
-      doc.text(w.severity === 'error' ? '\u2717' : w.severity === 'warning' ? '\u26A0' : '\u2139', p.M + 2, p.y);
+      doc.text(w.severity === 'error' ? 'x' : w.severity === 'warning' ? '!' : 'i', p.M + 2, p.y);
       doc.setTextColor(...TEXT);
       const wLines = doc.splitTextToSize(w.message, p.CW - 12);
       doc.text(wLines, p.M + 8, p.y);
@@ -770,18 +785,18 @@ function generatePDF(
   p.sectionTitle('Glossary');
   p.explanationText('Key terms used in this report:');
   const glossary = [
-    ['IHT', 'Inheritance Tax \u2014 40% tax on estate value above the nil-rate band (\u00A3325k + \u00A3175k residence nil-rate)'],
-    ['BPR', 'Business Property Relief \u2014 up to 100% IHT relief for qualifying business assets held 2+ years'],
-    ['CGT', 'Capital Gains Tax \u2014 tax on profit when selling assets (10%/20% basic/higher rate; 18%/24% for property)'],
-    ['PET', 'Potentially Exempt Transfer \u2014 gift to individuals, exempt from IHT if donor survives 7 years'],
-    ['CLT', 'Chargeable Lifetime Transfer \u2014 gift into a trust, taxed at 20% above nil-rate band'],
-    ['NEFI', 'Normal Expenditure from Income \u2014 regular gifts from surplus income, immediately IHT exempt'],
-    ['PCLS/TFLS', 'Pension Commencement Lump Sum / Tax-Free Lump Sum \u2014 25% of pension taken tax-free'],
-    ['VCT', 'Venture Capital Trust \u2014 tax-free dividends, CGT-exempt after 5yr hold. NOT IHT exempt'],
-    ['EIS', 'Enterprise Investment Scheme \u2014 IHT exempt via BPR after 2yr hold, CGT-exempt if held 3yr+'],
-    ['ISA', 'Individual Savings Account \u2014 tax-free growth and income, but remains in estate for IHT'],
-    ['GIA', 'General Investment Account \u2014 unwrapped investments subject to income tax, CGT, and IHT'],
-    ['SIPP', 'Self-Invested Personal Pension \u2014 pension drawn as taxable income, currently outside IHT estate'],
+    ['IHT', 'Inheritance Tax -- 40% tax on estate value above the nil-rate band (\u00A3325k + \u00A3175k residence nil-rate)'],
+    ['BPR', 'Business Property Relief -- up to 100% IHT relief for qualifying business assets held 2+ years'],
+    ['CGT', 'Capital Gains Tax -- tax on profit when selling assets (10%/20% basic/higher rate; 18%/24% for property)'],
+    ['PET', 'Potentially Exempt Transfer -- gift to individuals, exempt from IHT if donor survives 7 years'],
+    ['CLT', 'Chargeable Lifetime Transfer -- gift into a trust, taxed at 20% above nil-rate band'],
+    ['NEFI', 'Normal Expenditure from Income -- regular gifts from surplus income, immediately IHT exempt'],
+    ['PCLS/TFLS', 'Pension Commencement Lump Sum / Tax-Free Lump Sum -- 25% of pension taken tax-free'],
+    ['VCT', 'Venture Capital Trust -- tax-free dividends, CGT-exempt after 5yr hold. NOT IHT exempt'],
+    ['EIS', 'Enterprise Investment Scheme -- IHT exempt via BPR after 2yr hold, CGT-exempt if held 3yr+'],
+    ['ISA', 'Individual Savings Account -- tax-free growth and income, but remains in estate for IHT'],
+    ['GIA', 'General Investment Account -- unwrapped investments subject to income tax, CGT, and IHT'],
+    ['SIPP', 'Self-Invested Personal Pension -- pension drawn as taxable income, currently outside IHT estate'],
   ];
   for (const [term, desc] of glossary) {
     p.ensureSpace(5);

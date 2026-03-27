@@ -1,4 +1,5 @@
 import { usePlanner } from '../context/PlannerContext';
+import { useAuth } from '../context/AuthContext';
 import ExportPDF from '../components/ExportPDF';
 
 function fmt(n: number): string {
@@ -22,6 +23,7 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
 
 export default function ReportPage() {
   const { inputs, assets, result, taxParams } = usePlanner();
+  const { investor } = useAuth();
 
   if (assets.length === 0) {
     return (
@@ -80,6 +82,7 @@ export default function ReportPage() {
           result={result}
           assets={assets}
           taxParams={taxParams}
+          investorName={investor?.name}
         />
       </div>
 
