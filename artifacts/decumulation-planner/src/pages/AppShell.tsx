@@ -8,6 +8,7 @@ import AnalysisPage from './AnalysisPage';
 import ReportPage from './ReportPage';
 import { useState } from 'react';
 import UnlockLogo from '../components/UnlockLogo';
+import { assessAsset } from '../lib/completenessChecks';
 
 const NAV_ITEMS = [
   { path: '/app/portfolio', label: 'Portfolio' },
@@ -16,11 +17,38 @@ const NAV_ITEMS = [
   { path: '/app/report', label: 'Report' },
 ] as const;
 
+function getConfidenceScore(assets: any[]): number {
+  if (assets.length === 0) return 0;
+  const totalValue = assets.reduce((s: number, a: any) => s + (a.current_value ?? 0), 0);
+  if (totalValue === 0) return 0;
+  return Math.round(
+    assets.reduce((s: number, a: any) => s + assessAsset(a).score * (a.current_value ?? 0), 0) / totalValue
+  );
+}
+
+function confidenceLabel(score: number): string {
+  if (score >= 90) return 'High';
+  if (score >= 70) return 'Good';
+  if (score >= 50) return 'Fair';
+  return 'Low';
+}
+
+function confidenceColor(score: number): string {
+  if (score >= 90) return 'var(--tone-success)';
+  if (score >= 70) return '#F59E0B';
+  return '#EF4444';
+}
+
 function AppShellInner() {
   const { investor, logout } = useAuth();
-  const { result, inputs, isLoadingData } = usePlanner();
+  const { result, inputs, assets, isLoadingData } = usePlanner();
   const [location] = useLocation();
   const [learningOpen, setLearningOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  const confidence = getConfidenceScore(assets);
+  const showConfidenceBanner = !bannerDismissed && assets.length > 0 && confidence < 70 &&
+    ['/app/planning', '/app/analysis', '/app/report'].includes(location);
 
   if (isLoadingData) {
     return (
@@ -61,6 +89,13 @@ function AppShellInner() {
           </div>
         )}
 
+        {assets.length > 0 && (
+          <Link href="/app/portfolio" className="confidence-badge" style={{ '--conf-color': confidenceColor(confidence) } as React.CSSProperties} title={`Simulation confidence: ${confidence}% — based on data completeness across ${assets.length} assets`}>
+            <span className="confidence-score">{confidence}%</span>
+            <span className="confidence-label">{confidenceLabel(confidence)}</span>
+          </Link>
+        )}
+
         <button
           className="edit-assets-btn learn-btn"
           onClick={() => setLearningOpen(true)}
@@ -81,6 +116,16 @@ function AppShellInner() {
       {learningOpen && <LearningCentre onClose={() => setLearningOpen(false)} />}
 
       <div className="app-body-full">
+        {showConfidenceBanner && (
+          <div className="confidence-banner" style={{ borderColor: confidenceColor(confidence) }}>
+            <span>
+              <strong>Simulation confidence: {confidence}%</strong> — some asset data is missing or estimated.
+              Results may be less accurate.{' '}
+              <Link href="/app/portfolio" className="confidence-banner-link">Review portfolio data →</Link>
+            </span>
+            <button className="confidence-banner-dismiss" onClick={() => setBannerDismissed(true)}>×</button>
+          </div>
+        )}
         <Switch>
           <Route path="/app/portfolio" component={PortfolioPage} />
           <Route path="/app/planning" component={PlanningPage} />

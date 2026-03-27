@@ -2977,6 +2977,83 @@ body {
   color: var(--tone-error);
 }
 
+/* Confidence badge */
+.confidence-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--conf-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.confidence-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.confidence-score {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--conf-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.confidence-label {
+  font-size: 11px;
+  color: var(--unlock-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Confidence banner */
+.confidence-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 20px;
+  margin: 0 0 16px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--unlock-muted);
+  line-height: 1.5;
+}
+
+.confidence-banner strong {
+  color: var(--unlock-text);
+}
+
+.confidence-banner-link {
+  color: var(--unlock-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.confidence-banner-link:hover {
+  text-decoration: underline;
+}
+
+.confidence-banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--unlock-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.confidence-banner-dismiss:hover {
+  opacity: 1;
+}
+
 .header-user {
   display: flex;
   align-items: center;
