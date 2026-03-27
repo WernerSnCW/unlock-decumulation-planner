@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   --unlock-bg:       #2b2b2b;
@@ -341,7 +341,7 @@ body {
 
 .weight-pct {
   margin-left: auto;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
   color: var(--unlock-text);
   min-width: 32px;
@@ -529,7 +529,7 @@ body {
 }
 
 .summary-card .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 28px;
   font-weight: 500;
 }
@@ -565,7 +565,7 @@ body {
 
 .comparison-grid .cell {
   padding: 10px 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   border-bottom: 1px solid var(--unlock-border);
   border-right: 1px solid var(--unlock-border);
@@ -681,7 +681,7 @@ body {
 .detail-table td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--unlock-border);
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
 }
 
@@ -732,7 +732,7 @@ body {
 }
 
 .expanded-detail .draw-item .draw-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   color: var(--unlock-text);
 }
 
@@ -826,7 +826,7 @@ body {
 }
 
 .recharts-text {
-  font-family: 'JetBrains Mono', monospace !important;
+  font-variant-numeric: tabular-nums !important;
   fill: var(--unlock-muted) !important;
   font-size: 11px !important;
 }
@@ -864,7 +864,7 @@ body {
 }
 
 .tfls-display {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--unlock-accent);
   margin-top: 4px;
@@ -1001,7 +1001,7 @@ body {
   font-size: 16px;
   font-weight: 700;
   color: var(--unlock-text);
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .timeline-age {
@@ -1011,14 +1011,14 @@ body {
 
 .timeline-portfolio {
   font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   color: var(--unlock-muted);
   margin-left: auto;
 }
 
 .timeline-iht {
   font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   color: var(--chart-iht);
 }
 
@@ -1070,7 +1070,7 @@ body {
 }
 
 .step-amount {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 500;
   flex-shrink: 0;
@@ -1129,7 +1129,7 @@ body {
 }
 
 .plan-summary-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 16px;
   font-weight: 600;
   color: var(--unlock-text);
@@ -1144,7 +1144,7 @@ body {
 }
 
 .glory-years-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   color: var(--tone-warning);
 }
 
@@ -1177,7 +1177,7 @@ body {
 }
 
 .glory-phase .phase-amount {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 500;
   color: var(--unlock-text);
@@ -1199,7 +1199,7 @@ body {
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .eis-row span:first-child {
@@ -1347,7 +1347,7 @@ body {
 }
 
 .optimiser-result-item .value.mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .optimiser-apply-btn {
@@ -1572,7 +1572,7 @@ body {
   font-size: 14px;
   font-weight: 600;
   color: var(--unlock-text);
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .expand-arrow {
@@ -1629,7 +1629,7 @@ body {
   border-radius: var(--radius-sm);
   color: var(--unlock-text);
   font-size: 13px;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .field-input-wrap input:focus {
@@ -2548,7 +2548,7 @@ body {
   border-radius: var(--radius-md);
   padding: 14px 20px;
   font-size: 20px;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 3px;
   color: var(--unlock-text);
   text-align: center;
@@ -2732,7 +2732,7 @@ body {
   font-weight: 600;
   padding: 4px 10px;
   border-radius: var(--radius-sm);
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .funded-ok {
@@ -2985,7 +2985,7 @@ body {
   font-size: 24px;
   font-weight: 700;
   color: var(--unlock-text);
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .portfolio-table-wrap {
@@ -3028,7 +3028,7 @@ body {
 
 .portfolio-table .num {
   text-align: right;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
 }
 
@@ -3334,7 +3334,7 @@ body {
 }
 
 .report-row span:last-child {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 500;
   color: var(--unlock-text);
@@ -3651,7 +3651,7 @@ body {
 }
 
 .access-code {
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   background: var(--unlock-bg);
   padding: 3px 8px;
@@ -3849,7 +3849,7 @@ body {
   font-weight: 700;
   color: var(--unlock-accent);
   margin-bottom: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .csv-dropzone-title {
@@ -4124,7 +4124,7 @@ body {
 .csv-import-value {
   font-size: 20px;
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   color: var(--unlock-accent);
 }
 
@@ -4159,7 +4159,7 @@ body {
 .csv-import-val {
   width: 100px;
   text-align: right;
-  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--unlock-text);
 }

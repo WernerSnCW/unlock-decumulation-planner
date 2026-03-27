@@ -86,7 +86,7 @@ export default function PortfolioChart({ perYear, planYears, firstShortfallYear,
                 border: '1px solid rgba(234, 242, 247, 0.10)',
                 borderRadius: '10px',
                 fontSize: 12,
-                fontFamily: 'JetBrains Mono, monospace',
+                fontVariantNumeric: 'tabular-nums',
               }}
               labelStyle={{ color: '#FFFFFF' }}
               itemStyle={{ color: '#B0B0B0' }}
@@ -164,7 +164,7 @@ export default function PortfolioChart({ perYear, planYears, firstShortfallYear,
               border: '1px solid rgba(234, 242, 247, 0.10)',
               borderRadius: '10px',
               fontSize: 12,
-              fontFamily: 'JetBrains Mono, monospace',
+              fontVariantNumeric: 'tabular-nums',
             }}
             labelStyle={{ color: '#FFFFFF' }}
             itemStyle={{ color: '#B0B0B0' }}
