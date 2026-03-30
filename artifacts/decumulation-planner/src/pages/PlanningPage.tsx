@@ -113,6 +113,17 @@ export default function PlanningPage() {
                   <span className="settings-chip accent" title={`Venture Capital Trust — ${fmt(inputs.vct_strategy.annual_amount ?? 0)}/yr for 30% income tax relief and tax-free dividends`}>VCT {fmt(inputs.vct_strategy.annual_amount ?? 0)}/yr</span>
                 )}
 
+                {/* Estate & IHT */}
+                {inputs.has_main_residence && inputs.has_direct_descendants && (
+                  <span className="settings-chip accent" title="Residence Nil-Rate Band active — up to £175,000 additional nil-rate band reduces IHT">RNRB</span>
+                )}
+                {inputs.charitable_legacy_pct >= 10 && (
+                  <span className="settings-chip accent" title={`${inputs.charitable_legacy_pct}% of estate to charity — IHT rate reduced from 40% to 36%`}>Charity {inputs.charitable_legacy_pct}%</span>
+                )}
+                {inputs.nrb_trust_enabled && (
+                  <span className="settings-chip accent" title="NRB trust strategy — gifts up to £325,000 into trust every 7 years to reduce estate">NRB Trust</span>
+                )}
+
                 {/* Scenario flags */}
                 {inputs.apply_2026_bpr_cap && <span className="settings-chip warn" title="Models the proposed 2026 cap on Business Property Relief at £1m (50% relief above)">2026 BPR Cap</span>}
                 {inputs.apply_2027_pension_iht && <span className="settings-chip warn" title="Models the proposed 2027 change bringing pensions into the IHT-liable estate">2027 Pension IHT</span>}

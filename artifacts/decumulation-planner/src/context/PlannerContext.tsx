@@ -44,6 +44,8 @@ export const DEFAULT_INPUTS: SimulationInputs = {
   has_main_residence: true,
   has_direct_descendants: true,
   charitable_legacy_pct: 0,
+  nrb_trust_enabled: false,
+  gift_asset_ids: [],
   cash_reserve: 0,
   legacy_target: 0,
   glory_years: { enabled: false, duration: 5, multiplier: 1.5, target_is_glory: false },

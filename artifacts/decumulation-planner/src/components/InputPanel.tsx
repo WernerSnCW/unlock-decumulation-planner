@@ -1142,6 +1142,62 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
 
       <div className="divider" />
 
+      <CollapsibleSection title="Estate & IHT" defaultOpen={false}>
+
+      <div className="toggle-row">
+        <label>Has main residence<InfoTip text="Do you own a main residence that will be left to direct descendants? If yes, the Residence Nil-Rate Band (RNRB) of up to £175,000 applies, reducing your IHT bill." /></label>
+        <button
+          className={`toggle-switch ${inputs.has_main_residence ? 'active' : 'inactive'}`}
+          onClick={() => update('has_main_residence', !inputs.has_main_residence)}
+        >
+          <div className="toggle-knob" />
+        </button>
+      </div>
+
+      <div className="toggle-row">
+        <label>Has direct descendants<InfoTip text="Children or grandchildren who will inherit. Required alongside main residence for the RNRB allowance." /></label>
+        <button
+          className={`toggle-switch ${inputs.has_direct_descendants ? 'active' : 'inactive'}`}
+          onClick={() => update('has_direct_descendants', !inputs.has_direct_descendants)}
+        >
+          <div className="toggle-knob" />
+        </button>
+      </div>
+
+      {inputs.has_main_residence && inputs.has_direct_descendants && (
+        <div style={{ fontSize: 11, color: 'var(--unlock-accent)', padding: '4px 0' }}>
+          RNRB active — up to £175,000 additional nil-rate band applied
+        </div>
+      )}
+
+      <div className="input-group">
+        <label>Charitable legacy (%)<InfoTip text="Percentage of your estate left to charity. If 10% or more, your IHT rate drops from 40% to 36%." /></label>
+        <NumInput
+          value={inputs.charitable_legacy_pct}
+          onChange={v => update('charitable_legacy_pct', Math.min(30, Math.max(0, v)))}
+          min={0}
+        />
+        {inputs.charitable_legacy_pct >= 10 && (
+          <div style={{ fontSize: 11, color: 'var(--unlock-accent)', padding: '2px 0' }}>
+            Reduced IHT rate of 36% applies
+          </div>
+        )}
+      </div>
+
+      <div className="toggle-row">
+        <label>NRB trust strategy<InfoTip text="Automatically gift up to the nil-rate band (£325,000) into a discretionary trust every 7 years to reduce your estate for IHT. Gifts are funded from drawdowns." /></label>
+        <button
+          className={`toggle-switch ${inputs.nrb_trust_enabled ? 'active' : 'inactive'}`}
+          onClick={() => update('nrb_trust_enabled', !inputs.nrb_trust_enabled)}
+        >
+          <div className="toggle-knob" />
+        </button>
+      </div>
+
+      </CollapsibleSection>
+
+      <div className="divider" />
+
       <CollapsibleSection title="Optional" defaultOpen={false}>
 
       <div className="input-group">

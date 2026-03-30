@@ -245,6 +245,8 @@ export interface SimulationInputs {
   has_main_residence: boolean;
   has_direct_descendants: boolean;
   charitable_legacy_pct: number;
+  nrb_trust_enabled: boolean;
+  gift_asset_ids: string[];
   cash_reserve: number;
   legacy_target: number;
   glory_years: GloryYearsConfig;
@@ -724,6 +726,37 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
       giftedThisYear = inputs.annual_gift_amount;
       remaining += inputs.annual_gift_amount;
+    }
+
+    // Step 4a-ii: Asset gifting — gift specific assets as PETs in year 1
+    if (planYear === 1 && inputs.gift_asset_ids && inputs.gift_asset_ids.length > 0) {
+      for (const asset of assets) {
+        if (inputs.gift_asset_ids.includes(asset.id) && !asset.transferred && asset.value > 0) {
+          const giftValue = Math.max(0, asset.value);
+          const costBasis = asset.acquisitionCost ?? asset.value;
+          const gain = Math.max(0, giftValue - costBasis);
+          if (gain > 0) {
+            totalCGTGain += gain;
+          }
+          giftHistory.push({ year: planYear, amount: giftValue });
+          giftedThisYear += giftValue;
+          asset.value = 0;
+          asset.incomeGenerated = 0;
+          asset.mortgageBalance = 0;
+          asset.transferred = true;
+        }
+      }
+    }
+
+    // Step 4a-iii: NRB trust strategy — automated NRB gifts every 7 years
+    if (inputs.nrb_trust_enabled && (planYear === 1 || planYear % 7 === 1)) {
+      const totalAvailable = assets.filter(a => !a.transferred).reduce((s, a) => s + Math.max(0, a.value), 0);
+      const affordableGift = Math.min(params.nil_rate_band, Math.max(0, totalAvailable - spendTarget));
+      if (affordableGift > 0) {
+        giftHistory.push({ year: planYear, amount: affordableGift });
+        giftedThisYear += affordableGift;
+        remaining += affordableGift;
+      }
     }
 
     // Step 4b: EIS programme — allocate from cash/liquid assets first
