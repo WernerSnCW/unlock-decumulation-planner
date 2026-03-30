@@ -3510,9 +3510,9 @@ body {
 
 /* Override sidebar styles when inside settings bar */
 .settings-bar-body .sidebar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   max-width: none;
   width: 100%;
   padding: 0;
@@ -3521,72 +3521,121 @@ body {
   border-radius: 0;
 }
 
+/* Section titles inside settings bar */
 .settings-bar-body .section-title {
-  grid-column: 1 / -1;
+  font-size: 10px;
+  margin-bottom: 6px;
+  color: var(--unlock-accent);
 }
 
+/* Hide dividers — cards provide structure */
 .settings-bar-body .divider {
-  grid-column: 1 / -1;
+  display: none;
 }
 
-.settings-bar-body .collapsible-section {
-  grid-column: 1 / -1;
+/* ── Core settings row ── */
+.settings-core-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--unlock-border);
 }
 
-/* Sections with sliders or wide content need full width */
-.settings-bar-body .collapsible-section:has([id="section-drawdown-priorities"]) {
-  grid-column: 1 / -1;
-}
-
-.settings-bar-body .collapsible-section:has([id="section-eis-programme"]) {
-  grid-column: 1 / -1;
-}
-
-.settings-bar-body .collapsible-section:has([id="section-vct-programme"]) {
-  grid-column: 1 / -1;
-}
-
-/* Ensure sliders have breathing room inside the grid */
-.settings-bar-body .input-group {
-  min-width: 0;
-  padding: 12px 16px;
+.settings-core-row .input-group {
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.12);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
 }
 
-/* Zebra striping for settings groups */
-.settings-bar-body .input-group:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.settings-bar-body .input-group:nth-child(even) {
-  background: rgba(0, 0, 0, 0.12);
-}
-
-.settings-bar-body .input-group:hover {
+.settings-core-row .input-group:hover {
   border-color: var(--unlock-border);
 }
 
+.settings-core-row .gross-net-row {
+  margin-top: 4px;
+}
+
+/* ── Sections grid (collapsible sections in 2 columns) ── */
+.settings-sections-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* Each collapsible section as a compact card */
+.settings-bar-body .collapsible-section {
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--unlock-border);
+  border-radius: var(--radius-md);
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.settings-bar-body .collapsible-header {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid transparent;
+}
+
+.settings-bar-body .collapsible-section[open] > .collapsible-header,
+.settings-bar-body .collapsible-header:hover {
+  border-bottom-color: var(--unlock-border);
+}
+
+.settings-bar-body .collapsible-header .section-title {
+  font-size: 10px;
+  margin: 0;
+}
+
+/* Content area inside collapsible sections */
+.settings-bar-body .collapsible-section > div:last-child:not(.collapsible-header) {
+  padding: 10px 12px;
+}
+
+/* Wide sections span both columns (drawdown, EIS, VCT) */
+.settings-sections-grid .collapsible-section:has(.strategy-presets),
+.settings-sections-grid .collapsible-section:has(.slider-row),
+.settings-sections-grid .collapsible-section:has(.eis-section-grid),
+.settings-sections-grid .collapsible-section:has(.vct-section-grid) {
+  grid-column: 1 / -1;
+}
+
+/* Input groups inside sections — compact */
+.settings-bar-body .collapsible-section .input-group {
+  padding: 4px 0;
+  border: none;
+  background: none;
+}
+
+.settings-bar-body .collapsible-section .toggle-row {
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+/* Strategy presets compact */
+.settings-bar-body .strategy-presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* Slider rows */
 .settings-bar-body .slider-row {
   padding-right: 8px;
 }
 
-.settings-bar-body .strategy-presets {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-/* Give toggle rows more vertical space */
-.settings-bar-body .toggle-row {
-  padding: 8px 0;
-}
-
-/* More spacing between collapsible sections */
-.settings-bar-body .collapsible-section {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--unlock-border);
+/* Responsive: stack on narrow screens */
+@media (max-width: 900px) {
+  .settings-core-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .settings-sections-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .planning-main-v2 {

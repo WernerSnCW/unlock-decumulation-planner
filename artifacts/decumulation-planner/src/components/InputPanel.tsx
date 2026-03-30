@@ -228,7 +228,8 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
 
   return (
     <div className="sidebar">
-      <div className="section-title">Income Target</div>
+      <div className="section-title">Core Settings</div>
+      <div className="settings-core-row">
 
       <div className="input-group">
         <label>Annual Income Target</label>
@@ -297,7 +298,9 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
         {errors.current_age && <span className="error-text">{errors.current_age}</span>}
       </div>
 
-      <div className="divider" />
+      </div>{/* end settings-core-row */}
+
+      <div className="settings-sections-grid">
 
       <CollapsibleSection title="Glory Years" defaultOpen={false}>
 
@@ -1240,6 +1243,7 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
       </div>
 
       </CollapsibleSection>
+      </div>{/* end settings-sections-grid */}
     </div>
   );
 }
