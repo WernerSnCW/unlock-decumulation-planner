@@ -20,7 +20,10 @@ export interface TaxParams {
   cgt_rate_higher: number;
   iht_rate: number;
   iht_rate_lifetime_clt: number;
+  iht_charitable_rate: number;
   nil_rate_band: number;
+  rnrb: number;
+  rnrb_taper_start: number;
   tfls_lifetime_limit: number;
   annual_gift_exemption: number;
   isa_annual_limit: number;
@@ -199,11 +202,11 @@ export function calculatePCLS(grossCrystallisation: number, remainingLSA: number
   return { pcls, taxableDraw, newRemainingLSA };
 }
 
-export function calculateCGT(gain: number, taxableIncome: number, params: TaxParams): number {
+export function calculateCGT(gain: number, grossIncome: number, params: TaxParams): number {
   const taxableGain = Math.max(0, gain - params.cgt_exempt_amount);
   if (taxableGain <= 0) return 0;
 
-  const basicBandRemaining = Math.max(0, params.basic_rate_threshold - taxableIncome);
+  const basicBandRemaining = Math.max(0, params.basic_rate_threshold - grossIncome);
   const inBasic = Math.min(taxableGain, basicBandRemaining);
   const inHigher = taxableGain - inBasic;
 
@@ -217,22 +220,46 @@ export function calculateIHTBill(
   pensionValue: number,
   toggles: Toggles,
   params: TaxParams,
-  calendarYear: number
+  calendarYear: number,
+  rnrbQualifies: boolean = false,
+  charitablePct: number = 0
 ): number {
+  // Step 1: BPR relief (with optional 2026 cap)
   let bprRelief = bprTotal;
   if (toggles.apply_2026_bpr_cap && calendarYear >= 2026 && bprTotal > params.bpr_full_relief_cap) {
     const excess = bprTotal - params.bpr_full_relief_cap;
     bprRelief = params.bpr_full_relief_cap + excess * 0.5;
   }
 
-  let taxableEstate = Math.max(0, estate - bprRelief);
-
+  // Step 2: Gross estate (pension included if 2027+ toggle)
+  let grossEstate = estate;
   if (toggles.apply_2027_pension_iht && calendarYear >= 2027) {
-    taxableEstate += pensionValue;
+    grossEstate += pensionValue;
   }
 
+  // Step 3: RNRB (Residence Nil-Rate Band)
+  let availableRNRB = 0;
+  if (rnrbQualifies && params.rnrb > 0) {
+    if (grossEstate > params.rnrb_taper_start) {
+      const excess = grossEstate - params.rnrb_taper_start;
+      availableRNRB = Math.max(0, params.rnrb - excess / 2);
+    } else {
+      availableRNRB = params.rnrb;
+    }
+  }
+
+  // Step 4: Taxable estate
+  const taxableEstate = Math.max(0, grossEstate - bprRelief);
   const availableNRB = Math.max(0, params.nil_rate_band - cltCumulative);
-  const iht = Math.max(0, taxableEstate - availableNRB) * params.iht_rate;
+  const totalNRB = availableNRB + availableRNRB;
+  const taxableAboveNRB = Math.max(0, taxableEstate - totalNRB);
+
+  // Step 5: Charitable deduction and rate
+  const isCharitableRate = charitablePct >= 10;
+  const charitableDeduction = isCharitableRate ? taxableAboveNRB * (charitablePct / 100) : 0;
+  const taxableAfterCharity = Math.max(0, taxableAboveNRB - charitableDeduction);
+  const ihtRate = isCharitableRate ? params.iht_charitable_rate : params.iht_rate;
+  const iht = taxableAfterCharity * ihtRate;
 
   return Math.round(iht * 100) / 100;
 }

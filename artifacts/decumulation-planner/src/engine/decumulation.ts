@@ -185,9 +185,10 @@ export interface VCTYearSummary {
   proceedsReturned: number;
 }
 
-const VCT_BASE_CASE_GROWTH = 0.005;
+const VCT_BASE_CASE_GROWTH = 0.05387; // good_generalist: 1.30^(1/5) - 1
 const VCT_DIVIDEND_YIELD = 0.05;
-const VCT_WORST_CASE_LOSS = 0.50;
+const VCT_EXIT_DISCOUNT = 0.075; // 7.5% discount to NAV on exit
+const VCT_POOR_NAV_GROWTH = -0.06939; // poor_manager: 0.70^(1/5) - 1
 const VCT_PRE_2026_RELIEF = 0.30;
 const VCT_POST_2026_RELIEF = 0.20;
 
@@ -241,6 +242,9 @@ export interface SimulationInputs {
   private_pension_income: number;
   apply_2026_bpr_cap: boolean;
   apply_2027_pension_iht: boolean;
+  has_main_residence: boolean;
+  has_direct_descendants: boolean;
+  charitable_legacy_pct: number;
   cash_reserve: number;
   legacy_target: number;
   glory_years: GloryYearsConfig;
@@ -482,6 +486,7 @@ interface AssetState {
   taxReliefClaimed: number;
   reliefClaimedType: string;
   deferredGainAmount: number | null;
+  inDrawdown: boolean;
   mortgageBalance: number;
   allowableImprovementCosts: number;
   estimatedDisposalCostPct: number;
@@ -580,6 +585,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     growthRate: a.assumed_growth_rate,
     incomeGenerated: a.income_generated,
     reinvestedPct: a.reinvested_pct ?? 0,
+    inDrawdown: a.in_drawdown ?? false,
     isIHTExempt: a.is_iht_exempt,
     bprQualifyingDate: a.bpr_qualifying_date,
     pensionType: a.pension_type,
@@ -678,12 +684,18 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       const reinvested = totalIncome * reinvestedFraction;
       const cashIncome = totalIncome - reinvested;
 
-      if (asset.assetClass === 'cash') {
-        savingsIncome += cashIncome;
-      } else if (asset.assetClass === 'property_investment' || asset.assetClass === 'property_residential') {
-        rentalIncome += cashIncome;
-      } else if (asset.assetClass === 'vct' || asset.assetClass === 'eis' || asset.assetClass === 'aim_shares') {
-        dividendIncome += cashIncome;
+      // Tax classification: ISA and pension-wrapped income is tax-free
+      const isTaxFree = asset.wrapperType === 'isa' || asset.assetClass === 'pension';
+      if (!isTaxFree) {
+        if (asset.assetClass === 'cash') {
+          savingsIncome += cashIncome;
+        } else if (asset.assetClass === 'property_investment' || asset.assetClass === 'property_residential') {
+          rentalIncome += cashIncome;
+        } else if (asset.assetClass === 'vct') {
+          // VCT dividends are tax-free regardless of wrapper
+        } else if (asset.assetClass === 'eis' || asset.assetClass === 'aim_shares') {
+          dividendIncome += cashIncome;
+        }
       }
       baselineCashIncome += cashIncome;
       asset.value -= cashIncome;
@@ -901,9 +913,10 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         if (!c.liquidated && planYear >= c.liquidationYear) {
           c.liquidated = true;
           const yearsHeld = c.liquidationYear - c.yearInvested;
-          const valueAtLiq = isVctWorstCaseEngine
-            ? c.amount * (1 - VCT_WORST_CASE_LOSS)
+          const navAtExit = isVctWorstCaseEngine
+            ? c.amount * Math.pow(1 + VCT_POOR_NAV_GROWTH, yearsHeld)
             : c.amount * Math.pow(1 + VCT_BASE_CASE_GROWTH, yearsHeld);
+          const valueAtLiq = navAtExit * (1 - VCT_EXIT_DISCOUNT);
           proceedsFromLiquidations += valueAtLiq;
         }
       }
@@ -965,10 +978,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
         const yearsHeld = planYear - c.yearInvested;
         const bcVal = c.amount * Math.pow(1 + VCT_BASE_CASE_GROWTH, yearsHeld);
         baseCaseValue += bcVal;
-        worstCaseValue += c.amount * Math.max(0, 1 - VCT_WORST_CASE_LOSS * (yearsHeld / 5));
-        const dividendBase = isVctWorstCaseEngine
-          ? c.amount * Math.max(0, 1 - VCT_WORST_CASE_LOSS * (yearsHeld / 5))
-          : bcVal;
+        const wcVal = c.amount * Math.pow(1 + VCT_POOR_NAV_GROWTH, yearsHeld);
+        worstCaseValue += wcVal;
+        const dividendBase = isVctWorstCaseEngine ? wcVal : bcVal;
         annualDividends += dividendBase * VCT_DIVIDEND_YIELD;
       }
       worstCaseValue = Math.max(0, worstCaseValue);
@@ -1047,9 +1059,14 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       remaining -= draw;
 
       if (asset.assetClass === 'pension') {
-        const pclsResult = calculatePCLS(draw, tflsRemaining);
-        tflsRemaining = pclsResult.newRemainingLSA;
-        pensionDrawTaxable += pclsResult.taxableDraw;
+        if (asset.inDrawdown) {
+          // Already crystallised — entire draw is taxable, no PCLS
+          pensionDrawTaxable += draw;
+        } else {
+          const pclsResult = calculatePCLS(draw, tflsRemaining);
+          tflsRemaining = pclsResult.newRemainingLSA;
+          pensionDrawTaxable += pclsResult.taxableDraw;
+        }
       } else if (asset.wrapperType === 'unwrapped' && asset.assetClass !== 'cash') {
         if (asset.assetClass === 'vct') {
           if (asset.acquisitionDate) {
@@ -1129,9 +1146,9 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       totalVentureRelief += lossReliefThisYear;
     }
     const incomeTax = Math.max(0, rawIncomeTax - totalVentureRelief);
-    const taxableIncomeAfterPA = Math.max(0, (nonSavingsIncome + savingsIncome + dividendIncome) - params.personal_allowance);
+    const grossIncomeForCGT = nonSavingsIncome + savingsIncome + dividendIncome;
     const totalCGTGainWithDeferred = totalCGTGain + totalDeferredGainRealized + eisDeferredGainCrystallized;
-    const cgt = calculateCGT(totalCGTGainWithDeferred, taxableIncomeAfterPA, params);
+    const cgt = calculateCGT(totalCGTGainWithDeferred, grossIncomeForCGT, params);
 
     // Step 6b: Deduct tax liabilities from portfolio (draw from most liquid first, respecting cash reserve)
     let taxToPay = incomeTax + cgt;
@@ -1206,7 +1223,8 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
 
     const cltCumulative = getCLTCumulative(giftHistory, planYear);
     const estateForIHT = Math.max(0, totalPortfolioValue - pensionValue - totalMortgageLiabilities);
-    const ihtBill = calculateIHTBill(estateForIHT, bprTotal, cltCumulative, pensionValue, toggles, params, calendarYear);
+    const rnrbQualifies = inputs.has_main_residence && inputs.has_direct_descendants;
+    const ihtBill = calculateIHTBill(estateForIHT, bprTotal, cltCumulative, pensionValue, toggles, params, calendarYear, rnrbQualifies, inputs.charitable_legacy_pct);
 
     const ihtExemptTotal = bprTotal;
     const actualSpend = spendTarget - remaining;
@@ -1385,7 +1403,8 @@ function calculateNoPlanIHT(register: Asset[], taxParams: TaxParametersFile, inp
   }
 
   const estateForIHT = Math.max(0, totalValue - pensionValue - totalMortgages);
-  return calculateIHTBill(estateForIHT, bprTotal, 0, pensionValue, toggles, params, calendarYear);
+  const rnrbQualifies = inputs.has_main_residence && inputs.has_direct_descendants;
+  return calculateIHTBill(estateForIHT, bprTotal, 0, pensionValue, toggles, params, calendarYear, rnrbQualifies, inputs.charitable_legacy_pct);
 }
 
 export interface OptimiserResult {
