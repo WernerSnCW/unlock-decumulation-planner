@@ -3592,8 +3592,18 @@ body {
 }
 
 /* Content area inside collapsible sections */
-.settings-bar-body .collapsible-section > div:last-child:not(.collapsible-header) {
+.settings-bar-body .collapsible-section .collapsible-body {
+  padding: 0 12px;
+}
+
+.settings-bar-body .collapsible-section:not(.collapsed) .collapsible-body {
   padding: 10px 12px;
+}
+
+.settings-bar-body .collapsible-section.collapsed .collapsible-body {
+  max-height: 0 !important;
+  padding: 0 12px;
+  overflow: hidden;
 }
 
 /* Wide sections span both columns (drawdown, EIS, VCT) */
