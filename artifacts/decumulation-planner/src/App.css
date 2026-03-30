@@ -179,6 +179,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
 }
 
 .input-group label {
@@ -3547,6 +3549,22 @@ body {
 /* Ensure sliders have breathing room inside the grid */
 .settings-bar-body .input-group {
   min-width: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+}
+
+/* Zebra striping for settings groups */
+.settings-bar-body .input-group:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.settings-bar-body .input-group:nth-child(even) {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.settings-bar-body .input-group:hover {
+  border-color: var(--unlock-border);
 }
 
 .settings-bar-body .slider-row {
@@ -3561,7 +3579,14 @@ body {
 
 /* Give toggle rows more vertical space */
 .settings-bar-body .toggle-row {
-  padding: 6px 0;
+  padding: 8px 0;
+}
+
+/* More spacing between collapsible sections */
+.settings-bar-body .collapsible-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--unlock-border);
 }
 
 .planning-main-v2 {
