@@ -729,6 +729,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
 
     // Step 4a-ii: Asset gifting — gift specific assets as PETs in year 1
+    let assetGiftCGTGain = 0;
     if (planYear === 1 && inputs.gift_asset_ids && inputs.gift_asset_ids.length > 0) {
       for (const asset of assets) {
         if (inputs.gift_asset_ids.includes(asset.id) && !asset.transferred && asset.value > 0) {
@@ -736,7 +737,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
           const costBasis = asset.acquisitionCost ?? asset.value;
           const gain = Math.max(0, giftValue - costBasis);
           if (gain > 0) {
-            totalCGTGain += gain;
+            assetGiftCGTGain += gain;
           }
           giftHistory.push({ year: planYear, amount: giftValue });
           giftedThisYear += giftValue;
@@ -1066,7 +1067,7 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
     }
     const priority = getDrawdownPriority(effectiveWeights, assets, planYear, toggles, inputs.strategy_mechanisms);
     let pensionDrawTaxable = 0;
-    let totalCGTGain = 0;
+    let totalCGTGain = assetGiftCGTGain;
     let totalDeferredGainRealized = 0;
 
     const totalCashValue = assets.filter(a => a.assetClass === 'cash').reduce((s, a) => s + Math.max(0, a.value), 0);
