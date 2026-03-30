@@ -140,6 +140,7 @@ export default function PlanningPage() {
             <InputPanel
               inputs={inputs}
               summary={result?.summary ?? null}
+              assets={assets}
               onChange={updateInputs}
             />
           </div>

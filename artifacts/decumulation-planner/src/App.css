@@ -3621,6 +3621,66 @@ body {
   background: none;
 }
 
+/* Gift specific assets list */
+.gift-assets-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--unlock-border);
+}
+
+.gift-assets-section > label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--unlock-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.gift-assets-list {
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gift-asset-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--unlock-text);
+}
+
+.gift-asset-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.gift-asset-item input[type="checkbox"] {
+  accent-color: var(--unlock-accent);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.gift-asset-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gift-asset-value {
+  font-family: 'Inter', monospace;
+  font-size: 11px;
+  color: var(--unlock-muted);
+  flex-shrink: 0;
+}
+
 .settings-bar-body .collapsible-section .toggle-row {
   padding: 4px 0;
   font-size: 13px;

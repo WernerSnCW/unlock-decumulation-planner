@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms, EISStrategyConfig, VCTStrategyConfig, EISCGTEvent } from '../engine/decumulation';
+import type { SimulationInputs, SimulationSummary, LifestyleMultiplier, GiftType, PriorityWeights, DrawdownStrategy, GloryYearsConfig, StrategyMechanisms, EISStrategyConfig, VCTStrategyConfig, EISCGTEvent, Asset } from '../engine/decumulation';
 import { DEFAULT_EIS_STRATEGY, DEFAULT_VCT_STRATEGY } from '../engine/decumulation';
 
 function InfoTip({ text }: { text: string }) {
@@ -112,6 +112,7 @@ function CollapsibleSection({ title, children, defaultOpen = true }: { title: st
 interface InputPanelProps {
   inputs: SimulationInputs;
   summary: SimulationSummary | null;
+  assets: Asset[];
   onChange: (inputs: SimulationInputs) => void;
 }
 
@@ -187,7 +188,7 @@ function formatMoney(v: number): string {
   return '\u00A3' + Math.round(v).toLocaleString('en-GB');
 }
 
-export default function InputPanel({ inputs, summary, onChange }: InputPanelProps) {
+export default function InputPanel({ inputs, summary, assets: portfolioAssets, onChange }: InputPanelProps) {
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   const update = (field: keyof SimulationInputs, value: any) => {
@@ -1196,6 +1197,49 @@ export default function InputPanel({ inputs, summary, onChange }: InputPanelProp
           <div className="toggle-knob" />
         </button>
       </div>
+
+      {/* Gift specific assets as PETs in year 1 */}
+      {(() => {
+        const giftableAssets = portfolioAssets.filter(a =>
+          a.asset_class !== 'cash' &&
+          a.asset_class !== 'pension' &&
+          a.disposal_type !== 'transfer' &&
+          a.current_value > 0
+        );
+        if (giftableAssets.length === 0) return null;
+        const selectedIds = inputs.gift_asset_ids ?? [];
+        const totalGiftValue = giftableAssets
+          .filter(a => selectedIds.includes(a.asset_id))
+          .reduce((s, a) => s + a.current_value, 0);
+        return (
+          <div className="gift-assets-section">
+            <label>Gift Specific Assets<InfoTip text="Select assets to gift as PETs in year 1. Their full value is removed from your portfolio, recorded as a PET for the 7-year IHT clock, and any capital gain triggers CGT." /></label>
+            <div className="gift-assets-list">
+              {giftableAssets.map(a => (
+                <label key={a.asset_id} className="gift-asset-item">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(a.asset_id)}
+                    onChange={e => {
+                      const newIds = e.target.checked
+                        ? [...selectedIds, a.asset_id]
+                        : selectedIds.filter(id => id !== a.asset_id);
+                      onChange({ ...inputs, gift_asset_ids: newIds });
+                    }}
+                  />
+                  <span className="gift-asset-label">{a.label}</span>
+                  <span className="gift-asset-value">{'\u00A3'}{Math.round(a.current_value).toLocaleString('en-GB')}</span>
+                </label>
+              ))}
+            </div>
+            {totalGiftValue > 0 && (
+              <div style={{ fontSize: 11, color: 'var(--unlock-accent)', padding: '4px 0' }}>
+                Total gift value: {'\u00A3'}{Math.round(totalGiftValue).toLocaleString('en-GB')}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       </CollapsibleSection>
 
