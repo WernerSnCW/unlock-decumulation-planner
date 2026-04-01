@@ -5232,6 +5232,29 @@ body {
   color: var(--unlock-text);
 }
 
+.spotlight-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.spotlight-back {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid var(--unlock-border);
+  color: var(--unlock-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.spotlight-back:hover {
+  color: var(--unlock-text);
+  border-color: var(--unlock-text);
+}
+
 /* ───────────────────────── Page Guide ───────────────────────── */
 
 .page-guide-trigger {

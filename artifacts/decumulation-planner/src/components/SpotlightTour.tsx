@@ -24,6 +24,14 @@ const TOUR_STEPS: TourStep[] = [
     position: 'below',
   },
   {
+    target: '[data-tour="settings-bar"]',
+    title: 'Settings',
+    description:
+      'You don\'t need to change these to get started, but this is where you fine-tune: EIS/VCT programmes, estate planning options, inflation assumptions, and more. Open it any time from the Planning page.',
+    navigateTo: '/app/planning',
+    position: 'below',
+  },
+  {
     target: '[data-tour="analysis"]',
     title: 'Analysis',
     description:
@@ -35,14 +43,6 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Report',
     description:
       'A summary of the full simulation — total tax paid, effective rate, estate value, and how much you save compared to doing nothing. You can export this as a PDF.',
-    position: 'below',
-  },
-  {
-    target: '[data-tour="settings-bar"]',
-    title: 'Settings',
-    description:
-      'You don\'t need to change these to get started, but this is where you fine-tune: EIS/VCT programmes, estate planning options, inflation assumptions, and more. Open it any time from the Planning page.',
-    navigateTo: '/app/planning',
     position: 'below',
   },
 ];
@@ -144,6 +144,13 @@ export default function SpotlightTour({ onClose, navigate }: SpotlightTourProps)
     }
   };
 
+  const handleBack = () => {
+    if (step > 0) {
+      setRect(null);
+      setStep(s => s - 1);
+    }
+  };
+
   // Compute card position
   const getCardStyle = (): React.CSSProperties => {
     if (!rect) return { opacity: 0 };
@@ -201,9 +208,16 @@ export default function SpotlightTour({ onClose, navigate }: SpotlightTourProps)
           <button className="spotlight-skip" onClick={finish}>
             Skip tour
           </button>
-          <button className="spotlight-next" onClick={handleNext}>
-            {isLast ? 'Done' : 'Next'}
-          </button>
+          <div className="spotlight-nav">
+            {step > 0 && (
+              <button className="spotlight-back" onClick={handleBack}>
+                Back
+              </button>
+            )}
+            <button className="spotlight-next" onClick={handleNext}>
+              {isLast ? 'Done' : 'Next'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
