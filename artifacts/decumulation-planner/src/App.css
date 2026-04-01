@@ -5258,26 +5258,27 @@ body {
 /* ───────────────────────── Page Guide ───────────────────────── */
 
 .page-guide-trigger {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  border: 1px solid var(--unlock-border);
-  background: transparent;
-  color: var(--unlock-muted);
-  font-size: 14px;
-  font-weight: 600;
+  border: 1.5px solid var(--unlock-accent);
+  background: rgba(0, 187, 119, 0.1);
+  color: var(--unlock-accent);
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.15s;
 }
 
 .page-guide-trigger:hover {
   border-color: var(--unlock-accent);
-  color: var(--unlock-accent);
-  background: rgba(0, 187, 119, 0.08);
+  color: #0d1f1a;
+  background: var(--unlock-accent);
+  transform: scale(1.1);
 }
 
 .page-guide-backdrop {
