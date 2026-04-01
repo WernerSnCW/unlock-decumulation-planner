@@ -777,7 +777,13 @@ export function runSimulation(inputs: SimulationInputs, register: Asset[], taxPa
       const growthFactor = eisGrowthMode === 'increasing' ? Math.pow(1 + EIS_GROWTH_RATE, planYear - 1) : 1;
 
       if (inputs.eis_strategy.allocation_mode === 'tax_allowance') {
-        const estNonSavings = totalPensionIncome + rentalIncome;
+        // Use the gross income target as the estimated taxable income,
+        // since drawdowns from GIAs and pension crystallisation will be taxable.
+        // Fall back to baseline income if gross target is lower.
+        const grossTarget = inputs.gross_income
+          ? spendTarget
+          : spendTarget / (1 - 0.20); // estimate gross from net
+        const estNonSavings = Math.max(totalPensionIncome + rentalIncome, grossTarget);
         const estTax = calculateIncomeTax(estNonSavings, savingsIncome, dividendIncome, params);
         eisTaxAllowanceIncomeTax = estTax;
 
