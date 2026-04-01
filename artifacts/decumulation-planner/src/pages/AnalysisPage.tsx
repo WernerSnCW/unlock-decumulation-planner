@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import { usePlanner } from '../context/PlannerContext';
+import PageGuide from '../components/PageGuide';
 import FundedYearsIndicator from '../components/FundedYearsIndicator';
 import PortfolioChart from '../components/PortfolioChart';
 import IHTChart from '../components/IHTChart';
@@ -43,6 +44,20 @@ export default function AnalysisPage() {
   return (
     <div className="analysis-page">
       <div className="page-intro">
+        <PageGuide
+          title="Analysis"
+          summary="Explore the year-by-year simulation output with interactive charts and a detailed action plan."
+          actions={[
+            'Review the portfolio drawdown chart to see which assets are used each year',
+            'Check the IHT exposure chart to track estate tax liability over time',
+            'Read the action plan for specific steps to take',
+          ]}
+          tips={[
+            'Hover over any year in the chart to see a detailed breakdown',
+            'The action plan updates automatically when you change strategy settings',
+            'Warnings highlight years where income falls short or tax spikes',
+          ]}
+        />
         <h2>Analysis</h2>
         <p>Year-by-year projection of how your assets are drawn down, taxes paid, and estate value over the plan period.</p>
         <details className="page-tip">

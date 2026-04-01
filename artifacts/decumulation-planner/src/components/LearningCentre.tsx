@@ -555,7 +555,7 @@ const TOPICS: Topic[] = [
   },
 ];
 
-export default function LearningCentre({ onClose }: { onClose: () => void }) {
+export default function LearningCentre({ onClose, onStartTour }: { onClose: () => void; onStartTour?: () => void }) {
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
@@ -605,6 +605,14 @@ export default function LearningCentre({ onClose }: { onClose: () => void }) {
 
         {!currentTopic ? (
           <div className="learning-body">
+            {onStartTour && (
+              <button
+                className="learning-tour-btn"
+                onClick={onStartTour}
+              >
+                Take guided tour
+              </button>
+            )}
             <p className="learning-intro">
               Understand the key concepts behind retirement planning, tax efficiency, and estate optimisation.
             </p>

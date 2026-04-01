@@ -4,6 +4,7 @@ import { usePlanner } from '../context/PlannerContext';
 import InputPanel from '../components/InputPanel';
 import OptimiserPanel from '../components/OptimiserPanel';
 import StrategyComparison from '../components/StrategyComparison';
+import PageGuide from '../components/PageGuide';
 import { STRATEGY_PRESETS } from '../engine/decumulation';
 import type { DrawdownStrategy, PriorityWeights } from '../engine/decumulation';
 
@@ -58,6 +59,20 @@ export default function PlanningPage() {
   return (
     <div className="planning-page-v2">
       <div className="page-intro">
+        <PageGuide
+          title="Planning"
+          summary="Configure your retirement income target, strategy, and simulation parameters."
+          actions={[
+            'Set your target annual income and plan duration',
+            'Choose a drawdown strategy: tax-optimised, IHT-optimised, or balanced',
+            'Open the settings bar to fine-tune advanced options',
+          ]}
+          tips={[
+            'The simulation recalculates instantly as you change any input',
+            'Glory Years lets you model higher spending in early retirement',
+            'The Optimiser can search for the best combination of settings',
+          ]}
+        />
         <h2>Planning</h2>
         <p>Set your income target and strategy preferences. The simulation recalculates automatically as you change settings.</p>
         <details className="page-tip">
@@ -70,6 +85,7 @@ export default function PlanningPage() {
       <div className={`settings-bar ${settingsOpen ? 'open' : ''}`}>
         <button
           className="settings-bar-toggle"
+          data-tour="settings-bar"
           onClick={() => setSettingsOpen(!settingsOpen)}
         >
           <div className="settings-bar-summary">

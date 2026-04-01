@@ -4,6 +4,7 @@ import { usePlanner } from '../context/PlannerContext';
 import AssetEditor from '../components/AssetEditor';
 import CsvImportWizard from '../components/CsvImportWizard';
 import DataCompletenessPanel from '../components/DataCompletenessPanel';
+import PageGuide from '../components/PageGuide';
 import mockRegister from '../data/mockRegister.json';
 import type { Asset } from '../engine/decumulation';
 
@@ -77,6 +78,20 @@ export default function PortfolioPage() {
       )}
 
       <div className="page-intro">
+        <PageGuide
+          title="Portfolio"
+          summary="Register all your financial assets so the simulation has accurate data to work with."
+          actions={[
+            'Add assets manually or import from CSV',
+            'Set growth rates, income yields, and tax wrapper details for each asset',
+            'Review the data completeness score to improve simulation accuracy',
+          ]}
+          tips={[
+            'Assets with incomplete data still contribute to the plan but reduce confidence',
+            'You can edit any asset by clicking its row in the table',
+            'AIM and EIS assets get automatic IHT relief modelling',
+          ]}
+        />
         <h2>Portfolio</h2>
         <p>Add your assets with their current values and tax wrappers. Growth rates and income figures feed directly into the simulation.</p>
         <details className="page-tip">

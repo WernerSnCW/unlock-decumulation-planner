@@ -1,6 +1,7 @@
 import { usePlanner } from '../context/PlannerContext';
 import { useAuth } from '../context/AuthContext';
 import ExportPDF from '../components/ExportPDF';
+import PageGuide from '../components/PageGuide';
 
 function fmt(n: number): string {
   return '£' + Math.round(n).toLocaleString('en-GB');
@@ -71,6 +72,19 @@ export default function ReportPage() {
   return (
     <div className="report-page">
       <div className="page-intro">
+        <PageGuide
+          title="Report"
+          summary="Review a summary of the full simulation and export it as a PDF."
+          actions={[
+            'Compare total tax paid vs doing nothing',
+            'Check your effective tax rate and final estate value',
+            'Export the report as PDF for your records or adviser',
+          ]}
+          tips={[
+            'The report reflects whatever strategy is currently active on the Planning page',
+            'PDF export includes all charts and the action plan',
+          ]}
+        />
         <h2>Report</h2>
         <p>Summary of your plan for review. Export as PDF to share with your advisor or keep for your records.</p>
       </div>

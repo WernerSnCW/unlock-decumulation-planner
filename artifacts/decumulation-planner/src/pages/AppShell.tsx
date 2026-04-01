@@ -2,6 +2,7 @@ import { Route, Switch, useLocation, Link, Redirect } from 'wouter';
 import { useAuth } from '../context/AuthContext';
 import { PlannerProvider, usePlanner } from '../context/PlannerContext';
 import LearningCentre from '../components/LearningCentre';
+import SpotlightTour from '../components/SpotlightTour';
 import PortfolioPage from './PortfolioPage';
 import PlanningPage from './PlanningPage';
 import AnalysisPage from './AnalysisPage';
@@ -44,9 +45,18 @@ function confidenceColor(score: number): string {
 function AppShellInner() {
   const { investor, logout } = useAuth();
   const { result, inputs, assets, isLoadingData } = usePlanner();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [learningOpen, setLearningOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Auto-launch tour on first visit
+  useEffect(() => {
+    if (!localStorage.getItem('unlock_tour_completed')) {
+      const timer = setTimeout(() => setTourOpen(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const confidence = getConfidenceScore(assets);
   const showConfidenceBanner = !bannerDismissed && assets.length > 0 && confidence < 70 &&
@@ -96,6 +106,7 @@ function AppShellInner() {
                 <Link
                   href={path}
                   className={`nav-link ${isActive ? 'nav-link-active' : ''}`}
+                  data-tour={label.toLowerCase()}
                 >
                   {showStep && (
                     <span className={`nav-step-badge ${isActive ? 'nav-step-active' : ''}`}>
@@ -146,7 +157,22 @@ function AppShellInner() {
         <span className="subtitle">Planning estimate — not financial advice</span>
       </header>
 
-      {learningOpen && <LearningCentre onClose={() => setLearningOpen(false)} />}
+      {learningOpen && (
+        <LearningCentre
+          onClose={() => setLearningOpen(false)}
+          onStartTour={() => {
+            setLearningOpen(false);
+            setTourOpen(true);
+          }}
+        />
+      )}
+
+      {tourOpen && (
+        <SpotlightTour
+          onClose={() => setTourOpen(false)}
+          navigate={setLocation}
+        />
+      )}
 
       <div className="app-body-full">
         {showConfidenceBanner && (
