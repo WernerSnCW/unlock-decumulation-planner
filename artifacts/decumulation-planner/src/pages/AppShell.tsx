@@ -6,16 +6,18 @@ import PortfolioPage from './PortfolioPage';
 import PlanningPage from './PlanningPage';
 import AnalysisPage from './AnalysisPage';
 import ReportPage from './ReportPage';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UnlockLogo from '../components/UnlockLogo';
 import { assessAsset } from '../lib/completenessChecks';
 
 const NAV_ITEMS = [
-  { path: '/app/portfolio', label: 'Portfolio' },
-  { path: '/app/planning', label: 'Planning' },
-  { path: '/app/analysis', label: 'Analysis' },
-  { path: '/app/report', label: 'Report' },
+  { path: '/app/portfolio', label: 'Portfolio', step: 1 },
+  { path: '/app/planning', label: 'Planning', step: 2 },
+  { path: '/app/analysis', label: 'Analysis', step: 3 },
+  { path: '/app/report', label: 'Report', step: 4 },
 ] as const;
+
+const VISITED_KEY = 'unlock_visited_pages';
 
 function getConfidenceScore(assets: any[]): number {
   if (assets.length === 0) return 0;
@@ -50,6 +52,23 @@ function AppShellInner() {
   const showConfidenceBanner = !bannerDismissed && assets.length > 0 && confidence < 70 &&
     ['/app/planning', '/app/analysis', '/app/report'].includes(location);
 
+  const [visitedPages, setVisitedPages] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(VISITED_KEY);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    if (location && !visitedPages.has(location)) {
+      const updated = new Set(visitedPages).add(location);
+      setVisitedPages(updated);
+      localStorage.setItem(VISITED_KEY, JSON.stringify([...updated]));
+    }
+  }, [location]);
+
   if (isLoadingData) {
     return (
       <div className="app-layout">
@@ -68,15 +87,29 @@ function AppShellInner() {
         <h1>Decumulation Planner</h1>
 
         <nav className="app-nav">
-          {NAV_ITEMS.map(({ path, label }) => (
-            <Link
-              key={path}
-              href={path}
-              className={`nav-link ${location === path ? 'nav-link-active' : ''}`}
-            >
-              {label}
-            </Link>
-          ))}
+          {NAV_ITEMS.map(({ path, label, step }, i) => {
+            const isActive = location === path;
+            const isVisited = visitedPages.has(path);
+            const showStep = !isVisited || isActive;
+            return (
+              <span key={path} className="nav-item-wrapper">
+                <Link
+                  href={path}
+                  className={`nav-link ${isActive ? 'nav-link-active' : ''}`}
+                >
+                  {showStep && (
+                    <span className={`nav-step-badge ${isActive ? 'nav-step-active' : ''}`}>
+                      {step}
+                    </span>
+                  )}
+                  {label}
+                </Link>
+                {i < NAV_ITEMS.length - 1 && (
+                  <span className="nav-step-arrow">›</span>
+                )}
+              </span>
+            );
+          })}
         </nav>
 
         <div className="header-spacer" />

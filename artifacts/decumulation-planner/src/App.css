@@ -2956,6 +2956,49 @@ body {
   background: rgba(0, 187, 119, 0.1);
 }
 
+.nav-item-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.08);
+  color: var(--unlock-muted);
+  border: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.nav-step-active {
+  background: var(--unlock-accent);
+  color: #0d1f1a;
+  border-color: var(--unlock-accent);
+}
+
+.nav-step-arrow {
+  font-size: 14px;
+  color: var(--unlock-muted);
+  opacity: 0.4;
+  margin-left: 2px;
+  pointer-events: none;
+}
+
 .header-funded {
   display: flex;
   align-items: center;
