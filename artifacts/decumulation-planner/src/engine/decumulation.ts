@@ -108,7 +108,7 @@ export interface EISStrategyConfig {
 
 export const DEFAULT_EIS_STRATEGY: EISStrategyConfig = {
   enabled: false,
-  allocation_mode: 'fixed',
+  allocation_mode: 'tax_allowance',
   scheme_type: 'eis',
   annual_eis_amount: 0,
   annual_seis_amount: 0,

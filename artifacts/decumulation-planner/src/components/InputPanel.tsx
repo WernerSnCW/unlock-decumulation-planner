@@ -475,7 +475,7 @@ export default function InputPanel({ inputs, summary, assets: portfolioAssets, o
                   </div>
                 </div>
 
-                {summary && summary.eis_tax_allowance_income_tax > 0 && (
+                {summary && (
                   <div className="eis-summary">
                     <div className="eis-row" style={{ color: '#94A3B8' }}>
                       <span>Estimated income tax</span>
