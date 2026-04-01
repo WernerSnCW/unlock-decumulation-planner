@@ -4,6 +4,7 @@ import { usePlanner } from '../context/PlannerContext';
 import InputPanel from '../components/InputPanel';
 import OptimiserPanel from '../components/OptimiserPanel';
 import StrategyComparison from '../components/StrategyComparison';
+import EISScenarioComparison from '../components/EISScenarioComparison';
 import PageGuide from '../components/PageGuide';
 import { STRATEGY_PRESETS } from '../engine/decumulation';
 import type { DrawdownStrategy, PriorityWeights } from '../engine/decumulation';
@@ -179,6 +180,14 @@ export default function PlanningPage() {
               register={assets}
               taxParams={taxParams}
             />
+            {inputs.eis_strategy?.enabled && (
+              <EISScenarioComparison
+                inputs={inputs}
+                register={assets}
+                taxParams={taxParams}
+                currentScenario={inputs.eis_strategy.scenario ?? 'base_case'}
+              />
+            )}
           </>
         )}
 
